@@ -6,7 +6,7 @@ use fs_more::{
 };
 use fs_more_test_harness::{
     assert_file_content_match,
-    error::{TestError, TestResult},
+    error::TestResult,
     DoubleFileHarness,
     SingleFileHarness,
 };

@@ -1,10 +1,13 @@
-//! A set of extensions to the filesystem
+//! A set of extensions of the [`std::fs`] module
 //! (mostly for copying and moving files and directories).
 //!
 //!
 //! ### Attribution
 //!
-//! Heavily inspired and adapted from the `fs_extra` library (thank you!), which is MIT-licensed:
+//! <details>
+//! <summary>Inspired by <code>fs_extra</code></summary>
+//!
+//! Heavily inspired by the `fs_extra` library (thank you!), which is MIT-licensed:
 //!
 //! ```markdown
 //! MIT License
@@ -28,6 +31,9 @@
 //! OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //! SOFTWARE.
 //! ```
+//!
+//! </details>
+//!
 
 pub mod error;
 pub mod file;

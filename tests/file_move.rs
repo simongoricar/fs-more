@@ -1,4 +1,3 @@
-use assert_fs::fixture::FixtureError;
 use assert_matches::assert_matches;
 use fs_more::{error::FileError, file::FileMoveOptions};
 use fs_more_test_harness::{

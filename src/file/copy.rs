@@ -4,9 +4,13 @@ use std::{
     path::Path,
 };
 
-use super::validate_source_file_path;
+use super::{
+    progress::{FileProgress, ProgressWriter},
+    validate_source_file_path,
+};
 use crate::error::FileError;
 
+/// Options that influence the [`copy_file`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct FileCopyOptions {
     /// Whether to overwrite an existing target file if it exists already.
@@ -15,11 +19,26 @@ pub struct FileCopyOptions {
     pub overwrite_existing: bool,
 
     /// Whether to skip copying the file if it already exists.
+    ///
     /// This takes precedence over `overwrite_existing`.
     pub skip_existing: bool,
 }
 
 
+/// Copy a single file from the `source_file_path` to the `target_file_path`.
+///
+/// The target path must be the actual target file path and cannot be a directory.
+/// Returns the number of bytes moved (i.e. the file size).
+///
+/// ## Options
+/// If `options.overwrite_existing` is `true`, an existing target file will be overwritten if it happens to exist.
+///
+/// If `options.overwrite_existing` is `false` and the target file exists, this function will
+/// return `Err` with [`FileError::AlreadyExists`][crate::error::FileError::AlreadyExists],
+/// unless `options.skip_existing` is `true`, in which case `Ok(0)` is returned.
+///
+/// ## Internals
+/// This function internally delegates copying to [`std::fs::copy`] from the standard library (unlike [`copy_file_with_progress`]).
 pub fn copy_file<P, T>(
     source_file_path: P,
     target_file_path: T,
@@ -74,6 +93,7 @@ where
 }
 
 
+/// Options that influence the [`copy_file_with_progress`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct FileCopyWithProgressOptions {
     /// Whether to overwrite an existing target file if it exists already.
@@ -85,11 +105,14 @@ pub struct FileCopyWithProgressOptions {
     /// This takes precedence over `overwrite_existing`.
     pub skip_existing: bool,
 
-    /// Internal buffer size when copying the file, defaults to 64 KiB.
+    /// Internal buffer size (for both reading and writing) when copying the file,
+    /// defaults to 64 KiB.
     pub buffer_size: usize,
 
     /// *Minimum* amount of bytes written between two consecutive progress reports.
     /// Defaults to 64 KiB.
+    ///
+    /// *Note that the interval can be larger.*
     pub progress_update_byte_interval: u64,
 }
 
@@ -107,123 +130,23 @@ impl Default for FileCopyWithProgressOptions {
 }
 
 
-#[derive(Clone, PartialEq, Eq)]
-pub struct FileCopyProgress {
-    pub bytes_copied: u64,
-    pub bytes_total: u64,
-}
-
-struct ProgressWriter<W: Write, F: FnMut(&FileCopyProgress)> {
-    progress: FileCopyProgress,
-    inner: W,
-
-    progress_update_byte_interval: u64,
-    bytes_written_since_last_progress_update: u64,
-
-    handler: F,
-}
-
-impl<W: Write, F: FnMut(&FileCopyProgress)> ProgressWriter<W, F> {
-    pub fn new(
-        inner: W,
-        handler: F,
-        progress_update_byte_interval: u64,
-        bytes_total: u64,
-    ) -> Self {
-        Self {
-            progress: FileCopyProgress {
-                bytes_copied: 0,
-                bytes_total,
-            },
-            inner,
-            progress_update_byte_interval,
-            bytes_written_since_last_progress_update: 0,
-            handler,
-        }
-    }
-
-    pub fn into_inner(self) -> (W, FileCopyProgress, F) {
-        (self.inner, self.progress, self.handler)
-    }
-}
-
-impl<W: Write, F: FnMut(&FileCopyProgress)> Write for ProgressWriter<W, F> {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let inner_write_result = self.inner.write(buf);
-
-        if let Ok(bytes_written) = &inner_write_result {
-            self.progress.bytes_copied += *bytes_written as u64;
-            self.bytes_written_since_last_progress_update +=
-                *bytes_written as u64;
-        }
-
-        if self.bytes_written_since_last_progress_update
-            > self.progress_update_byte_interval
-        {
-            (self.handler)(&self.progress);
-            self.bytes_written_since_last_progress_update = 0;
-        }
-
-        inner_write_result
-    }
-
-    fn flush(&mut self) -> std::io::Result<()> {
-        self.inner.flush()
-    }
-}
-
-
-pub fn copy_file_with_progress<P, T, F>(
-    source_file_path: P,
-    target_file_path: T,
+/// Copies the specified file from the source to the target with the specified options.
+///
+/// This is done by opening both files (one for reading, another for writing) and wrapping
+/// them in buffered readers and writers and our progress tracker and then using
+/// the [`std::io::copy`] function to copy the entire file.
+///
+/// *Warning:* no checks (e.g. whether source exists or whether target is a directory or already exists)
+/// are done.
+pub(crate) fn copy_file_with_progress_unchecked<F>(
+    source_file_path: &Path,
+    target_file_path: &Path,
     options: &FileCopyWithProgressOptions,
     progress_handler: F,
 ) -> Result<u64, FileError>
 where
-    P: AsRef<Path>,
-    T: AsRef<Path>,
-    F: FnMut(&FileCopyProgress),
+    F: FnMut(&FileProgress),
 {
-    let source_file_path = source_file_path.as_ref();
-    let target_file_path = target_file_path.as_ref();
-
-    validate_source_file_path(source_file_path)?;
-
-    // Ensure the target file path doesn't exist yet
-    // (unless `overwrite_existing` is `true`)
-    // and that it isn't already a directory path.
-    match target_file_path.try_exists() {
-        Ok(exists) => {
-            if exists {
-                // Ensure we don't try to copy the file into itself.
-                let canonicalized_source_path =
-                    source_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToCanonicalizeSourcePath { error }
-                    })?;
-                let canonicalized_target_path =
-                    target_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToCanonicalizeTargetPath { error }
-                    })?;
-
-                if canonicalized_source_path.eq(&canonicalized_target_path) {
-                    return Err(FileError::SourceAndTargetAreTheSameFile);
-                }
-            }
-
-            if exists && options.skip_existing {
-                return Ok(0);
-            }
-
-            if exists && !options.overwrite_existing {
-                return Err(FileError::AlreadyExists);
-            }
-        }
-        Err(error) => return Err(FileError::UnableToAccessTargetFile { error }),
-    }
-
-    // All checks have passed, we must now copy the file.
-    // Unlike in the `copy_file` function, we must copy the file ourselves, as we
-    // can't report progress otherwise.
     let bytes_total = source_file_path
         .metadata()
         .map_err(|error| FileError::OtherIoError { error })?
@@ -286,4 +209,92 @@ where
     progress_handler(&copy_progress);
 
     Ok(final_number_of_bytes_copied)
+}
+
+
+
+/// Copy a single file from the `source_file_path` to the `target_file_path`.
+///
+/// The target path must be the actual target file path and cannot be a directory.
+/// Returns the number of bytes moved (i.e. the file size).
+///
+/// You must also provide a progress handler that receives a
+/// [`&FileProgress`][super::FileProgress] on each progress update.
+/// You can control the progress update frequency with the
+/// [`options.progress_update_byte_interval`][FileCopyWithProgressOptions::progress_update_byte_interval] option.
+/// That option is the *minumum* amount of bytes written between two progress reports, meaning we can't guarantee
+/// a specific amount of progress reports per file size. We do, however, guarantee at least one progress report (the final one).
+///
+///
+/// ## Options
+/// If [`options.overwrite_existing`][FileCopyWithProgressOptions::overwrite_existing] is `true`,
+/// an existing target file will be overwritten (if it happens to exist, otherwise the flag is ignored).
+///
+/// If [`options.overwrite_existing`][FileCopyWithProgressOptions::overwrite_existing] is `false`
+/// and the target file exists, this function will return `Err`
+/// with [`FileError::AlreadyExists`][crate::error::FileError::AlreadyExists],
+/// unless [`options.skip_existing`][FileCopyWithProgressOptions::skip_existing] is `true`,
+/// in which case `Ok(0)` is returned.
+///
+/// ## Internals
+/// This function handles copying itself by opening handles of both files itself
+/// and buffering reads and writes (see the [`option.buffer_size`][FileCopyWithProgressOptions::buffer_size] option).
+pub fn copy_file_with_progress<P, T, F>(
+    source_file_path: P,
+    target_file_path: T,
+    options: &FileCopyWithProgressOptions,
+    progress_handler: F,
+) -> Result<u64, FileError>
+where
+    P: AsRef<Path>,
+    T: AsRef<Path>,
+    F: FnMut(&FileProgress),
+{
+    let source_file_path = source_file_path.as_ref();
+    let target_file_path = target_file_path.as_ref();
+
+    validate_source_file_path(source_file_path)?;
+
+    // Ensure the target file path doesn't exist yet
+    // (unless `overwrite_existing` is `true`)
+    // and that it isn't already a directory path.
+    match target_file_path.try_exists() {
+        Ok(exists) => {
+            if exists {
+                // Ensure we don't try to copy the file into itself.
+                let canonicalized_source_path =
+                    source_file_path.canonicalize().map_err(|error| {
+                        FileError::UnableToCanonicalizeSourcePath { error }
+                    })?;
+                let canonicalized_target_path =
+                    target_file_path.canonicalize().map_err(|error| {
+                        FileError::UnableToCanonicalizeTargetPath { error }
+                    })?;
+
+                if canonicalized_source_path.eq(&canonicalized_target_path) {
+                    return Err(FileError::SourceAndTargetAreTheSameFile);
+                }
+            }
+
+            if exists && options.skip_existing {
+                return Ok(0);
+            }
+
+            if exists && !options.overwrite_existing {
+                return Err(FileError::AlreadyExists);
+            }
+        }
+        Err(error) => return Err(FileError::UnableToAccessTargetFile { error }),
+    }
+
+    // All checks have passed, we must now copy the file.
+    // Unlike in the `copy_file` function, we must copy the file ourselves, as we
+    // can't report progress otherwise. This is delegated to the `copy_file_with_progress_unchecked`
+    // function which is used in other parts of the library as well.
+    copy_file_with_progress_unchecked(
+        source_file_path,
+        target_file_path,
+        options,
+        progress_handler,
+    )
 }
