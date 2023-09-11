@@ -79,10 +79,3 @@ fabric.properties
 
 ## Rust
 /target
-
-
-## Sensitive files
-test-data
-*.toml
-!*.TEMPLATE.toml
-bin
