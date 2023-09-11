@@ -14,7 +14,12 @@ pub use copy::{
     FileCopyWithProgressOptions,
 };
 pub use progress::{FileProgress, ProgressWriter};
-pub use r#move::{move_file, FileMoveOptions};
+pub use r#move::{
+    move_file,
+    move_file_with_progress,
+    FileMoveOptions,
+    FileMoveWithProgressOptions,
+};
 pub use remove::remove_file;
 
 use crate::error::FileError;

@@ -298,7 +298,7 @@ pub fn copy_file_with_progress() -> TestResult<()> {
                 ..Default::default()
             },
             |progress| {
-                last_bytes_copied = progress.bytes_copied;
+                last_bytes_copied = progress.bytes_finished;
                 total_bytes = progress.bytes_total;
             },
         );

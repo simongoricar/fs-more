@@ -19,7 +19,11 @@ pub enum FileError {
     #[error("unable to access source file")]
     UnableToAccessSourceFile { error: std::io::Error },
 
-    /// The target file already exists. Some copy/move options disable this check.
+    /// The target file already exists. Some copy/move options disable this error:
+    /// - [`FileCopyOptions.overwrite_existing`][crate::file::FileCopyOptions],
+    /// - [`FileCopyWithProgressOptions.overwrite_existing`][crate::file::FileCopyWithProgressOptions],
+    /// - [`FileMoveOptions.overwrite_existing`][crate::file::FileMoveOptions] and
+    /// - [`FileMoveWithProgressOptions.overwrite_existing`][crate::file::FileMoveWithProgressOptions].
     #[error("target file already exists")]
     AlreadyExists,
 

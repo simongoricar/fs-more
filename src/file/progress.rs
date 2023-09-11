@@ -3,10 +3,10 @@ use std::io::Write;
 /// File copying or moving progress.
 #[derive(Clone, PartialEq, Eq)]
 pub struct FileProgress {
-    /// Current number of bytes copied to the destination.
-    pub bytes_copied: u64,
+    /// Current number of bytes copied or moved to the destination.
+    pub bytes_finished: u64,
 
-    /// Total number of bytes that must be copied to the destination.
+    /// Total number of bytes that must be copied or moved to the destination.
     pub bytes_total: u64,
 }
 
@@ -40,7 +40,7 @@ impl<W: Write, F: FnMut(&FileProgress)> ProgressWriter<W, F> {
     ) -> Self {
         Self {
             progress: FileProgress {
-                bytes_copied: 0,
+                bytes_finished: 0,
                 bytes_total,
             },
             inner,
@@ -61,7 +61,7 @@ impl<W: Write, F: FnMut(&FileProgress)> Write for ProgressWriter<W, F> {
         let inner_write_result = self.inner.write(buf);
 
         if let Ok(bytes_written) = &inner_write_result {
-            self.progress.bytes_copied += *bytes_written as u64;
+            self.progress.bytes_finished += *bytes_written as u64;
             self.bytes_written_since_last_progress_report +=
                 *bytes_written as u64;
         }

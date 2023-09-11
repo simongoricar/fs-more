@@ -205,7 +205,7 @@ where
         .map_err(|error| FileError::OtherIoError { error })?;
 
     // Perform one last progress update.
-    copy_progress.bytes_copied = final_number_of_bytes_copied;
+    copy_progress.bytes_finished = final_number_of_bytes_copied;
     progress_handler(&copy_progress);
 
     Ok(final_number_of_bytes_copied)
@@ -223,7 +223,8 @@ where
 /// You can control the progress update frequency with the
 /// [`options.progress_update_byte_interval`][FileCopyWithProgressOptions::progress_update_byte_interval] option.
 /// That option is the *minumum* amount of bytes written between two progress reports, meaning we can't guarantee
-/// a specific amount of progress reports per file size. We do, however, guarantee at least one progress report (the final one).
+/// a specific amount of progress reports per file size.
+/// We do, however, guarantee at least one progress report (the final one).
 ///
 ///
 /// ## Options
