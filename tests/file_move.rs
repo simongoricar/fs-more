@@ -3,12 +3,13 @@ use assert_matches::assert_matches;
 use fs_more::{error::FileError, file::FileMoveOptions};
 use fs_more_test_harness::{
     assert_file_content_match,
+    error::TestResult,
     DoubleFileHarness,
     SingleFileHarness,
 };
 
 #[test]
-pub fn move_file() -> Result<(), FixtureError> {
+pub fn move_file() -> TestResult<()> {
     let harness = SingleFileHarness::new()?;
 
     let target_file_path = harness.file_path().with_file_name("test_file2.txt");
@@ -42,7 +43,7 @@ pub fn move_file() -> Result<(), FixtureError> {
 }
 
 #[test]
-pub fn forbid_move_into_itself() -> Result<(), FixtureError> {
+pub fn forbid_move_into_itself() -> TestResult<()> {
     let harness = SingleFileHarness::new()?;
 
     let file_move_result: Result<u64, FileError> = fs_more::file::move_file(
@@ -86,8 +87,7 @@ pub fn forbid_move_into_itself() -> Result<(), FixtureError> {
 }
 
 #[test]
-pub fn forbid_move_into_itself_with_overwrite_flag() -> Result<(), FixtureError>
-{
+pub fn forbid_move_into_itself_with_overwrite_flag() -> TestResult<()> {
     let harness = SingleFileHarness::new()?;
 
     let file_move_result: Result<u64, FileError> = fs_more::file::move_file(
@@ -131,7 +131,7 @@ pub fn forbid_move_into_itself_with_overwrite_flag() -> Result<(), FixtureError>
 }
 
 #[test]
-pub fn forbid_case_insensitive_move_into_itself() -> Result<(), FixtureError> {
+pub fn forbid_case_insensitive_move_into_itself() -> TestResult<()> {
     let harness = SingleFileHarness::new()?;
 
     let upper_case_file_name = harness
@@ -185,8 +185,7 @@ pub fn forbid_case_insensitive_move_into_itself() -> Result<(), FixtureError> {
 
 
 #[test]
-pub fn allow_move_overwriting_target_file_with_flag() -> Result<(), FixtureError>
-{
+pub fn allow_move_overwriting_target_file_with_flag() -> TestResult<()> {
     let harness = DoubleFileHarness::new()?;
 
     let file_move_result: Result<u64, FileError> = fs_more::file::move_file(
@@ -235,8 +234,7 @@ pub fn allow_move_overwriting_target_file_with_flag() -> Result<(), FixtureError
 
 
 #[test]
-pub fn forbid_move_overwriting_target_file_without_flag(
-) -> Result<(), FixtureError> {
+pub fn forbid_move_overwriting_target_file_without_flag() -> TestResult<()> {
     let harness = DoubleFileHarness::new()?;
 
     let file_move_result: Result<u64, FileError> = fs_more::file::move_file(

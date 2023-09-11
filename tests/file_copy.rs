@@ -6,6 +6,7 @@ use fs_more::{
 };
 use fs_more_test_harness::{
     assert_file_content_match,
+    error::{TestError, TestResult},
     DoubleFileHarness,
     SingleFileHarness,
 };
@@ -16,7 +17,7 @@ use fs_more_test_harness::{
  */
 
 #[test]
-pub fn copy_file() -> Result<(), FixtureError> {
+pub fn copy_file() -> TestResult<()> {
     let harness = SingleFileHarness::new()?;
 
     let target_file_path = harness.file_path().with_file_name("test_file2.txt");
@@ -48,7 +49,7 @@ pub fn copy_file() -> Result<(), FixtureError> {
 
 
 #[test]
-pub fn forbid_copy_into_self() -> Result<(), FixtureError> {
+pub fn forbid_copy_into_self() -> TestResult<()> {
     let harness = SingleFileHarness::new()?;
 
     let file_copy_result = fs_more::file::copy_file(
@@ -130,7 +131,7 @@ pub fn forbid_case_insensitive_copy_into_self() -> Result<(), FixtureError> {
 }
 
 #[test]
-pub fn allow_move_overwriting_file_with_flag() -> Result<(), FixtureError> {
+pub fn allow_move_overwriting_file_with_flag() -> TestResult<()> {
     let harness = DoubleFileHarness::new()?;
 
     let file_copy_result = fs_more::file::copy_file(
@@ -173,7 +174,7 @@ pub fn allow_move_overwriting_file_with_flag() -> Result<(), FixtureError> {
 }
 
 #[test]
-pub fn forbid_move_overwriting_file_without_flag() -> Result<(), FixtureError> {
+pub fn forbid_move_overwriting_file_without_flag() -> TestResult<()> {
     let harness = DoubleFileHarness::new()?;
 
     let file_copy_result = fs_more::file::copy_file(
@@ -219,7 +220,7 @@ pub fn forbid_move_overwriting_file_without_flag() -> Result<(), FixtureError> {
 }
 
 #[test]
-pub fn skip_existing_target_file_move_with_flag() -> Result<(), FixtureError> {
+pub fn skip_existing_target_file_move_with_flag() -> TestResult<()> {
     let harness = DoubleFileHarness::new()?;
 
     let file_copy_result = fs_more::file::copy_file(
@@ -277,12 +278,15 @@ pub fn skip_existing_target_file_move_with_flag() -> Result<(), FixtureError> {
 
 
 #[test]
-pub fn copy_file_with_progress() -> Result<(), FixtureError> {
+pub fn copy_file_with_progress() -> TestResult<()> {
     let harness = SingleFileHarness::new()?;
 
     let target_file_path = harness.file_path().with_file_name("test_file2.txt");
 
+    let target_file_size_bytes = harness.file_path().metadata()?.len();
+
     let mut last_bytes_copied = 0;
+    let mut total_bytes = 0;
 
     let file_copy_result: Result<u64, FileError> =
         fs_more::file::copy_file_with_progress(
@@ -295,6 +299,7 @@ pub fn copy_file_with_progress() -> Result<(), FixtureError> {
             },
             |progress| {
                 last_bytes_copied = progress.bytes_copied;
+                total_bytes = progress.bytes_total;
             },
         );
 
@@ -302,6 +307,24 @@ pub fn copy_file_with_progress() -> Result<(), FixtureError> {
         file_copy_result.is_ok(),
         "failed to execute fs_more::file::copy_file_with_progress: {}.",
         file_copy_result.unwrap_err()
+    );
+
+    let bytes_copied = file_copy_result.unwrap();
+    assert_eq!(
+        bytes_copied, last_bytes_copied,
+        "copy_file_with_progress failed to report some last writes \
+        (return value and last progress update do not match)"
+    );
+
+    assert_eq!(
+        bytes_copied, target_file_size_bytes,
+        "copied vs real total bytes mismatch: the copy_file_with_progress return value \
+        doesn't match the entire file size reported by the filesystem"
+    );
+    assert_eq!(
+        bytes_copied, total_bytes,
+        "copied vs total bytes mismatch: the copy_file_with_progress return value \
+        doesn't match the entire file size reported by the same function"
     );
 
     assert!(

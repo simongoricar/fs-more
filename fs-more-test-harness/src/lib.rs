@@ -1,4 +1,5 @@
 pub mod double;
+pub mod error;
 pub mod single;
 
 pub use double::DoubleFileHarness;
