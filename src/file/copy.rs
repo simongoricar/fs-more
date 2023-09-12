@@ -42,7 +42,7 @@ pub struct FileCopyOptions {
 pub fn copy_file<P, T>(
     source_file_path: P,
     target_file_path: T,
-    options: &FileCopyOptions,
+    options: FileCopyOptions,
 ) -> Result<u64, FileError>
 where
     P: AsRef<Path>,
@@ -62,11 +62,11 @@ where
                 // Ensure we don't try to copy the file into itself.
                 let canonicalized_source_path =
                     source_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToCanonicalizeSourcePath { error }
+                        FileError::UnableToAccessSourceFile { error }
                     })?;
                 let canonicalized_target_path =
                     target_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToCanonicalizeTargetPath { error }
+                        FileError::UnableToAccessTargetFile { error }
                     })?;
 
                 if canonicalized_source_path.eq(&canonicalized_target_path) {
@@ -141,7 +141,7 @@ impl Default for FileCopyWithProgressOptions {
 pub(crate) fn copy_file_with_progress_unchecked<F>(
     source_file_path: &Path,
     target_file_path: &Path,
-    options: &FileCopyWithProgressOptions,
+    options: FileCopyWithProgressOptions,
     progress_handler: F,
 ) -> Result<u64, FileError>
 where
@@ -243,7 +243,7 @@ where
 pub fn copy_file_with_progress<P, T, F>(
     source_file_path: P,
     target_file_path: T,
-    options: &FileCopyWithProgressOptions,
+    options: FileCopyWithProgressOptions,
     progress_handler: F,
 ) -> Result<u64, FileError>
 where
@@ -265,11 +265,11 @@ where
                 // Ensure we don't try to copy the file into itself.
                 let canonicalized_source_path =
                     source_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToCanonicalizeSourcePath { error }
+                        FileError::UnableToAccessSourceFile { error }
                     })?;
                 let canonicalized_target_path =
                     target_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToCanonicalizeTargetPath { error }
+                        FileError::UnableToAccessTargetFile { error }
                     })?;
 
                 if canonicalized_source_path.eq(&canonicalized_target_path) {

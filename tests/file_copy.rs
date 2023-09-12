@@ -25,7 +25,7 @@ pub fn copy_file() -> TestResult<()> {
     let file_copy_result: Result<u64, FileError> = fs_more::file::copy_file(
         harness.file_path(),
         &target_file_path,
-        &FileCopyOptions {
+        FileCopyOptions {
             overwrite_existing: false,
             skip_existing: false,
         },
@@ -55,7 +55,7 @@ pub fn forbid_copy_into_self() -> TestResult<()> {
     let file_copy_result = fs_more::file::copy_file(
         harness.file_path(),
         harness.file_path(),
-        &FileCopyOptions {
+        FileCopyOptions {
             overwrite_existing: false,
             skip_existing: false,
         },
@@ -100,7 +100,7 @@ pub fn forbid_case_insensitive_copy_into_self() -> Result<(), FixtureError> {
     let file_copy_result = fs_more::file::copy_file(
         harness.file_path(),
         target_file_path,
-        &FileCopyOptions {
+        FileCopyOptions {
             overwrite_existing: false,
             skip_existing: false,
         },
@@ -137,7 +137,7 @@ pub fn allow_move_overwriting_file_with_flag() -> TestResult<()> {
     let file_copy_result = fs_more::file::copy_file(
         harness.first_file_path(),
         harness.second_file_path(),
-        &FileCopyOptions {
+        FileCopyOptions {
             overwrite_existing: true,
             skip_existing: false,
         },
@@ -180,7 +180,7 @@ pub fn forbid_move_overwriting_file_without_flag() -> TestResult<()> {
     let file_copy_result = fs_more::file::copy_file(
         harness.first_file_path(),
         harness.second_file_path(),
-        &FileCopyOptions {
+        FileCopyOptions {
             overwrite_existing: false,
             skip_existing: false,
         },
@@ -226,7 +226,7 @@ pub fn skip_existing_target_file_move_with_flag() -> TestResult<()> {
     let file_copy_result = fs_more::file::copy_file(
         harness.first_file_path(),
         harness.second_file_path(),
-        &FileCopyOptions {
+        FileCopyOptions {
             overwrite_existing: false,
             skip_existing: true,
         },
@@ -292,7 +292,7 @@ pub fn copy_file_with_progress() -> TestResult<()> {
         fs_more::file::copy_file_with_progress(
             harness.file_path(),
             &target_file_path,
-            &FileCopyWithProgressOptions {
+            FileCopyWithProgressOptions {
                 overwrite_existing: false,
                 skip_existing: false,
                 ..Default::default()

@@ -33,7 +33,7 @@ pub struct FileMoveOptions {
 pub fn move_file<P, T>(
     source_file_path: P,
     target_file_path: T,
-    options: &FileMoveOptions,
+    options: FileMoveOptions,
 ) -> Result<u64, FileError>
 where
     P: AsRef<Path>,
@@ -53,11 +53,11 @@ where
                 // Ensure we don't try to copy the file into itself.
                 let canonicalized_source_path =
                     source_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToCanonicalizeSourcePath { error }
+                        FileError::UnableToAccessSourceFile { error }
                     })?;
                 let canonicalized_target_path =
                     target_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToCanonicalizeTargetPath { error }
+                        FileError::UnableToAccessTargetFile { error }
                     })?;
 
                 if canonicalized_source_path.eq(&canonicalized_target_path) {
@@ -162,7 +162,7 @@ impl Default for FileMoveWithProgressOptions {
 pub fn move_file_with_progress<P, T, F>(
     source_file_path: P,
     target_file_path: T,
-    options: &FileMoveWithProgressOptions,
+    options: FileMoveWithProgressOptions,
     mut progress_handler: F,
 ) -> Result<u64, FileError>
 where
@@ -184,11 +184,11 @@ where
                 // Ensure we don't try to copy the file into itself.
                 let canonicalized_source_path =
                     source_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToCanonicalizeSourcePath { error }
+                        FileError::UnableToAccessSourceFile { error }
                     })?;
                 let canonicalized_target_path =
                     target_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToCanonicalizeTargetPath { error }
+                        FileError::UnableToAccessTargetFile { error }
                     })?;
 
                 if canonicalized_source_path.eq(&canonicalized_target_path) {
@@ -227,7 +227,7 @@ where
         let bytes_written = copy_file_with_progress_unchecked(
             source_file_path,
             target_file_path,
-            &FileCopyWithProgressOptions {
+            FileCopyWithProgressOptions {
                 overwrite_existing: options.overwrite_existing,
                 skip_existing: false,
                 buffer_size: options.buffer_size,

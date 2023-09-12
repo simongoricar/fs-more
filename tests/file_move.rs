@@ -16,7 +16,7 @@ pub fn move_file() -> TestResult<()> {
     let file_copy_result: Result<u64, FileError> = fs_more::file::move_file(
         harness.file_path(),
         &target_file_path,
-        &FileMoveOptions {
+        FileMoveOptions {
             overwrite_existing: false,
         },
     );
@@ -48,7 +48,7 @@ pub fn forbid_move_into_itself() -> TestResult<()> {
     let file_move_result: Result<u64, FileError> = fs_more::file::move_file(
         harness.file_path(),
         harness.file_path(),
-        &FileMoveOptions {
+        FileMoveOptions {
             overwrite_existing: false,
         },
     );
@@ -92,7 +92,7 @@ pub fn forbid_move_into_itself_with_overwrite_flag() -> TestResult<()> {
     let file_move_result: Result<u64, FileError> = fs_more::file::move_file(
         harness.file_path(),
         harness.file_path(),
-        &FileMoveOptions {
+        FileMoveOptions {
             overwrite_existing: true,
         },
     );
@@ -145,7 +145,7 @@ pub fn forbid_case_insensitive_move_into_itself() -> TestResult<()> {
     let file_move_result: Result<u64, FileError> = fs_more::file::move_file(
         harness.file_path(),
         target_file_path,
-        &FileMoveOptions {
+        FileMoveOptions {
             overwrite_existing: false,
         },
     );
@@ -190,7 +190,7 @@ pub fn allow_move_overwriting_target_file_with_flag() -> TestResult<()> {
     let file_move_result: Result<u64, FileError> = fs_more::file::move_file(
         harness.first_file_path(),
         harness.second_file_path(),
-        &FileMoveOptions {
+        FileMoveOptions {
             overwrite_existing: true,
         },
     );
@@ -239,7 +239,7 @@ pub fn forbid_move_overwriting_target_file_without_flag() -> TestResult<()> {
     let file_move_result: Result<u64, FileError> = fs_more::file::move_file(
         harness.first_file_path(),
         harness.second_file_path(),
-        &FileMoveOptions {
+        FileMoveOptions {
             overwrite_existing: false,
         },
     );

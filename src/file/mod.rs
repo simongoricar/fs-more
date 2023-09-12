@@ -6,6 +6,7 @@ mod copy;
 mod r#move;
 mod progress;
 mod remove;
+mod size;
 
 pub use copy::{
     copy_file,
@@ -21,6 +22,7 @@ pub use r#move::{
     FileMoveWithProgressOptions,
 };
 pub use remove::remove_file;
+pub use size::get_file_size_in_bytes;
 
 use crate::error::FileError;
 
