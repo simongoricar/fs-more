@@ -1,4 +1,3 @@
-mod double;
 mod simple_file;
 mod simple_tree;
 

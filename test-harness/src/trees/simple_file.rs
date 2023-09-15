@@ -2,7 +2,8 @@ use fs_more_test_harness_derive::FilesystemTreeHarness;
 
 use crate::assertable::{AssertableFilePath, AssertableRootPath};
 
-const SINGLE_FILE_CONTENTS: &str = "This is the first file.";
+const FIRST_FILE_CONTENTS: &str = "This is the first file.";
+const SECOND_FILE_CONTENTS: &str = "This is the second file.";
 
 #[derive(FilesystemTreeHarness)]
 pub struct SimpleFileHarness {
@@ -11,7 +12,13 @@ pub struct SimpleFileHarness {
 
     #[file(
         path = "test_file.txt",
-        content = SINGLE_FILE_CONTENTS.as_bytes(),
+        content = FIRST_FILE_CONTENTS.as_bytes(),
     )]
-    pub single_file: AssertableFilePath,
+    pub test_file: AssertableFilePath,
+
+    #[file(
+        path = "foo_bar.txt",
+        content = SECOND_FILE_CONTENTS.as_bytes(),
+    )]
+    pub foo_bar: AssertableFilePath,
 }
