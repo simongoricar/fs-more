@@ -355,6 +355,7 @@ where
     })
 }
 
+// TODO Write integration tests for directory functions.
 
 #[cfg(test)]
 mod tests {

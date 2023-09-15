@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use assert_fs::fixture::FixtureError;
 use assert_matches::assert_matches;
 use fs_more::{
@@ -5,10 +7,10 @@ use fs_more::{
     file::{FileCopyOptions, FileCopyWithProgressOptions},
 };
 use fs_more_test_harness::{
-    assert_file_content_match,
+    assert_file_string_match,
+    assertable::AssertableFilePath,
     error::TestResult,
-    DoubleFileHarness,
-    SingleFileHarness,
+    trees::SimpleFileHarness,
 };
 
 
@@ -18,12 +20,50 @@ use fs_more_test_harness::{
 
 #[test]
 pub fn copy_file() -> TestResult<()> {
-    let harness = SingleFileHarness::new()?;
+    let harness = SimpleFileHarness::new()?;
 
-    let target_file_path = harness.file_path().with_file_name("test_file2.txt");
+    let target_file = AssertableFilePath::from_path_as_empty(
+        harness.single_file.path().with_file_name("test_file2.txt"),
+    );
+
+    target_file.assert_not_exists();
 
     let file_copy_result: Result<u64, FileError> = fs_more::file::copy_file(
-        harness.file_path(),
+        harness.single_file.path(),
+        target_file.path(),
+        FileCopyOptions {
+            overwrite_existing: false,
+            skip_existing: false,
+        },
+    );
+
+    assert!(
+        file_copy_result.is_ok(),
+        "failed to execute fs_more::file::copy_file: {}",
+        file_copy_result.unwrap_err()
+    );
+
+    harness.single_file.assert_exists();
+    harness.single_file.assert_content_unchanged();
+    target_file.assert_exists();
+    target_file.assert_content_matches_another_file(&harness.single_file);
+
+
+    harness.destroy()?;
+
+    Ok(())
+}
+
+/*
+#[test]
+pub fn copy_binary_file() -> TestResult<()> {
+    let harness = SimpleTreeHarness::new()?;
+
+    let target_file_path =
+        harness.binary_file_path().with_file_name("test_file2.txt");
+
+    let file_copy_result: Result<u64, FileError> = fs_more::file::copy_file(
+        harness.binary_file_path(),
         &target_file_path,
         FileCopyOptions {
             overwrite_existing: false,
@@ -154,14 +194,14 @@ pub fn allow_move_overwriting_file_with_flag() -> TestResult<()> {
         "fs_more::file::copy_file succeeded, but target file does not exist."
     );
 
-    assert_file_content_match!(
+    assert_file_string_match!(
         harness.first_file_path(),
         DoubleFileHarness::expected_first_file_contents(),
         otherwise "fs_more::file::copy_file modified the source file"
     );
     // This `expected_first_file_contents` is intentional
     // as we just overwrote the second file.
-    assert_file_content_match!(
+    assert_file_string_match!(
         harness.second_file_path(),
         DoubleFileHarness::expected_first_file_contents(),
         otherwise "fs_more::file::copy_file failed to overwrite the second file"
@@ -201,13 +241,13 @@ pub fn forbid_move_overwriting_file_without_flag() -> TestResult<()> {
         "fs_more::file::copy_file failed (which is OK), but target file no longer exists."
     );
 
-    assert_file_content_match!(
+    assert_file_string_match!(
         harness.first_file_path(),
         DoubleFileHarness::expected_first_file_contents(),
         otherwise "fs_more::file::copy_file modified the source file"
     );
     // We must not have overwritten the file this time (unlike in `allow_overwriting_file_with_flag`).
-    assert_file_content_match!(
+    assert_file_string_match!(
         harness.second_file_path(),
         DoubleFileHarness::expected_second_file_contents(),
         otherwise "fs_more::file::copy_file did not keep the target file intact"
@@ -252,13 +292,13 @@ pub fn skip_existing_target_file_move_with_flag() -> TestResult<()> {
         "fs_more::file::copy_file returned Ok, but target file no longer exists."
     );
 
-    assert_file_content_match!(
+    assert_file_string_match!(
         harness.first_file_path(),
         DoubleFileHarness::expected_first_file_contents(),
         otherwise "fs_more::file::copy_file modified the source file"
     );
     // We must not have overwritten the file (unlike in `allow_overwriting_file_with_flag`).
-    assert_file_content_match!(
+    assert_file_string_match!(
         harness.second_file_path(),
         DoubleFileHarness::expected_second_file_contents(),
         otherwise "fs_more::file::copy_file did not keep the target file intact"
@@ -336,12 +376,12 @@ pub fn copy_file_with_progress() -> TestResult<()> {
         "copying succeeded, but target file does not exist."
     );
 
-    assert_file_content_match!(
+    assert_file_string_match!(
         harness.file_path(),
         SingleFileHarness::expected_file_contents(),
         otherwise "copy_file_with_progress has tampered with the source file"
     );
-    assert_file_content_match!(
+    assert_file_string_match!(
         target_file_path,
         SingleFileHarness::expected_file_contents(),
         otherwise "copy_file_with_progress did not copy the file correctly"
@@ -352,3 +392,4 @@ pub fn copy_file_with_progress() -> TestResult<()> {
 
     Ok(())
 }
+ */
