@@ -1,7 +1,4 @@
-use std::{
-    path::{Path, PathBuf},
-    time::Duration,
-};
+use std::path::PathBuf;
 
 use assert_fs::fixture::FixtureError;
 use assert_matches::assert_matches;
@@ -10,7 +7,6 @@ use fs_more::{
     file::{FileCopyOptions, FileCopyWithProgressOptions},
 };
 use fs_more_test_harness::{
-    assert_file_string_match,
     assertable::AssertableFilePath,
     error::TestResult,
     trees::{SimpleFileHarness, SimpleTreeHarness},
@@ -49,7 +45,8 @@ pub fn copy_file() -> TestResult<()> {
     harness.test_file.assert_content_unchanged();
 
     target_file.assert_exists();
-    target_file.assert_content_matches_other_assertable(&harness.test_file);
+    target_file
+        .assert_content_matches_expected_value_of_assertable(&harness.test_file);
 
     harness.destroy()?;
     Ok(())
@@ -88,7 +85,9 @@ pub fn copy_binary_file() -> TestResult<()> {
     harness.binary_file_b.assert_content_unchanged();
 
     target_file.assert_exists();
-    target_file.assert_content_matches_other_assertable(&harness.binary_file_a);
+    target_file.assert_content_matches_expected_value_of_assertable(
+        &harness.binary_file_a,
+    );
 
     harness.destroy()?;
     Ok(())
@@ -282,7 +281,7 @@ pub fn allow_copy_overwriting_file_with_flag() -> TestResult<()> {
 
     harness
         .foo_bar
-        .assert_content_matches_other_assertable(&harness.test_file);
+        .assert_content_matches_expected_value_of_assertable(&harness.test_file);
 
 
     harness.destroy()?;
@@ -419,7 +418,8 @@ pub fn copy_file_with_progress() -> TestResult<()> {
     harness.test_file.assert_content_unchanged();
 
     target_file.assert_exists();
-    target_file.assert_content_matches_other_assertable(&harness.test_file);
+    target_file
+        .assert_content_matches_expected_value_of_assertable(&harness.test_file);
 
 
     harness.destroy()?;

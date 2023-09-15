@@ -256,6 +256,19 @@ impl AssertableFilePath {
             .map(|content| content.as_ref())
     }
 
+    /// Returns a reference to the expected file contents (as a slice of bytes).
+    ///
+    /// ## Panics
+    /// This will panic if the expected contents are unknown
+    /// (e.g. when using the [`from_path_with_expected_content`][Self::from_path_with_expected_content]
+    /// or [`from_path_pure`][Self::from_path_pure]
+    /// methods to initialize [`Self`]).
+    pub fn expected_content_unchecked(&self) -> &[u8] {
+        self.expected_file_content
+            .as_ref()
+            .expect("Expected file content is unknown.")
+    }
+
     /// Assert this file exists.
     pub fn assert_exists(&self) {
         assert!(self.file_path.exists() && self.file_path.is_file());
@@ -294,7 +307,7 @@ impl AssertableFilePath {
                 display_bytes_unless_large(expected_contents, 32);
 
             panic!(
-                "File contents do not match: \n  {} (expected) \n    vs\n  {} (actual).\n",
+                "File contents do not match: \n  {} (expected) \n    vs\n  {} (actual).",
                 expected_content_described, real_content_described,
             )
         }
@@ -306,7 +319,10 @@ impl AssertableFilePath {
     /// ## Panics
     /// This method also panics if `other`'s expected content is unknown
     /// (i.e. when its [`expected_content`][Self::expected_content] returns `None`).
-    pub fn assert_content_matches_other_assertable(&self, other: &Self) {
+    pub fn assert_content_matches_expected_value_of_assertable(
+        &self,
+        other: &Self,
+    ) {
         let other_expected_content = other
             .expected_content()
             .expect("other's expected_content is unknown");
@@ -326,7 +342,7 @@ impl AssertableFilePath {
     /// Assert a file's contents match another file.
     ///
     /// You can provide anything that implements `AsRef<Path>`.
-    pub fn assert_content_matches_another_file<P>(&self, other: P)
+    pub fn assert_content_matches_file<P>(&self, other: P)
     where
         P: AsRef<Path>,
     {

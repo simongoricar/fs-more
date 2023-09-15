@@ -1,17 +1,22 @@
 use assert_matches::assert_matches;
 use fs_more::{error::FileError, file::FileMoveOptions};
-use fs_more_test_harness::{assert_file_string_match, error::TestResult};
+use fs_more_test_harness::{
+    assertable::AssertableFilePath,
+    error::TestResult,
+    trees::SimpleFileHarness,
+};
 
-/*
 #[test]
 pub fn move_file() -> TestResult<()> {
-    let harness = SingleFileHarness::new()?;
+    let harness = SimpleFileHarness::new()?;
 
-    let target_file_path = harness.file_path().with_file_name("test_file2.txt");
+    let target_file = AssertableFilePath::from_path_pure(
+        harness.test_file.path().with_file_name("test_file2.txt"),
+    );
 
     let file_copy_result: Result<u64, FileError> = fs_more::file::move_file(
-        harness.file_path(),
-        &target_file_path,
+        harness.test_file.path(),
+        target_file.path(),
         FileMoveOptions {
             overwrite_existing: false,
         },
@@ -19,31 +24,29 @@ pub fn move_file() -> TestResult<()> {
 
     assert!(
         file_copy_result.is_ok(),
-        "failed to execute fs_more::file::move_file: {}",
+        "failed to execute move_file: {}",
         file_copy_result.unwrap_err()
     );
-    assert!(
-        !harness.file_path().exists(),
-        "fs_more::file::move_file succeeded, but source file still exists."
-    );
-    assert!(
-        target_file_path.exists(),
-        "fs_more::file::move_file succeeded, but the target file does not exist."
-    );
+
+    harness.test_file.assert_not_exists();
+
+    target_file.assert_exists();
+    target_file
+        .assert_content_matches_expected_value_of_assertable(&harness.test_file);
 
 
     harness.destroy()?;
-
     Ok(())
 }
 
+
 #[test]
 pub fn forbid_move_into_itself() -> TestResult<()> {
-    let harness = SingleFileHarness::new()?;
+    let harness = SimpleFileHarness::new()?;
 
     let file_move_result: Result<u64, FileError> = fs_more::file::move_file(
-        harness.file_path(),
-        harness.file_path(),
+        harness.foo_bar.path(),
+        harness.foo_bar.path(),
         FileMoveOptions {
             overwrite_existing: false,
         },
@@ -51,7 +54,7 @@ pub fn forbid_move_into_itself() -> TestResult<()> {
 
     assert!(
         file_move_result.is_err(),
-        "fs_more::file::move_file should have errored, but got {}.",
+        "move_file should have errored, but got {}.",
         file_move_result.unwrap()
     );
 
@@ -59,35 +62,26 @@ pub fn forbid_move_into_itself() -> TestResult<()> {
     assert_matches!(
         move_err,
         FileError::SourceAndTargetAreTheSameFile,
-        "fs_more::file::move_file should have errored with \
+        "move_file should have errored with \
         SourceAndTargetAreTheSameFile, got {}.",
         move_err
     );
 
-    assert!(
-        harness.file_path().exists(),
-        "fs_more::file::move_file errored (which is Ok), but source file is gone anyway."
-    );
-
-    assert_file_string_match!(
-        harness.file_path(),
-        SingleFileHarness::expected_file_contents(),
-        otherwise "fs_more::file::move_file tampered with the file contents."
-    );
+    harness.foo_bar.assert_exists();
+    harness.foo_bar.assert_content_unchanged();
 
 
     harness.destroy()?;
-
     Ok(())
 }
 
 #[test]
 pub fn forbid_move_into_itself_with_overwrite_flag() -> TestResult<()> {
-    let harness = SingleFileHarness::new()?;
+    let harness = SimpleFileHarness::new()?;
 
     let file_move_result: Result<u64, FileError> = fs_more::file::move_file(
-        harness.file_path(),
-        harness.file_path(),
+        harness.foo_bar.path(),
+        harness.foo_bar.path(),
         FileMoveOptions {
             overwrite_existing: true,
         },
@@ -95,7 +89,7 @@ pub fn forbid_move_into_itself_with_overwrite_flag() -> TestResult<()> {
 
     assert!(
         file_move_result.is_err(),
-        "fs_more::file::move_file should have errored, but got {}.",
+        "move_file should have errored, but got {}.",
         file_move_result.unwrap()
     );
 
@@ -103,44 +97,38 @@ pub fn forbid_move_into_itself_with_overwrite_flag() -> TestResult<()> {
     assert_matches!(
         move_err,
         FileError::SourceAndTargetAreTheSameFile,
-        "fs_more::file::move_file should have errored with \
-        SourceAndTargetAreTheSameFile, got {}.",
+        "move_file should have errored with SourceAndTargetAreTheSameFile, got {}.",
         move_err
     );
 
-    assert!(
-        harness.file_path().exists(),
-        "fs_more::file::move_file errored (which is Ok), but source file is gone anyway."
-    );
-
-    assert_file_string_match!(
-        harness.file_path(),
-        SingleFileHarness::expected_file_contents(),
-        otherwise "fs_more::file::move_file tampered with the file contents."
-    );
+    harness.foo_bar.assert_exists();
+    harness.foo_bar.assert_content_unchanged();
 
 
     harness.destroy()?;
-
     Ok(())
 }
 
 #[test]
 pub fn forbid_case_insensitive_move_into_itself() -> TestResult<()> {
-    let harness = SingleFileHarness::new()?;
+    let harness = SimpleFileHarness::new()?;
 
     let upper_case_file_name = harness
-        .file_path()
+        .foo_bar
+        .path()
         .file_name()
         .unwrap()
         .to_string_lossy()
         .to_uppercase();
-    let target_file_path =
-        harness.file_path().with_file_name(upper_case_file_name);
+
+    let target_file = AssertableFilePath::from_path_pure(
+        harness.foo_bar.path().with_file_name(upper_case_file_name),
+    );
+    target_file.assert_exists();
 
     let file_move_result: Result<u64, FileError> = fs_more::file::move_file(
-        harness.file_path(),
-        target_file_path,
+        harness.foo_bar.path(),
+        target_file.path(),
         FileMoveOptions {
             overwrite_existing: false,
         },
@@ -148,7 +136,7 @@ pub fn forbid_case_insensitive_move_into_itself() -> TestResult<()> {
 
     assert!(
         file_move_result.is_err(),
-        "fs_more::file::move_file should have errored, but got {}.",
+        "move_file should have errored, but got {}.",
         file_move_result.unwrap()
     );
 
@@ -156,36 +144,26 @@ pub fn forbid_case_insensitive_move_into_itself() -> TestResult<()> {
     assert_matches!(
         move_err,
         FileError::SourceAndTargetAreTheSameFile,
-        "fs_more::file::move_file should have errored with \
-        SourceAndTargetAreTheSameFile, got {}.",
+        "move_file should have errored with SourceAndTargetAreTheSameFile, got {}.",
         move_err
     );
 
-    assert!(
-        harness.file_path().exists(),
-        "fs_more::file::move_file errored (which is Ok), but source file is gone anyway."
-    );
-
-    assert_file_string_match!(
-        harness.file_path(),
-        SingleFileHarness::expected_file_contents(),
-        otherwise "fs_more::file::move_file tampered with the file contents."
-    );
+    harness.foo_bar.assert_exists();
+    harness.foo_bar.assert_content_unchanged();
 
 
     harness.destroy()?;
-
     Ok(())
 }
 
 
 #[test]
 pub fn allow_move_overwriting_target_file_with_flag() -> TestResult<()> {
-    let harness = DoubleFileHarness::new()?;
+    let harness = SimpleFileHarness::new()?;
 
     let file_move_result: Result<u64, FileError> = fs_more::file::move_file(
-        harness.first_file_path(),
-        harness.second_file_path(),
+        harness.test_file.path(),
+        harness.foo_bar.path(),
         FileMoveOptions {
             overwrite_existing: true,
         },
@@ -193,48 +171,37 @@ pub fn allow_move_overwriting_target_file_with_flag() -> TestResult<()> {
 
     assert!(
         file_move_result.is_ok(),
-        "fs_more::file::move_file should have Ok-ed, but got {}.",
+        "move_file should have Ok-ed, but got {}.",
         file_move_result.unwrap_err()
     );
 
     let move_ok = file_move_result.unwrap();
-    assert!(
-        move_ok > 0,
-        "fs_more::file::move_file should have returned a non-zero number of moved bytes, \
-        but got {}.",
-        move_ok
+    assert_eq!(
+        harness.test_file.expected_content_unchecked().len(),
+        move_ok as usize,
+        "move_file did not return the precise amount of moved bytes"
     );
 
+    harness.test_file.assert_not_exists();
+    harness.foo_bar.assert_exists();
 
-    assert!(
-        !harness.first_file_path().exists(),
-        "source file still exists."
-    );
-    assert!(
-        harness.second_file_path().exists(),
-        "target file no longer exists."
-    );
-
-    assert_file_string_match!(
-        harness.second_file_path(),
-        DoubleFileHarness::expected_first_file_contents(),
-        otherwise "fs_more::file::move_file did not overwrite second file correctly."
-    );
+    harness
+        .foo_bar
+        .assert_content_matches_expected_value_of_assertable(&harness.test_file);
 
 
     harness.destroy()?;
-
     Ok(())
 }
 
 
 #[test]
 pub fn forbid_move_overwriting_target_file_without_flag() -> TestResult<()> {
-    let harness = DoubleFileHarness::new()?;
+    let harness = SimpleFileHarness::new()?;
 
     let file_move_result: Result<u64, FileError> = fs_more::file::move_file(
-        harness.first_file_path(),
-        harness.second_file_path(),
+        harness.test_file.path(),
+        harness.foo_bar.path(),
         FileMoveOptions {
             overwrite_existing: false,
         },
@@ -242,7 +209,7 @@ pub fn forbid_move_overwriting_target_file_without_flag() -> TestResult<()> {
 
     assert!(
         file_move_result.is_err(),
-        "fs_more::file::move_file should have errored, got {}.",
+        "move_file should have errored, got {}.",
         file_move_result.unwrap()
     );
 
@@ -250,34 +217,17 @@ pub fn forbid_move_overwriting_target_file_without_flag() -> TestResult<()> {
     assert_matches!(
         move_err,
         FileError::AlreadyExists,
-        "fs_more::file::move_file should have returned AlreadyExists, got {}",
+        "move_file should have returned AlreadyExists, got {}",
         move_err
     );
 
+    harness.test_file.assert_exists();
+    harness.foo_bar.assert_exists();
 
-    assert!(
-        harness.first_file_path().exists(),
-        "source file no longer exists."
-    );
-    assert!(
-        harness.second_file_path().exists(),
-        "target file no longer exists."
-    );
-
-    assert_file_string_match!(
-        harness.first_file_path(),
-        DoubleFileHarness::expected_first_file_contents(),
-        otherwise "fs_more::file::move_file modified the first file erroneously."
-    );
-    assert_file_string_match!(
-        harness.second_file_path(),
-        DoubleFileHarness::expected_second_file_contents(),
-        otherwise "fs_more::file::move_file modified the second file erroneously."
-    );
+    harness.test_file.assert_content_unchanged();
+    harness.foo_bar.assert_content_unchanged();
 
 
     harness.destroy()?;
-
     Ok(())
 }
- */

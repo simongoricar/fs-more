@@ -1,13 +1,16 @@
 use assert_matches::assert_matches;
 use fs_more::error::FileRemoveError;
-use fs_more_test_harness::error::TestResult;
+use fs_more_test_harness::{
+    assertable::AssertableFilePath,
+    error::TestResult,
+    trees::SimpleFileHarness,
+};
 
-/*
 #[test]
 pub fn remove_file() -> TestResult<()> {
-    let harness = SingleFileHarness::new()?;
+    let harness = SimpleFileHarness::new()?;
 
-    let removal_result = fs_more::file::remove_file(harness.file_path());
+    let removal_result = fs_more::file::remove_file(harness.test_file.path());
 
 
     assert!(
@@ -16,30 +19,32 @@ pub fn remove_file() -> TestResult<()> {
         removal_result.unwrap_err()
     );
 
-    assert!(
-        !harness.file_path().exists(),
-        "remove_file succeeded, but the file still exists"
-    );
+    harness.test_file.assert_not_exists();
+    harness.foo_bar.assert_exists();
 
     harness.destroy()?;
-
     Ok(())
 }
 
+
 #[test]
 pub fn fail_file_removal_when_it_doesnt_exist() -> TestResult<()> {
-    let harness = SingleFileHarness::new()?;
+    let harness = SimpleFileHarness::new()?;
 
-    let some_random_non_existent_file_path =
-        harness.file_path().with_file_name("asdio32f.txt");
+    let non_existent_file = AssertableFilePath::from_path_pure(
+        harness
+            .foo_bar
+            .path()
+            .with_file_name("random_nonexistent_file.md"),
+    );
+    non_existent_file.assert_not_exists();
 
-    let removal_result =
-        fs_more::file::remove_file(&some_random_non_existent_file_path);
+    let removal_result = fs_more::file::remove_file(non_existent_file.path());
 
 
     assert!(
         removal_result.is_err(),
-        "failed to fail at file removal: expected Err, got Ok"
+        "failed to error on file removal: expected Err, got Ok"
     );
 
     let removal_err = removal_result.unwrap_err();
@@ -47,21 +52,11 @@ pub fn fail_file_removal_when_it_doesnt_exist() -> TestResult<()> {
     assert_matches!(
         removal_err,
         FileRemoveError::NotFound,
-        "expected NotFound error, got {}",
+        "expected NotFound, got {}",
         removal_err
     );
 
-    assert!(
-        harness.file_path().exists(),
-        "remove_file failed (which is Ok), but a completed unrelated file was removed"
-    );
-    assert!(
-        !some_random_non_existent_file_path.exists(),
-        "remove_file failed (which is Ok), but a completed unrelated file was created"
-    );
 
     harness.destroy()?;
-
     Ok(())
 }
- */

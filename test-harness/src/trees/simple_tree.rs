@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use fs_more_test_harness_derive::FilesystemTreeHarness;
 use once_cell::sync::Lazy;
 use rand::{distributions::Standard, Rng, SeedableRng};
