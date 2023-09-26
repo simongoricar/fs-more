@@ -1,12 +1,11 @@
-use fs_more_test_harness_derive::FilesystemTreeHarness;
+use fs_more_test_harness_derive::fs_harness_tree;
 use once_cell::sync::Lazy;
-use rand::{distributions::Standard, Rng, SeedableRng};
 
 use crate::{
     assertable::{
         AssertableDirectoryPath,
         AssertableFilePath,
-        AssertableRootPath,
+        AssertableRootDirectory,
     },
     lazy_generate_seeded_binary_data,
 };
@@ -19,10 +18,10 @@ static BINARY_DATA_B: Lazy<Vec<u8>> =
     lazy_generate_seeded_binary_data!(1024 * 64, 2397591013122);
 
 
-#[derive(FilesystemTreeHarness)]
+#[fs_harness_tree]
 pub struct SimpleTreeHarness {
     #[root]
-    pub root: AssertableRootPath,
+    pub root: AssertableRootDirectory,
 
     #[file(
         path = "binary_file_a.bin",

@@ -12,6 +12,7 @@ use crate::{
 /// **Be careful!** If you set `follow_symbolic_links` to `true` in [`Self::scan_with_options`],
 /// the resulting `files` and `directories` *might not all be sub-paths of the root* `directory_path`
 /// (as we follow any symbolic links leading elsewhere and include their full target path in the results).
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DirectoryScan {
     /// The directory that was scanned.
     pub root_directory_path: PathBuf,
@@ -220,10 +221,14 @@ impl DirectoryScan {
             let file_size_bytes = get_file_size_in_bytes(file_path).map_err(
                 |error| match error {
                     FileSizeError::NotFound => {
-                        DirectorySizeScanError::FileNoLongerExists
+                        DirectorySizeScanError::FileNoLongerExists {
+                            path: file_path.clone(),
+                        }
                     }
                     FileSizeError::NotAFile => {
-                        DirectorySizeScanError::FileNoLongerExists
+                        DirectorySizeScanError::FileNoLongerExists {
+                            path: file_path.clone(),
+                        }
                     }
                     FileSizeError::UnableToAccessFile { error } => {
                         DirectorySizeScanError::UnableToAccessFile { error }

@@ -26,7 +26,7 @@ where
         }
     }
 
-    if !file_path.is_file() || !file_path.is_symlink() {
+    if !file_path.is_file() && !file_path.is_symlink() {
         return Err(FileSizeError::NotAFile);
     }
 

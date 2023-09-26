@@ -1,14 +1,14 @@
-use fs_more_test_harness_derive::FilesystemTreeHarness;
+use fs_more_test_harness_derive::fs_harness_tree;
 
-use crate::assertable::{AssertableFilePath, AssertableRootPath};
+use crate::assertable::{AssertableFilePath, AssertableRootDirectory};
 
 const FIRST_FILE_CONTENTS: &str = "This is the first file.";
 const SECOND_FILE_CONTENTS: &str = "This is the second file.";
 
-#[derive(FilesystemTreeHarness)]
+#[fs_harness_tree]
 pub struct SimpleFileHarness {
     #[root]
-    root: AssertableRootPath,
+    root: AssertableRootDirectory,
 
     #[file(
         path = "test_file.txt",

@@ -1,5 +1,7 @@
 //! Error structures and enums.
 
+use std::path::PathBuf;
+
 use thiserror::Error;
 
 /// Represents an error state when copying or moving a file.
@@ -129,8 +131,8 @@ pub enum DirectoryError {
     TargetItemAlreadyExists,
 
     // TODO Is this used?
-    /// The source and target directory paths point to the same directory.
-    #[error("source and target path are the same directory")]
+    /// The source and target paths point to the same path.
+    #[error("source and target path are the same")]
     SourceAndTargetAreTheSame,
 
     /// A scanned subdirectory's path is not inside the root directory.
@@ -173,8 +175,8 @@ pub enum DirectorySizeScanError {
 
     /// A file that was scanned on initialization of [`DirectoryScan`][crate::directory::DirectoryScan]
     /// is no longer there or no longer a file.
-    #[error("a scanned file no longer exists or isn't a file anymore")]
-    FileNoLongerExists,
+    #[error("scanned file no longer exists or isn't a file anymore: {path}")]
+    FileNoLongerExists { path: PathBuf },
 
     /// The file cannot be accessed (e.g. due to missing permissions).
     ///

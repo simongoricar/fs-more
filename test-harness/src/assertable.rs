@@ -25,7 +25,7 @@ pub enum AssertableFilePathError {
 
     #[error("provided file path exists, but is not a file")]
     NotAFile,
-    // TODO
+
     #[error("other std::io::Error: {0}")]
     OtherIoError(#[from] std::io::Error),
 }
@@ -36,14 +36,14 @@ pub enum AssertableFilePathError {
 ///
 /// Mainly intended to be used with the [`FilesystemTreeHarness`](../../fs_more_test_harness_derive/derive.FilesystemTreeHarness.html)
 /// macro, but can also be used standalone, see the [`new`][Self::new] initialization method.
-pub struct AssertableRootPath {
+pub struct AssertableRootDirectory {
     #[allow(dead_code)]
     root: TempDir,
 
     directory_path: PathBuf,
 }
 
-impl AssertableRootPath {
+impl AssertableRootDirectory {
     /// Initialize a new assertable root directory path from the provided
     /// [`assert_fs::TempDir`](../../assert_fs/fixture/struct.TempDir.html).
     pub fn new(root: TempDir) -> Self {
@@ -58,6 +58,29 @@ impl AssertableRootPath {
     /// Returns this assertable root directory's filesystem path as a [`Path`][std::path::Path] reference.
     pub fn path(&self) -> &Path {
         &self.directory_path
+    }
+
+    /// Returns a child path (subpath) of this root path.
+    ///
+    /// ### Example
+    /// ```rust
+    /// # use fs_more_test_harness::assertable::AssertableRootDirectory;
+    /// # use std::path::PathBuf;
+    /// let temporary_dir = assert_fs::TempDir::new()
+    ///     .expect("failed to create a temporary directory for testing");
+    ///
+    /// let assertable_root_dir = AssertableRootDirectory::new(temporary_dir);
+    ///
+    /// assert_eq!(
+    ///     assertable_root_dir.child_path("foo"),
+    ///     assertable_root_dir.path().join("foo")
+    /// );
+    /// ```
+    pub fn child_path<P>(&self, sub_path: P) -> PathBuf
+    where
+        P: AsRef<Path>,
+    {
+        self.path().join(sub_path)
     }
 
     /// Assert the directory exists.
@@ -109,8 +132,44 @@ impl AssertableDirectoryPath {
     }
 
     /// Returns this assertable directory's filesystem path as a [`Path`][std::path::Path] reference.
+    ///
+    /// ### Example
+    /// ```rust
+    /// # use fs_more_test_harness::assertable::AssertableDirectoryPath;
+    /// # use std::path::Path;
+    /// let some_path = Path::new("/foo/bar");
+    /// let assertable_directory_path = AssertableDirectoryPath::from_path(some_path);
+    ///
+    /// assert_eq!(
+    ///     some_path,
+    ///     assertable_directory_path.path(),
+    /// );
+    /// ```
     pub fn path(&self) -> &Path {
         &self.directory_path
+    }
+
+    /// Returns a child path (subpath) of this directory path.
+    ///
+    /// ### Example
+    /// ```rust
+    /// # use fs_more_test_harness::assertable::AssertableRootDirectory;
+    /// # use std::path::PathBuf;
+    /// let temporary_dir = assert_fs::TempDir::new()
+    ///     .expect("failed to create a temporary directory for testing");
+    ///
+    /// let assertable_root_dir = AssertableRootDirectory::new(temporary_dir);
+    ///
+    /// assert_eq!(
+    ///     assertable_root_dir.child_path("foo.txt"),
+    ///     assertable_root_dir.path().join("foo.txt")
+    /// );
+    /// ```
+    pub fn child_path<P>(&self, sub_path: P) -> PathBuf
+    where
+        P: AsRef<Path>,
+    {
+        self.path().join(sub_path)
     }
 
     /// Assert the directory exists.
