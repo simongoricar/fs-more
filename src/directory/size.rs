@@ -21,25 +21,19 @@ pub fn get_directory_size<P>(
 where
     P: Into<PathBuf>,
 {
-    let unlimited_depth_scan = DirectoryScan::scan_with_options(
-        directory_path,
-        None,
-        follow_symbolic_links,
-    )
-    .map_err(|error| match error {
-        DirectoryScanError::NotFound => {
-            DirectorySizeScanError::RootDirectoryNotFound
-        }
-        DirectoryScanError::NotADirectory => {
-            DirectorySizeScanError::RootIsNotADirectory
-        }
-        DirectoryScanError::UnableToReadDirectory { error } => {
-            DirectorySizeScanError::UnableToAccessDirectory { error }
-        }
-        DirectoryScanError::UnableToReadDirectoryItem { error } => {
-            DirectorySizeScanError::UnableToAccessFile { error }
-        }
-    })?;
+    let unlimited_depth_scan =
+        DirectoryScan::scan_with_options(directory_path, None, follow_symbolic_links).map_err(
+            |error| match error {
+                DirectoryScanError::NotFound => DirectorySizeScanError::RootDirectoryNotFound,
+                DirectoryScanError::NotADirectory => DirectorySizeScanError::RootIsNotADirectory,
+                DirectoryScanError::UnableToReadDirectory { error } => {
+                    DirectorySizeScanError::UnableToAccessDirectory { error }
+                }
+                DirectoryScanError::UnableToReadDirectoryItem { error } => {
+                    DirectorySizeScanError::UnableToAccessFile { error }
+                }
+            },
+        )?;
 
     unlimited_depth_scan.total_size_in_bytes()
 }

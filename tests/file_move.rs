@@ -31,8 +31,7 @@ pub fn move_file() -> TestResult<()> {
     harness.test_file.assert_not_exists();
 
     target_file.assert_exists();
-    target_file
-        .assert_content_matches_expected_value_of_assertable(&harness.test_file);
+    target_file.assert_content_matches_expected_value_of_assertable(&harness.test_file);
 
 
     harness.destroy()?;

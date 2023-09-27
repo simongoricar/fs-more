@@ -168,9 +168,7 @@ pub enum DirectorySizeScanError {
     RootDirectoryNotFound,
 
     /// The root directory path is not a directory nor a symbolic link to a file.
-    #[error(
-        "provided directory path is not a directory nor a symbolic link to one"
-    )]
+    #[error("provided directory path is not a directory nor a symbolic link to one")]
     RootIsNotADirectory,
 
     /// A file that was scanned on initialization of [`DirectoryScan`][crate::directory::DirectoryScan]

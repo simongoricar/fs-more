@@ -32,12 +32,7 @@ pub struct ProgressWriter<W: Write, F: FnMut(&FileProgress)> {
 impl<W: Write, F: FnMut(&FileProgress)> ProgressWriter<W, F> {
     /// Initialize a new `ProgressWriter` by providing a writer, your progress handler,
     /// the minimum amount of bytes written between two progress reports and the total file size in bytes.
-    pub fn new(
-        inner: W,
-        handler: F,
-        progress_update_byte_interval: u64,
-        bytes_total: u64,
-    ) -> Self {
+    pub fn new(inner: W, handler: F, progress_update_byte_interval: u64, bytes_total: u64) -> Self {
         Self {
             progress: FileProgress {
                 bytes_finished: 0,
@@ -62,13 +57,10 @@ impl<W: Write, F: FnMut(&FileProgress)> Write for ProgressWriter<W, F> {
 
         if let Ok(bytes_written) = &inner_write_result {
             self.progress.bytes_finished += *bytes_written as u64;
-            self.bytes_written_since_last_progress_report +=
-                *bytes_written as u64;
+            self.bytes_written_since_last_progress_report += *bytes_written as u64;
         }
 
-        if self.bytes_written_since_last_progress_report
-            > self.progress_report_byte_interval
-        {
+        if self.bytes_written_since_last_progress_report > self.progress_report_byte_interval {
             (self.handler)(&self.progress);
             self.bytes_written_since_last_progress_report = 0;
         }

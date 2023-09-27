@@ -45,8 +45,7 @@ pub fn copy_file() -> TestResult<()> {
     harness.test_file.assert_content_unchanged();
 
     target_file.assert_exists();
-    target_file
-        .assert_content_matches_expected_value_of_assertable(&harness.test_file);
+    target_file.assert_content_matches_expected_value_of_assertable(&harness.test_file);
 
     harness.destroy()?;
     Ok(())
@@ -85,9 +84,7 @@ pub fn copy_binary_file() -> TestResult<()> {
     harness.binary_file_b.assert_content_unchanged();
 
     target_file.assert_exists();
-    target_file.assert_content_matches_expected_value_of_assertable(
-        &harness.binary_file_a,
-    );
+    target_file.assert_content_matches_expected_value_of_assertable(&harness.binary_file_a);
 
     harness.destroy()?;
     Ok(())
@@ -209,9 +206,7 @@ pub fn forbid_non_trivial_copy_into_self() -> Result<(), FixtureError> {
         // Reconstruct a bit more complex version of the same path.
         let non_trivial_subpath = PathBuf::from(format!(
             "{}/../{}/{}",
-            parent_directory_name,
-            parent_directory_name,
-            target_file_name_uppercase
+            parent_directory_name, parent_directory_name, target_file_name_uppercase
         ));
 
         grandparent_directory.join(non_trivial_subpath)
@@ -369,26 +364,24 @@ pub fn copy_file_with_progress() -> TestResult<()> {
     );
     target_file.assert_not_exists();
 
-    let expected_final_file_size_bytes =
-        harness.test_file.path().metadata()?.len();
+    let expected_final_file_size_bytes = harness.test_file.path().metadata()?.len();
 
     let mut last_bytes_copied = 0;
     let mut total_bytes = 0;
 
-    let file_copy_result: Result<u64, FileError> =
-        fs_more::file::copy_file_with_progress(
-            harness.test_file.path(),
-            target_file.path(),
-            FileCopyWithProgressOptions {
-                overwrite_existing: false,
-                skip_existing: false,
-                ..Default::default()
-            },
-            |progress| {
-                last_bytes_copied = progress.bytes_finished;
-                total_bytes = progress.bytes_total;
-            },
-        );
+    let file_copy_result: Result<u64, FileError> = fs_more::file::copy_file_with_progress(
+        harness.test_file.path(),
+        target_file.path(),
+        FileCopyWithProgressOptions {
+            overwrite_existing: false,
+            skip_existing: false,
+            ..Default::default()
+        },
+        |progress| {
+            last_bytes_copied = progress.bytes_finished;
+            total_bytes = progress.bytes_total;
+        },
+    );
 
     assert!(
         file_copy_result.is_ok(),
@@ -418,8 +411,7 @@ pub fn copy_file_with_progress() -> TestResult<()> {
     harness.test_file.assert_content_unchanged();
 
     target_file.assert_exists();
-    target_file
-        .assert_content_matches_expected_value_of_assertable(&harness.test_file);
+    target_file.assert_content_matches_expected_value_of_assertable(&harness.test_file);
 
 
     harness.destroy()?;

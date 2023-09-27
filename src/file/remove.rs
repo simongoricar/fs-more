@@ -31,8 +31,7 @@ where
     }
 
     // All checks have passed, remove the file.
-    std::fs::remove_file(file_path)
-        .map_err(|error| FileRemoveError::OtherIoError { error })?;
+    std::fs::remove_file(file_path).map_err(|error| FileRemoveError::OtherIoError { error })?;
 
     Ok(())
 }

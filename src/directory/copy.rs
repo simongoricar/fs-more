@@ -489,8 +489,11 @@ impl DirectoryCopyProgress {
 
     /// Replace the current [`DirectoryCopyOperation`] with the next one (incrementing the operation index).
     /// After updating the operation, this function calls the given progress handler.
-    fn set_next_operation_and_emit<F>(&mut self, operation: DirectoryCopyOperation, progress_handler: &mut F)
-    where
+    fn set_next_operation_and_emit<F>(
+        &mut self,
+        operation: DirectoryCopyOperation,
+        progress_handler: &mut F,
+    ) where
         F: FnMut(&DirectoryCopyProgress),
     {
         self.current_operation_index += 1;
@@ -606,8 +609,7 @@ where
             buffer_size: options.buffer_size,
             progress_update_byte_interval: options.progress_update_byte_interval,
         },
-        |new_file_progress| 
-            progress.update_operation_and_emit(
+        |new_file_progress| progress.update_operation_and_emit(
                 |progress| {
                     if let DirectoryCopyOperation::CopyingFile {
                         progress: file_progress,
@@ -693,7 +695,7 @@ where
         DirectoryCopyOperation::CreatingDirectory {
             target_path: target_directory_path.clone(),
         },
-        progress_handler
+        progress_handler,
     );
 
     std::fs::create_dir(target_directory_path)
@@ -787,13 +789,13 @@ where
             return Err(DirectoryError::TargetItemAlreadyExists);
         }
 
-        
+
         DirectoryCopyProgress {
             bytes_total,
             bytes_finished: 0,
             files_copied: 0,
             directories_created: 0,
-            // This is a bogus operation - we don't emit this progress, 
+            // This is a bogus operation - we don't emit this progress,
             // but we need something here before the next operation starts.
             current_operation: DirectoryCopyOperation::CreatingDirectory {
                 target_path: PathBuf::new(),

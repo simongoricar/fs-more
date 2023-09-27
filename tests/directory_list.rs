@@ -19,11 +19,8 @@ where
 pub fn scan_directory() -> TestResult<()> {
     let harness = SimpleTreeHarness::new()?;
 
-    let scan_result = fs_more::directory::DirectoryScan::scan_with_options(
-        harness.root.path(),
-        None,
-        false,
-    );
+    let scan_result =
+        fs_more::directory::DirectoryScan::scan_with_options(harness.root.path(), None, false);
 
     assert!(
         scan_result.is_ok(),
@@ -75,11 +72,8 @@ pub fn scan_directory() -> TestResult<()> {
 pub fn scan_directory_with_limited_depth() -> TestResult<()> {
     let harness = SimpleTreeHarness::new()?;
 
-    let scan_result = fs_more::directory::DirectoryScan::scan_with_options(
-        harness.root.path(),
-        Some(0),
-        false,
-    );
+    let scan_result =
+        fs_more::directory::DirectoryScan::scan_with_options(harness.root.path(), Some(0), false);
 
     assert!(
         scan_result.is_ok(),
@@ -131,11 +125,8 @@ pub fn scan_directory_with_limited_depth() -> TestResult<()> {
 pub fn directory_size_via_directory_scan() -> TestResult<()> {
     let harness = SimpleTreeHarness::new()?;
 
-    let scan_result = fs_more::directory::DirectoryScan::scan_with_options(
-        harness.root.path(),
-        None,
-        false,
-    );
+    let scan_result =
+        fs_more::directory::DirectoryScan::scan_with_options(harness.root.path(), None, false);
 
 
     assert!(
@@ -167,11 +158,8 @@ pub fn directory_size_via_directory_scan() -> TestResult<()> {
 pub fn directory_size_via_directory_scan_with_depth_limit() -> TestResult<()> {
     let harness = SimpleTreeHarness::new()?;
 
-    let scan_result = fs_more::directory::DirectoryScan::scan_with_options(
-        harness.root.path(),
-        Some(0),
-        false,
-    );
+    let scan_result =
+        fs_more::directory::DirectoryScan::scan_with_options(harness.root.path(), Some(0), false);
 
 
     assert!(
@@ -205,8 +193,7 @@ pub fn directory_size_via_directory_scan_with_depth_limit() -> TestResult<()> {
 pub fn directory_size_via_size_function() -> TestResult<()> {
     let harness = SimpleTreeHarness::new()?;
 
-    let size_in_bytes_result =
-        fs_more::directory::get_directory_size(harness.root.path(), false);
+    let size_in_bytes_result = fs_more::directory::get_directory_size(harness.root.path(), false);
 
 
     assert!(

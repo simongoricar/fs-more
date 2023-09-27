@@ -35,21 +35,19 @@ fn assert_directory_contents_match_other_directory<P1, P2>(
     let mut directory_scan_queue = vec![self_directory_path.clone()];
 
     while let Some(next_directory_to_scan) = directory_scan_queue.pop() {
-        let directory_scan = std::fs::read_dir(&next_directory_to_scan)
-            .unwrap_or_else(|error| {
-                panic!(
-                    "failed to read contents of directory {}: {}",
-                    next_directory_to_scan.display(),
-                    error
-                );
-            });
+        let directory_scan = std::fs::read_dir(&next_directory_to_scan).unwrap_or_else(|error| {
+            panic!(
+                "failed to read contents of directory {}: {}",
+                next_directory_to_scan.display(),
+                error
+            );
+        });
 
         for entry in directory_scan {
             let entry = entry.expect("failed to get next directory entry");
             let entry_path = entry.path();
 
-            let entry_type =
-                entry.file_type().expect("failed to get entry's file type");
+            let entry_type = entry.file_type().expect("failed to get entry's file type");
             let entry_type_str = if entry_type.is_dir() {
                 "directory"
             } else if entry_type.is_file() {
@@ -61,12 +59,11 @@ fn assert_directory_contents_match_other_directory<P1, P2>(
             };
 
 
-            let subpath_of_self =
-                    entry_path.strip_prefix(&self_directory_path)
-                    .expect("scanned path should be a subdirectory of the base `self_directory_path`");
+            let subpath_of_self = entry_path
+                .strip_prefix(&self_directory_path)
+                .expect("scanned path should be a subdirectory of the base `self_directory_path`");
 
-            let expected_path_on_other =
-                other_directory_path.join(subpath_of_self);
+            let expected_path_on_other = other_directory_path.join(subpath_of_self);
 
 
             if entry_type.is_file() {
@@ -91,26 +88,26 @@ fn assert_directory_contents_match_other_directory<P1, P2>(
 
                 // First, do a naive file size check and fail early if they don't match.
                 let entry_file_size_bytes = entry
-                        .metadata()
-                        .unwrap_or_else(|error| {
-                            panic!(
-                                "failed to read metadata for file {} (on `self`): {}",
-                                entry_path.display(),
-                                error
-                            )
-                        })
-                        .len();
+                    .metadata()
+                    .unwrap_or_else(|error| {
+                        panic!(
+                            "failed to read metadata for file {} (on `self`): {}",
+                            entry_path.display(),
+                            error
+                        )
+                    })
+                    .len();
 
                 let other_file_size_bytes = expected_path_on_other
-                        .metadata()
-                        .unwrap_or_else(|error| {
-                            panic!(
-                                "failed to read metadata for file {} (on `other`): {}",
-                                expected_path_on_other.display(),
-                                error
-                            )
-                        })
-                        .len();
+                    .metadata()
+                    .unwrap_or_else(|error| {
+                        panic!(
+                            "failed to read metadata for file {} (on `other`): {}",
+                            expected_path_on_other.display(),
+                            error
+                        )
+                    })
+                    .len();
 
                 assert_eq!(
                     entry_file_size_bytes,
@@ -158,23 +155,21 @@ fn assert_directory_contents_match_other_directory<P1, P2>(
                 for (byte_index, (entry_file_byte, other_file_byte)) in
                     entry_file.bytes().zip(other_file.bytes()).enumerate()
                 {
-                    let entry_file_byte = entry_file_byte
-                        .unwrap_or_else(|error| {
-                            panic!(
-                                "failed to read byte from file {} (on `other`): {}",
-                                entry_path.display(),
-                                error
-                            );
-                        });
+                    let entry_file_byte = entry_file_byte.unwrap_or_else(|error| {
+                        panic!(
+                            "failed to read byte from file {} (on `other`): {}",
+                            entry_path.display(),
+                            error
+                        );
+                    });
 
-                    let other_file_byte = other_file_byte
-                        .unwrap_or_else(|error| {
-                            panic!(
-                                "failed to read byte from file {} (on `self`): {}",
-                                expected_path_on_other.display(),
-                                error
-                            );
-                        });
+                    let other_file_byte = other_file_byte.unwrap_or_else(|error| {
+                        panic!(
+                            "failed to read byte from file {} (on `self`): {}",
+                            expected_path_on_other.display(),
+                            error
+                        );
+                    });
 
                     if entry_file_byte != other_file_byte {
                         panic!(
@@ -294,24 +289,19 @@ impl AssertableRootDirectory {
 
     /// Assert the directory is completely empty.
     pub fn assert_is_empty(&self) {
-        let directory_scan = std::fs::read_dir(self.path())
-            .expect("failed to read contents of directory");
+        let directory_scan =
+            std::fs::read_dir(self.path()).expect("failed to read contents of directory");
 
         assert_eq!(directory_scan.count(), 0);
     }
 
     /// Assert contents of directory `self` and `other_directory_path` perfectly match.
     /// Structure and exact file contents are compared, but **symlinks and metadata are ignored**.
-    pub fn assert_directory_contents_match_directory<P>(
-        &self,
-        other_directory_path: P,
-    ) where
+    pub fn assert_directory_contents_match_directory<P>(&self, other_directory_path: P)
+    where
         P: Into<PathBuf>,
     {
-        assert_directory_contents_match_other_directory(
-            self.path(),
-            other_directory_path,
-        );
+        assert_directory_contents_match_other_directory(self.path(), other_directory_path);
     }
 
     /// Consume `self` and return the inner [`assert_fs::TempDir`](../../assert_fs/fixture/struct.TempDir.html).
@@ -405,24 +395,19 @@ impl AssertableDirectoryPath {
 
     /// Assert the directory is completely empty.
     pub fn assert_is_empty(&self) {
-        let directory_scan = std::fs::read_dir(self.path())
-            .expect("failed to read contents of directory");
+        let directory_scan =
+            std::fs::read_dir(self.path()).expect("failed to read contents of directory");
 
         assert_eq!(directory_scan.count(), 0);
     }
 
     /// Assert contents of directory `self` and `other_directory_path` perfectly match.
     /// Structure and exact file contents are compared, but **symlinks and metadata are ignored**.
-    pub fn assert_directory_contents_match_directory<P>(
-        &self,
-        other_directory_path: P,
-    ) where
+    pub fn assert_directory_contents_match_directory<P>(&self, other_directory_path: P)
+    where
         P: Into<PathBuf>,
     {
-        assert_directory_contents_match_other_directory(
-            self.path(),
-            other_directory_path,
-        );
+        assert_directory_contents_match_other_directory(self.path(), other_directory_path);
     }
 }
 
@@ -461,10 +446,7 @@ impl AssertableFilePath {
     /// *Warning:* this initialization method is intended for the
     /// [`FilesystemTreeHarness`](../../fs_more_test_harness_derive/derive.FilesystemTreeHarness.html)
     /// procedural macro - as such, ignore this method in your own uses.
-    pub fn from_child_path(
-        child_path: ChildPath,
-        original_contents: &'static [u8],
-    ) -> Self {
+    pub fn from_child_path(child_path: ChildPath, original_contents: &'static [u8]) -> Self {
         Self {
             file_path: child_path.path().to_path_buf(),
             expected_file_content: Some(Cow::Borrowed(original_contents)),
@@ -493,9 +475,7 @@ impl AssertableFilePath {
     /// a snapshot of the file contents (what we otherwise call the "expected content" here).
     /// When you later call [`assert_content_unchanged`][Self::assert_content_unchanged],
     /// you'll be able to assert whether the file changed since initialization.
-    pub fn from_path_with_captured_content<P>(
-        file_path: P,
-    ) -> Result<Self, AssertableFilePathError>
+    pub fn from_path_with_captured_content<P>(file_path: P) -> Result<Self, AssertableFilePathError>
     where
         P: Into<PathBuf>,
     {
@@ -523,10 +503,7 @@ impl AssertableFilePath {
     ///
     /// Therefore, the "expected" contents of the file (see the [`expected_content`][Self::expected_content] method)
     /// will be set to what you pass in with the `expected_content` parameter.
-    pub fn from_path_with_expected_content<P, C>(
-        path: P,
-        expected_content: C,
-    ) -> Self
+    pub fn from_path_with_expected_content<P, C>(path: P, expected_content: C) -> Self
     where
         P: Into<PathBuf>,
         C: Into<Cow<'static, [u8]>>,
@@ -591,22 +568,17 @@ impl AssertableFilePath {
     /// methods to initialize [`Self`]).
     pub fn assert_content_unchanged(&self) {
         let Some(expected_contents) = self.expected_file_content.as_ref() else {
-            panic!(
-                "Expected file contents are unknown."
-            )
+            panic!("Expected file contents are unknown.")
         };
 
-        let actual_content =
-            std::fs::read(self.path()).expect("Failed to read file.");
+        let actual_content = std::fs::read(self.path()).expect("Failed to read file.");
 
         let contents_match = actual_content.eq(expected_contents.as_ref());
 
         if !contents_match {
-            let real_content_described =
-                display_bytes_unless_large(&actual_content, 32);
+            let real_content_described = display_bytes_unless_large(&actual_content, 32);
 
-            let expected_content_described =
-                display_bytes_unless_large(expected_contents, 32);
+            let expected_content_described = display_bytes_unless_large(expected_contents, 32);
 
             panic!(
                 "File contents do not match: \n  {} (expected) \n    vs\n  {} (actual).",
@@ -621,22 +593,18 @@ impl AssertableFilePath {
     /// ## Panics
     /// This method also panics if `other`'s expected content is unknown
     /// (i.e. when its [`expected_content`][Self::expected_content] returns `None`).
-    pub fn assert_content_matches_expected_value_of_assertable(
-        &self,
-        other: &Self,
-    ) {
+    pub fn assert_content_matches_expected_value_of_assertable(&self, other: &Self) {
         let other_expected_content = other
             .expected_content()
             .expect("other's expected_content is unknown");
 
-        let self_content =
-            std::fs::read(&self.file_path).unwrap_or_else(|err| {
-                panic!(
-                    "Failed to read file path \"{}\": {}",
-                    self.file_path.display(),
-                    err
-                )
-            });
+        let self_content = std::fs::read(&self.file_path).unwrap_or_else(|err| {
+            panic!(
+                "Failed to read file path \"{}\": {}",
+                self.file_path.display(),
+                err
+            )
+        });
 
         assert_eq!(self_content, other_expected_content);
     }
@@ -648,23 +616,21 @@ impl AssertableFilePath {
     where
         P: AsRef<Path>,
     {
-        let self_content =
-            std::fs::read(&self.file_path).unwrap_or_else(|err| {
-                panic!(
-                    "Failed to read file path \"{}\": {}",
-                    self.file_path.display(),
-                    err
-                )
-            });
+        let self_content = std::fs::read(&self.file_path).unwrap_or_else(|err| {
+            panic!(
+                "Failed to read file path \"{}\": {}",
+                self.file_path.display(),
+                err
+            )
+        });
 
-        let other_content =
-            std::fs::read(other.as_ref()).unwrap_or_else(|err| {
-                panic!(
-                    "Failed to read file path \"{}\": {}",
-                    self.file_path.display(),
-                    err
-                )
-            });
+        let other_content = std::fs::read(other.as_ref()).unwrap_or_else(|err| {
+            panic!(
+                "Failed to read file path \"{}\": {}",
+                self.file_path.display(),
+                err
+            )
+        });
 
         assert_eq!(self_content, other_content);
     }

@@ -8,12 +8,7 @@ mod progress;
 mod remove;
 mod size;
 
-pub use copy::{
-    copy_file,
-    copy_file_with_progress,
-    FileCopyOptions,
-    FileCopyWithProgressOptions,
-};
+pub use copy::{copy_file, copy_file_with_progress, FileCopyOptions, FileCopyWithProgressOptions};
 pub use progress::{FileProgress, ProgressWriter};
 pub use r#move::{
     move_file,

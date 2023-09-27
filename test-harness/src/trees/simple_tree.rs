@@ -2,20 +2,14 @@ use fs_more_test_harness_derive::fs_harness_tree;
 use once_cell::sync::Lazy;
 
 use crate::{
-    assertable::{
-        AssertableDirectoryPath,
-        AssertableFilePath,
-        AssertableRootDirectory,
-    },
+    assertable::{AssertableDirectoryPath, AssertableFilePath, AssertableRootDirectory},
     lazy_generate_seeded_binary_data,
 };
 
 
-static BINARY_DATA_A: Lazy<Vec<u8>> =
-    lazy_generate_seeded_binary_data!(1024 * 32, 2903489125012);
+static BINARY_DATA_A: Lazy<Vec<u8>> = lazy_generate_seeded_binary_data!(1024 * 32, 2903489125012);
 
-static BINARY_DATA_B: Lazy<Vec<u8>> =
-    lazy_generate_seeded_binary_data!(1024 * 64, 2397591013122);
+static BINARY_DATA_B: Lazy<Vec<u8>> = lazy_generate_seeded_binary_data!(1024 * 64, 2397591013122);
 
 
 #[fs_harness_tree]

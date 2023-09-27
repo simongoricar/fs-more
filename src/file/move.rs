@@ -51,14 +51,12 @@ where
         Ok(exists) => {
             if exists {
                 // Ensure we don't try to copy the file into itself.
-                let canonicalized_source_path =
-                    source_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToAccessSourceFile { error }
-                    })?;
-                let canonicalized_target_path =
-                    target_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToAccessTargetFile { error }
-                    })?;
+                let canonicalized_source_path = source_file_path
+                    .canonicalize()
+                    .map_err(|error| FileError::UnableToAccessSourceFile { error })?;
+                let canonicalized_target_path = target_file_path
+                    .canonicalize()
+                    .map_err(|error| FileError::UnableToAccessTargetFile { error })?;
 
                 if canonicalized_source_path.eq(&canonicalized_target_path) {
                     return Err(FileError::SourceAndTargetAreTheSameFile);
@@ -95,9 +93,7 @@ where
             FileRemoveError::UnableToAccessFile { error } => {
                 FileError::UnableToAccessSourceFile { error }
             }
-            FileRemoveError::OtherIoError { error } => {
-                FileError::OtherIoError { error }
-            }
+            FileRemoveError::OtherIoError { error } => FileError::OtherIoError { error },
         })?;
 
         Ok(num_bytes_copied)
@@ -182,14 +178,12 @@ where
         Ok(exists) => {
             if exists {
                 // Ensure we don't try to copy the file into itself.
-                let canonicalized_source_path =
-                    source_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToAccessSourceFile { error }
-                    })?;
-                let canonicalized_target_path =
-                    target_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToAccessTargetFile { error }
-                    })?;
+                let canonicalized_source_path = source_file_path
+                    .canonicalize()
+                    .map_err(|error| FileError::UnableToAccessSourceFile { error })?;
+                let canonicalized_target_path = target_file_path
+                    .canonicalize()
+                    .map_err(|error| FileError::UnableToAccessTargetFile { error })?;
 
                 if canonicalized_source_path.eq(&canonicalized_target_path) {
                     return Err(FileError::SourceAndTargetAreTheSameFile);
@@ -231,8 +225,7 @@ where
                 overwrite_existing: options.overwrite_existing,
                 skip_existing: false,
                 buffer_size: options.buffer_size,
-                progress_update_byte_interval: options
-                    .progress_update_byte_interval,
+                progress_update_byte_interval: options.progress_update_byte_interval,
             },
             progress_handler,
         )?;
@@ -243,9 +236,7 @@ where
             FileRemoveError::UnableToAccessFile { error } => {
                 FileError::UnableToAccessSourceFile { error }
             }
-            FileRemoveError::OtherIoError { error } => {
-                FileError::OtherIoError { error }
-            }
+            FileRemoveError::OtherIoError { error } => FileError::OtherIoError { error },
         })?;
 
         Ok(bytes_written)

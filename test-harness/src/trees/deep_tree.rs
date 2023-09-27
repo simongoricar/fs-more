@@ -2,32 +2,23 @@ use fs_more_test_harness_derive::fs_harness_tree;
 use once_cell::sync::Lazy;
 
 use crate::{
-    assertable::{
-        AssertableDirectoryPath,
-        AssertableFilePath,
-        AssertableRootDirectory,
-    },
+    assertable::{AssertableDirectoryPath, AssertableFilePath, AssertableRootDirectory},
     lazy_generate_seeded_binary_data,
 };
 
 
-static BINARY_DATA_A: Lazy<Vec<u8>> =
-    lazy_generate_seeded_binary_data!(1024 * 32, 2903489125012);
+static BINARY_DATA_A: Lazy<Vec<u8>> = lazy_generate_seeded_binary_data!(1024 * 32, 2903489125012);
 
-static BINARY_DATA_B: Lazy<Vec<u8>> =
-    lazy_generate_seeded_binary_data!(1024 * 64, 2397591013122);
+static BINARY_DATA_B: Lazy<Vec<u8>> = lazy_generate_seeded_binary_data!(1024 * 64, 2397591013122);
 
-static BINARY_DATA_C: Lazy<Vec<u8>> =
-    lazy_generate_seeded_binary_data!(1024 * 128, 394590111123);
+static BINARY_DATA_C: Lazy<Vec<u8>> = lazy_generate_seeded_binary_data!(1024 * 128, 394590111123);
 
 static BINARY_DATA_D: Lazy<Vec<u8>> =
     lazy_generate_seeded_binary_data!(1024 * 256, 569119922498906);
 
-static BINARY_DATA_E: Lazy<Vec<u8>> =
-    lazy_generate_seeded_binary_data!(1024 * 16, 11235112229834);
+static BINARY_DATA_E: Lazy<Vec<u8>> = lazy_generate_seeded_binary_data!(1024 * 16, 11235112229834);
 
-static BINARY_DATA_F: Lazy<Vec<u8>> =
-    lazy_generate_seeded_binary_data!(1024 * 1024, 34901111222);
+static BINARY_DATA_F: Lazy<Vec<u8>> = lazy_generate_seeded_binary_data!(1024 * 1024, 34901111222);
 
 
 #[fs_harness_tree]

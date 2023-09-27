@@ -2,18 +2,11 @@ use proc_macro::TokenStream;
 use proc_macro2::Span;
 use proc_macro_error::abort_call_site;
 use quote::{quote, ToTokens};
-use syn::{
-    parse_quote,
-    punctuated::Punctuated,
-    ItemStruct,
-    MetaNameValue,
-    Token,
-};
+use syn::{parse_quote, punctuated::Punctuated, ItemStruct, MetaNameValue, Token};
 
 const ASSERTABLE_ROOT_DIRECTORY_TYPE_NAME: &str = "AssertableRootDirectory";
 const ASSERTABLE_FILE_PATH_STRUCT_TYPE_NAME: &str = "AssertableFilePath";
-const ASSERTABLE_DIRECTORY_PATH_STRUCT_TYPE_NAME: &str =
-    "AssertableDirectoryPath";
+const ASSERTABLE_DIRECTORY_PATH_STRUCT_TYPE_NAME: &str = "AssertableDirectoryPath";
 
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -24,9 +17,7 @@ enum FieldPathType {
 }
 
 
-fn infer_field_path_type_from_field_type(
-    field: &syn::Field,
-) -> Option<FieldPathType> {
+fn infer_field_path_type_from_field_type(field: &syn::Field) -> Option<FieldPathType> {
     let syn::Type::Path(field_value_type) = &field.ty else {
         return None;
     };
@@ -98,13 +89,10 @@ const DIRECTORY_ATTRIBUTE_NAME: &str = "directory";
 
 
 fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
-    let path_type_inferred_from_field_type =
-        infer_field_path_type_from_field_type(field);
+    let path_type_inferred_from_field_type = infer_field_path_type_from_field_type(field);
 
     let Some(field_ident) = field.ident.clone() else {
-        abort_call_site!(
-            "Missing field name."
-        );
+        abort_call_site!("Missing field name.");
     };
 
     for attribute in &field.attrs {
@@ -120,8 +108,8 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
 
                 let Some(inferred_path_type) = path_type_inferred_from_field_type.as_ref() else {
                     abort_call_site!(
-                        "Field {} has the #[{}] attribute, 
-                        but isn't of a recognized assertable type: 
+                        "Field {} has the #[{}] attribute, \
+                        but isn't of a recognized assertable type: \
                         expected type {}, got {}.",
                         ROOT_ATTRIBUTE_NAME,
                         field_ident.to_string(),
@@ -132,8 +120,8 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
 
                 if *inferred_path_type != FieldPathType::Root {
                     abort_call_site!(
-                        "Field {} has the #[{}] attribute,
-                        but isn't of the correct assertable type:
+                        "Field {} has the #[{}] attribute, \
+                        but isn't of the correct assertable type: \
                         expected type {}, got {}.",
                         ROOT_ATTRIBUTE_NAME,
                         field_ident.to_string(),
@@ -146,10 +134,11 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
             }
             syn::Meta::List(list_attribute) => {
                 if list_attribute.path.is_ident(FILE_ATTRIBUTE_NAME) {
-                    let Some(inferred_path_type) = path_type_inferred_from_field_type.as_ref() else {
+                    let Some(inferred_path_type) = path_type_inferred_from_field_type.as_ref()
+                    else {
                         abort_call_site!(
-                            "Field {} has the #[{}(...)] attribute,
-                            but isn't of a recognized assertable type:
+                            "Field {} has the #[{}(...)] attribute, \
+                            but isn't of a recognized assertable type: \
                             expected type {}, got {}.",
                             FILE_ATTRIBUTE_NAME,
                             field_ident.to_string(),
@@ -160,8 +149,8 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
 
                     if *inferred_path_type != FieldPathType::File {
                         abort_call_site!(
-                            "Field {} has the #[{}(...)] attribute,
-                            but isn't of the correct assertable type:
+                            "Field {} has the #[{}(...)] attribute, \
+                            but isn't of the correct assertable type: \
                             expected type {}, got {}.",
                             FILE_ATTRIBUTE_NAME,
                             field_ident.to_string(),
@@ -173,7 +162,7 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
                     let subattributes: Punctuated<MetaNameValue, Token![,]> = list_attribute
                         .parse_args_with(Punctuated::parse_terminated)
                         .unwrap_or_else(|_| abort_call_site!(
-                            "Expected a #[{}({} = \"string literal\", {} = expression resolving to Vec of u8)] 
+                            "Expected a #[{}({} = \"string literal\", {} = expression resolving to Vec of u8)] \
                             attribute, got {} instead.",
                             FILE_ATTRIBUTE_NAME,
                             FILE_PATH_SUBATTRIBUTE_NAME,
@@ -188,10 +177,7 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
                     const FILE_CONTENT_SUBATTRIBUTE_NAME: &str = "content";
 
                     for subattribute in subattributes {
-                        if subattribute
-                            .path
-                            .is_ident(FILE_PATH_SUBATTRIBUTE_NAME)
-                        {
+                        if subattribute.path.is_ident(FILE_PATH_SUBATTRIBUTE_NAME) {
                             let syn::Expr::Lit(path_literal) = &subattribute.value else {
                                 abort_call_site!(
                                     "Expected #[{}(..., {} = \"string literal\")], got {}.",
@@ -212,7 +198,7 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
 
                             if path_subattribute.is_some() {
                                 abort_call_site!(
-                                    "Unexpected contents of #[{}(...)] attribute: 
+                                    "Unexpected contents of #[{}(...)] attribute:  \
                                     field \"{}\" appears more than once.",
                                     FILE_ATTRIBUTE_NAME,
                                     FILE_PATH_SUBATTRIBUTE_NAME
@@ -220,13 +206,10 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
                             }
 
                             path_subattribute = Some(path_str_literal.clone());
-                        } else if subattribute
-                            .path
-                            .is_ident(FILE_CONTENT_SUBATTRIBUTE_NAME)
-                        {
+                        } else if subattribute.path.is_ident(FILE_CONTENT_SUBATTRIBUTE_NAME) {
                             if contents_subattribute.is_some() {
                                 abort_call_site!(
-                                    "Unexpected contents of #[{}(...)] attribute: 
+                                    "Unexpected contents of #[{}(...)] attribute:  \
                                     field \"{}\" appears more than once.",
                                     FILE_ATTRIBUTE_NAME,
                                     FILE_CONTENT_SUBATTRIBUTE_NAME
@@ -236,7 +219,7 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
                             contents_subattribute = Some(subattribute.value);
                         } else {
                             abort_call_site!(
-                                "Unexpected contents of #[{}(...)] attribute:
+                                "Unexpected contents of #[{}(...)] attribute: \
                                 expected fields {} and/or {}, got \"{}\" instead.",
                                 FILE_ATTRIBUTE_NAME,
                                 FILE_PATH_SUBATTRIBUTE_NAME,
@@ -259,12 +242,12 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
                         file_path: path_subattribute,
                         file_contents: contents_subattribute,
                     }));
-                } else if list_attribute.path.is_ident(DIRECTORY_ATTRIBUTE_NAME)
-                {
-                    let Some(inferred_path_type) = path_type_inferred_from_field_type.as_ref() else {
+                } else if list_attribute.path.is_ident(DIRECTORY_ATTRIBUTE_NAME) {
+                    let Some(inferred_path_type) = path_type_inferred_from_field_type.as_ref()
+                    else {
                         abort_call_site!(
-                            "Field {} has the #[{}(...)] attribute,
-                            but isn't of a recognized assertable type:
+                            "Field {} has the #[{}(...)] attribute, \
+                            but isn't of a recognized assertable type: \
                             expected type {}, got {}.",
                             DIRECTORY_ATTRIBUTE_NAME,
                             field_ident.to_string(),
@@ -275,8 +258,8 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
 
                     if *inferred_path_type != FieldPathType::Directory {
                         abort_call_site!(
-                            "Field {} has the #[{}(...)] attribute,
-                            but isn't of the correct assertable type:
+                            "Field {} has the #[{}(...)] attribute, \
+                            but isn't of the correct assertable type: \
                             expected type {}, got {}.",
                             DIRECTORY_ATTRIBUTE_NAME,
                             field_ident.to_string(),
@@ -285,18 +268,16 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
                         );
                     };
 
-                    let subattributes: Punctuated<MetaNameValue, Token![,]> =
-                        list_attribute
-                            .parse_args_with(Punctuated::parse_terminated)
-                            .unwrap_or_else(|_| {
-                                abort_call_site!(
-                                    "Expected a #[{}({} = \"string literal\")] 
-                            attribute, got {} instead.",
-                                    DIRECTORY_ATTRIBUTE_NAME,
-                                    DIRECTORY_PATH_SUBATTRIBUTE_NAME,
-                                    list_attribute.to_token_stream()
-                                )
-                            });
+                    let subattributes: Punctuated<MetaNameValue, Token![,]> = list_attribute
+                        .parse_args_with(Punctuated::parse_terminated)
+                        .unwrap_or_else(|_| {
+                            abort_call_site!(
+                                "Expected a #[{}({} = \"string literal\")] attribute, got {} instead.",
+                                DIRECTORY_ATTRIBUTE_NAME,
+                                DIRECTORY_PATH_SUBATTRIBUTE_NAME,
+                                list_attribute.to_token_stream()
+                            )
+                        });
 
 
                     let mut path_subattribute: Option<syn::LitStr> = None;
@@ -304,10 +285,7 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
                     const DIRECTORY_PATH_SUBATTRIBUTE_NAME: &str = "path";
 
                     for subattribute in subattributes {
-                        if !subattribute
-                            .path
-                            .is_ident(DIRECTORY_PATH_SUBATTRIBUTE_NAME)
-                        {
+                        if !subattribute.path.is_ident(DIRECTORY_PATH_SUBATTRIBUTE_NAME) {
                             continue;
                         }
 
@@ -387,9 +365,7 @@ fn remove_our_macro_attributes_from_field(field: &mut syn::Field) {
         }
 
         match &attribute.meta {
-            syn::Meta::Path(path_attribute) => {
-                !path_attribute.is_ident(ROOT_ATTRIBUTE_NAME)
-            }
+            syn::Meta::Path(path_attribute) => !path_attribute.is_ident(ROOT_ATTRIBUTE_NAME),
             syn::Meta::List(list_attribute) => {
                 !(list_attribute.path.is_ident(FILE_ATTRIBUTE_NAME)
                     || list_attribute.path.is_ident(DIRECTORY_ATTRIBUTE_NAME))
@@ -399,10 +375,7 @@ fn remove_our_macro_attributes_from_field(field: &mut syn::Field) {
     });
 }
 
-fn add_documentation_to_field(
-    field: &mut syn::Field,
-    parsed_data: &ParsedField,
-) {
+fn add_documentation_to_field(field: &mut syn::Field, parsed_data: &ParsedField) {
     let documentation_lines = match parsed_data {
         ParsedField::Root(root_field) => {
             let root_field_ident = &root_field.field_ident;
@@ -440,8 +413,7 @@ fn add_documentation_to_field(
             let directory_field_ident = &directory_field.field_ident;
             let directory_path = &directory_field.directory_path;
 
-            let directory_path_string =
-                directory_path.to_token_stream().to_string();
+            let directory_path_string = directory_path.to_token_stream().to_string();
             let directoryr_path_str_stripped_quotes = directory_path_string
                 .strip_prefix('"')
                 .unwrap()
@@ -469,17 +441,14 @@ fn add_documentation_to_field(
 }
 
 fn parse_struct_data(mut struct_data: ItemStruct) -> (ItemStruct, ParsedStruct) {
-    let mut all_field_idents: Vec<syn::Ident> =
-        Vec::with_capacity(struct_data.fields.len());
+    let mut all_field_idents: Vec<syn::Ident> = Vec::with_capacity(struct_data.fields.len());
 
     let mut root_field: Option<RootField> = None;
     let mut directory_fields: Vec<DirectoryField> = Vec::new();
     let mut file_fields: Vec<FileField> = Vec::new();
 
     let syn::Fields::Named(named_fields) = &mut struct_data.fields else {
-        abort_call_site!(
-            "Can only be used on structs with named fields."
-        );
+        abort_call_site!("Can only be used on structs with named fields.");
     };
 
     for field in &mut named_fields.named {
@@ -617,11 +586,10 @@ fn generate_impl(
         let temporary_dir_variable_ident =
             syn::Ident::new("temporary_directory", Span::call_site());
 
-        let root_field_initialization_expr =
-            generate_initialization_expression_for_root_field(
-                &parsed.root_field,
-                temporary_dir_variable_ident.clone(),
-            );
+        let root_field_initialization_expr = generate_initialization_expression_for_root_field(
+            &parsed.root_field,
+            temporary_dir_variable_ident.clone(),
+        );
 
         let directory_fields_initialization_exprs = parsed
             .directory_fields
@@ -690,16 +658,11 @@ fn generate_impl(
 }
 
 #[proc_macro_attribute]
-pub fn fs_harness_tree(
-    _attributes: TokenStream,
-    data: TokenStream,
-) -> TokenStream {
+pub fn fs_harness_tree(_attributes: TokenStream, data: TokenStream) -> TokenStream {
     let struct_data = match syn::parse::<ItemStruct>(data) {
         Ok(data) => data,
         Err(_) => {
-            abort_call_site!(
-                "Can't parse input (can only be used on structs with named fields)."
-            );
+            abort_call_site!("Can't parse input (can only be used on structs with named fields).");
         }
     };
 
@@ -707,8 +670,7 @@ pub fn fs_harness_tree(
 
 
     let struct_name = modified_struct.ident.clone();
-    let (impl_generics, ty_generics, where_clause) =
-        modified_struct.generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = modified_struct.generics.split_for_impl();
 
     let new_impl = generate_impl(
         parsed_data,
