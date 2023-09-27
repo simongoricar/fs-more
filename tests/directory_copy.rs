@@ -14,9 +14,8 @@ pub fn copy_directory() -> TestResult<()> {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
-    let source_scan =
-        DirectoryScan::scan_with_options(harness.root.path(), None, false)
-            .expect("failed to scan temporary directory");
+    let source_scan = DirectoryScan::scan_with_options(harness.root.path(), None, false)
+        .expect("failed to scan temporary directory");
     let source_full_size = source_scan
         .total_size_in_bytes()
         .expect("failed to compute size of source directory in bytes");
@@ -72,9 +71,8 @@ pub fn copy_directory_with_progress() -> TestResult<()> {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
-    let source_scan =
-        DirectoryScan::scan_with_options(harness.root.path(), None, false)
-            .expect("failed to scan temporary directory");
+    let source_scan = DirectoryScan::scan_with_options(harness.root.path(), None, false)
+        .expect("failed to scan temporary directory");
     let source_full_size = source_scan
         .total_size_in_bytes()
         .expect("failed to compute size of source directory in bytes");
@@ -106,7 +104,13 @@ pub fn copy_directory_with_progress() -> TestResult<()> {
                     previous_progress.current_operation_index,
                     progress.current_operation_index
                 );
-            } 
+            }
+
+            assert!(
+                progress.current_operation_index >= 0,
+                "copy_directory_with_progress reported a negative operation index: {}",
+                progress.current_operation_index
+            );
 
             last_progress = Some(progress.clone());
         },
@@ -133,8 +137,7 @@ pub fn copy_directory_with_progress() -> TestResult<()> {
     );
 
     assert_eq!(
-        last_progress.bytes_finished,
-        last_progress.bytes_total,
+        last_progress.bytes_finished, last_progress.bytes_total,
         "copy_directory_with_progress's last progress message was an unfinished copy"
     );
     assert_eq!(
