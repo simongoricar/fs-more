@@ -1,5 +1,7 @@
 use std::{
     borrow::Cow,
+    fs::OpenOptions,
+    io::{BufReader, Read},
     path::{Path, PathBuf},
 };
 
@@ -16,6 +18,203 @@ fn display_bytes_unless_large(bytes: &[u8], maximum_size: usize) -> String {
         format!("\"{}\"", String::from_utf8_lossy(bytes))
     }
 }
+
+fn assert_directory_contents_match_other_directory<P1, P2>(
+    self_directory_path: P1,
+    other_directory_path: P2,
+) where
+    P1: Into<PathBuf>,
+    P2: Into<PathBuf>,
+{
+    let self_directory_path: PathBuf = self_directory_path.into();
+    let other_directory_path: PathBuf = other_directory_path.into();
+
+    // The process is as follows:
+    // - we construct a scan queue containing directory paths (`self_directory_path` or subdirectories),
+    // - we process the queue (FIFO), comparing files and directories (and ignoring symbolic links or any file metadata).
+    let mut directory_scan_queue = vec![self_directory_path.clone()];
+
+    while let Some(next_directory_to_scan) = directory_scan_queue.pop() {
+        let directory_scan = std::fs::read_dir(&next_directory_to_scan)
+            .unwrap_or_else(|error| {
+                panic!(
+                    "failed to read contents of directory {}: {}",
+                    next_directory_to_scan.display(),
+                    error
+                );
+            });
+
+        for entry in directory_scan {
+            let entry = entry.expect("failed to get next directory entry");
+            let entry_path = entry.path();
+
+            let entry_type =
+                entry.file_type().expect("failed to get entry's file type");
+            let entry_type_str = if entry_type.is_dir() {
+                "directory"
+            } else if entry_type.is_file() {
+                "file"
+            } else if entry_type.is_symlink() {
+                "symbolic link"
+            } else {
+                "unknown"
+            };
+
+
+            let subpath_of_self =
+                    entry_path.strip_prefix(&self_directory_path)
+                    .expect("scanned path should be a subdirectory of the base `self_directory_path`");
+
+            let expected_path_on_other =
+                other_directory_path.join(subpath_of_self);
+
+
+            if entry_type.is_file() {
+                assert!(
+                    expected_path_on_other.exists(),
+                    "directory contents do not match: \
+                    file {} exists on `self`, but not on `other` \
+                    (expected {} to be a file)",
+                    subpath_of_self.display(),
+                    expected_path_on_other.display()
+                );
+
+                assert!(
+                    expected_path_on_other.is_file(),
+                    "directory contents do not match: \
+                    {} is a file on `self`, but is a {} on `other` instead \
+                    (expected {} to be a file)",
+                    subpath_of_self.display(),
+                    entry_type_str,
+                    expected_path_on_other.display()
+                );
+
+                // First, do a naive file size check and fail early if they don't match.
+                let entry_file_size_bytes = entry
+                        .metadata()
+                        .unwrap_or_else(|error| {
+                            panic!(
+                                "failed to read metadata for file {} (on `self`): {}",
+                                entry_path.display(),
+                                error
+                            )
+                        })
+                        .len();
+
+                let other_file_size_bytes = expected_path_on_other
+                        .metadata()
+                        .unwrap_or_else(|error| {
+                            panic!(
+                                "failed to read metadata for file {} (on `other`): {}",
+                                expected_path_on_other.display(),
+                                error
+                            )
+                        })
+                        .len();
+
+                assert_eq!(
+                    entry_file_size_bytes,
+                    other_file_size_bytes,
+                    "directory contents do not match: \
+                    file {} is of different sizes on `self` and `other`",
+                    subpath_of_self.display()
+                );
+
+                // If file sizes match, compare the contents.
+                const BUFFER_SIZE: usize = 1024 * 16;
+
+                let entry_file = {
+                    let file = OpenOptions::new()
+                        .read(true)
+                        .open(&entry_path)
+                        .unwrap_or_else(|error| {
+                            panic!(
+                                "failed to open file {} for reading (on `self`): {}",
+                                entry_path.display(),
+                                error
+                            )
+                        });
+
+                    BufReader::with_capacity(BUFFER_SIZE, file)
+                };
+
+                let other_file = {
+                    let file = OpenOptions::new()
+                        .read(true)
+                        .open(&expected_path_on_other)
+                        .unwrap_or_else(|error| {
+                            panic!(
+                                "failed to open file {} for reading (on `other`): {}",
+                                expected_path_on_other.display(),
+                                error
+                            )
+                        });
+
+                    BufReader::with_capacity(BUFFER_SIZE, file)
+                };
+
+                // TODO This is only used for testing anyway, but maybe
+                //      find a better way than byte-by-byte comparisons?
+                for (byte_index, (entry_file_byte, other_file_byte)) in
+                    entry_file.bytes().zip(other_file.bytes()).enumerate()
+                {
+                    let entry_file_byte = entry_file_byte
+                        .unwrap_or_else(|error| {
+                            panic!(
+                                "failed to read byte from file {} (on `other`): {}",
+                                entry_path.display(),
+                                error
+                            );
+                        });
+
+                    let other_file_byte = other_file_byte
+                        .unwrap_or_else(|error| {
+                            panic!(
+                                "failed to read byte from file {} (on `self`): {}",
+                                expected_path_on_other.display(),
+                                error
+                            );
+                        });
+
+                    if entry_file_byte != other_file_byte {
+                        panic!(
+                            "directory contents do not match: \
+                            contents of file {} are not the same, \
+                            byte {} is {} on `self`, but {} on `other`",
+                            subpath_of_self.display(),
+                            byte_index,
+                            entry_file_byte,
+                            other_file_byte
+                        );
+                    }
+                }
+            } else if entry_type.is_dir() {
+                assert!(
+                    expected_path_on_other.exists(),
+                    "directory contents do not match: \
+                    directory {} exists on `self`, but not on `other` \
+                    (expected {} to be a directory)",
+                    subpath_of_self.display(),
+                    expected_path_on_other.display()
+                );
+
+                assert!(
+                    expected_path_on_other.is_dir(),
+                    "directory contents do not match: \
+                    {} is a directory on `self`, but is a {} on `self` instead \
+                    (expected {} to be a directory)",
+                    subpath_of_self.display(),
+                    entry_type_str,
+                    expected_path_on_other.display()
+                );
+
+                // Queue scanning of the directory's contents by putting it into our scan queue.
+                directory_scan_queue.push(entry_path);
+            }
+        }
+    }
+}
+
 
 
 #[derive(Error, Debug)]
@@ -91,6 +290,28 @@ impl AssertableRootDirectory {
     /// Assert the directory does not exist.
     pub fn assert_not_exists(&self) {
         assert!(!self.directory_path.exists());
+    }
+
+    /// Assert the directory is completely empty.
+    pub fn assert_is_empty(&self) {
+        let directory_scan = std::fs::read_dir(self.path())
+            .expect("failed to read contents of directory");
+
+        assert_eq!(directory_scan.count(), 0);
+    }
+
+    /// Assert contents of directory `self` and `other_directory_path` perfectly match.
+    /// Structure and exact file contents are compared, but **symlinks and metadata are ignored**.
+    pub fn assert_directory_contents_match_directory<P>(
+        &self,
+        other_directory_path: P,
+    ) where
+        P: Into<PathBuf>,
+    {
+        assert_directory_contents_match_other_directory(
+            self.path(),
+            other_directory_path,
+        );
     }
 
     /// Consume `self` and return the inner [`assert_fs::TempDir`](../../assert_fs/fixture/struct.TempDir.html).
@@ -180,6 +401,28 @@ impl AssertableDirectoryPath {
     /// Assert the directory does not exist.
     pub fn assert_not_exists(&self) {
         assert!(!self.directory_path.exists());
+    }
+
+    /// Assert the directory is completely empty.
+    pub fn assert_is_empty(&self) {
+        let directory_scan = std::fs::read_dir(self.path())
+            .expect("failed to read contents of directory");
+
+        assert_eq!(directory_scan.count(), 0);
+    }
+
+    /// Assert contents of directory `self` and `other_directory_path` perfectly match.
+    /// Structure and exact file contents are compared, but **symlinks and metadata are ignored**.
+    pub fn assert_directory_contents_match_directory<P>(
+        &self,
+        other_directory_path: P,
+    ) where
+        P: Into<PathBuf>,
+    {
+        assert_directory_contents_match_other_directory(
+            self.path(),
+            other_directory_path,
+        );
     }
 }
 

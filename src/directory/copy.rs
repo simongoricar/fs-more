@@ -32,6 +32,18 @@ pub struct DirectoryCopyOptions {
     pub maximum_copy_depth: Option<usize>,
 }
 
+#[allow(clippy::derivable_impls)]
+impl Default for DirectoryCopyOptions {
+    fn default() -> Self {
+        Self {
+            allow_existing_target_directory: false,
+            overwrite_existing_subdirectories: false,
+            overwrite_existing_files: false,
+            maximum_copy_depth: None,
+        }
+    }
+}
+
 
 /// Given a source root path, a target root path and the source path to rejoin,
 /// this function takes the `source_path_to_rejoin`, removes the prefix provided by `source_root_path`
@@ -93,11 +105,15 @@ pub struct FinishedDirectoryCopy {
 /// Represents a file copy or directory creation operation.
 ///
 /// For more details, see the [`build_directory_copy_queue`] function.
+#[derive(Clone, Debug)]
 enum QueuedOperation {
     CopyFile {
         source_path: PathBuf,
         source_size_bytes: u64,
         target_path: PathBuf,
+    },
+    CreateRootDirectory {
+        target_directory_path: PathBuf,
     },
     CreateDirectory {
         target_directory_path: PathBuf,
@@ -134,9 +150,10 @@ where
     }
 
     // Push the initial (root) directory.
-    operation_queue.push(QueuedOperation::CreateDirectory {
+    operation_queue.push(QueuedOperation::CreateRootDirectory {
         target_directory_path: target_directory_root_path.clone(),
     });
+
     directory_scan_queue.push(PendingDirectoryScan {
         source_directory_path: source_directory_root_path.clone(),
         depth: 0,
@@ -207,7 +224,7 @@ where
         }
     }
 
-    todo!();
+    Ok(operation_queue)
 }
 
 
@@ -238,10 +255,7 @@ where
     S: Into<PathBuf>,
     T: AsRef<Path>,
 {
-    let source_directory_path =
-        std::fs::canonicalize(source_directory_path.into())
-            .map_err(|error| DirectoryError::PathError { error })?;
-
+    let source_directory_path = source_directory_path.into();
     let target_directory_path = target_directory_path.as_ref();
 
     // Ensure the source directory path exists. We use `try_exists`
@@ -274,6 +288,8 @@ where
         }
     }
 
+    let source_directory_path = std::fs::canonicalize(source_directory_path)
+        .map_err(|error| DirectoryError::PathError { error })?;
 
     // Initialize a queue of file copy or directory create operations.
     let operation_queue = build_directory_copy_queue(
@@ -336,9 +352,42 @@ where
                 num_files_copied += 1;
                 total_bytes_copied += source_size_bytes;
             }
+            QueuedOperation::CreateRootDirectory {
+                target_directory_path,
+            } => {
+                if target_directory_path.exists() {
+                    if !target_directory_path.is_dir() {
+                        return Err(DirectoryError::TargetItemAlreadyExists);
+                    }
+
+                    if !options.allow_existing_target_directory {
+                        return Err(DirectoryError::TargetItemAlreadyExists);
+                    }
+
+                    continue;
+                }
+
+                std::fs::create_dir(target_directory_path).map_err(|error| {
+                    DirectoryError::UnableToAccessTarget { error }
+                })?;
+
+                num_directories_created += 1;
+            }
             QueuedOperation::CreateDirectory {
                 target_directory_path,
             } => {
+                if target_directory_path.exists() {
+                    if !target_directory_path.is_dir() {
+                        return Err(DirectoryError::TargetItemAlreadyExists);
+                    }
+
+                    if !options.overwrite_existing_subdirectories {
+                        return Err(DirectoryError::TargetItemAlreadyExists);
+                    }
+
+                    continue;
+                }
+
                 std::fs::create_dir(target_directory_path).map_err(|error| {
                     DirectoryError::UnableToAccessTarget { error }
                 })?;

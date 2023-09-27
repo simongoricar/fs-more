@@ -8,7 +8,7 @@ const SECOND_FILE_CONTENTS: &str = "This is the second file.";
 #[fs_harness_tree]
 pub struct SimpleFileHarness {
     #[root]
-    root: AssertableRootDirectory,
+    pub root: AssertableRootDirectory,
 
     #[file(
         path = "test_file.txt",
