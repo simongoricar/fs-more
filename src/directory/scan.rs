@@ -101,24 +101,17 @@ impl DirectoryScan {
             0,
         ));
 
-        while !directory_scan_queue.is_empty() {
-            let next_directory = directory_scan_queue.pop().expect(
-                "BUG: Can't pop item from Vec even though is_empty == false.",
-            );
-
+        while let Some(next_directory) = directory_scan_queue.pop() {
             let directory_iterator = std::fs::read_dir(&next_directory.path)
-                .map_err(
-                    |error| DirectoryScanError::UnableToReadDirectory { error },
-                )?;
+                .map_err(|error| DirectoryScanError::UnableToReadDirectory { error })?;
 
             for item in directory_iterator {
-                let item = item.map_err(|error| {
-                    DirectoryScanError::UnableToReadDirectoryItem { error }
-                })?;
+                let item =
+                    item.map_err(|error| DirectoryScanError::UnableToReadDirectoryItem { error })?;
 
-                let item_file_type = item.file_type().map_err(|error| {
-                    DirectoryScanError::UnableToReadDirectoryItem { error }
-                })?;
+                let item_file_type = item
+                    .file_type()
+                    .map_err(|error| DirectoryScanError::UnableToReadDirectoryItem { error })?;
 
                 if item_file_type.is_file() {
                     // Files are simply added to the resulting scan and no further action is needed.
@@ -129,12 +122,10 @@ impl DirectoryScan {
                     // We can do that by adding them to the scan queue.
                     if let Some(maximum_depth) = maximum_scan_depth {
                         if next_directory.depth < maximum_depth {
-                            directory_scan_queue.push(
-                                PendingDirectoryScan::new(
-                                    item.path(),
-                                    next_directory.depth + 1,
-                                ),
-                            );
+                            directory_scan_queue.push(PendingDirectoryScan::new(
+                                item.path(),
+                                next_directory.depth + 1,
+                            ));
                         } else {
                             is_deeper_than_scan_allows = true;
                         }
@@ -151,12 +142,8 @@ impl DirectoryScan {
                     // If an item is a symbolic link, we ignore it, unless `follow_symbolic_links` is enabled.
                     // If enabled, we follow it to its destination and append that *destination* path
                     // to the file or directory list.
-                    let real_path =
-                        std::fs::read_link(item.path()).map_err(|error| {
-                            DirectoryScanError::UnableToReadDirectoryItem {
-                                error,
-                            }
-                        })?;
+                    let real_path = std::fs::read_link(item.path())
+                        .map_err(|error| DirectoryScanError::UnableToReadDirectoryItem { error })?;
 
                     if !real_path.exists() {
                         continue;
@@ -168,22 +155,18 @@ impl DirectoryScan {
                         // Depth settings are respected if the destination is a directory.
                         if let Some(maximum_depth) = maximum_scan_depth {
                             if next_directory.depth < maximum_depth {
-                                directory_scan_queue.push(
-                                    PendingDirectoryScan::new(
-                                        real_path.clone(),
-                                        next_directory.depth + 1,
-                                    ),
-                                );
+                                directory_scan_queue.push(PendingDirectoryScan::new(
+                                    real_path.clone(),
+                                    next_directory.depth + 1,
+                                ));
                             } else {
                                 is_deeper_than_scan_allows = true;
                             }
                         } else {
-                            directory_scan_queue.push(
-                                PendingDirectoryScan::new(
-                                    real_path.clone(),
-                                    next_directory.depth + 1,
-                                ),
-                            );
+                            directory_scan_queue.push(PendingDirectoryScan::new(
+                                real_path.clone(),
+                                next_directory.depth + 1,
+                            ));
                         }
 
                         directory_list.push(real_path);
@@ -218,26 +201,21 @@ impl DirectoryScan {
         let mut total_bytes = 0;
 
         for file_path in &self.files {
-            let file_size_bytes = get_file_size_in_bytes(file_path).map_err(
-                |error| match error {
-                    FileSizeError::NotFound => {
-                        DirectorySizeScanError::FileNoLongerExists {
-                            path: file_path.clone(),
-                        }
-                    }
-                    FileSizeError::NotAFile => {
-                        DirectorySizeScanError::FileNoLongerExists {
-                            path: file_path.clone(),
-                        }
-                    }
+            let file_size_bytes =
+                get_file_size_in_bytes(file_path).map_err(|error| match error {
+                    FileSizeError::NotFound => DirectorySizeScanError::FileNoLongerExists {
+                        path: file_path.clone(),
+                    },
+                    FileSizeError::NotAFile => DirectorySizeScanError::FileNoLongerExists {
+                        path: file_path.clone(),
+                    },
                     FileSizeError::UnableToAccessFile { error } => {
                         DirectorySizeScanError::UnableToAccessFile { error }
                     }
                     FileSizeError::OtherIoError { error } => {
                         DirectorySizeScanError::OtherIoError { error }
                     }
-                },
-            )?;
+                })?;
 
             total_bytes += file_size_bytes;
         }

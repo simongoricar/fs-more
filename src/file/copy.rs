@@ -60,14 +60,12 @@ where
         Ok(exists) => {
             if exists {
                 // Ensure we don't try to copy the file into itself.
-                let canonicalized_source_path =
-                    source_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToAccessSourceFile { error }
-                    })?;
-                let canonicalized_target_path =
-                    target_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToAccessTargetFile { error }
-                    })?;
+                let canonicalized_source_path = source_file_path
+                    .canonicalize()
+                    .map_err(|error| FileError::UnableToAccessSourceFile { error })?;
+                let canonicalized_target_path = target_file_path
+                    .canonicalize()
+                    .map_err(|error| FileError::UnableToAccessTargetFile { error })?;
 
                 if canonicalized_source_path.eq(&canonicalized_target_path) {
                     return Err(FileError::SourceAndTargetAreTheSameFile);
@@ -159,8 +157,7 @@ where
         .open(source_file_path)
         .map_err(|error| FileError::OtherIoError { error })?;
 
-    let mut input_file_buffered =
-        BufReader::with_capacity(options.buffer_size, input_file);
+    let mut input_file_buffered = BufReader::with_capacity(options.buffer_size, input_file);
 
 
     let output_file = OpenOptions::new()
@@ -192,13 +189,12 @@ where
 
 
     // Unwrap writers and flush any remaining output.
-    let (mut output_file, mut copy_progress, mut progress_handler) =
-        output_file_buffered
-            .into_inner()
-            .map_err(|error| FileError::OtherIoError {
-                error: error.into_error(),
-            })?
-            .into_inner();
+    let (mut output_file, mut copy_progress, mut progress_handler) = output_file_buffered
+        .into_inner()
+        .map_err(|error| FileError::OtherIoError {
+            error: error.into_error(),
+        })?
+        .into_inner();
 
     output_file
         .flush()
@@ -218,13 +214,15 @@ where
 /// The target path must be the actual target file path and cannot be a directory.
 /// Returns the number of bytes moved (i.e. the file size).
 ///
+/// ## Progress reporting
 /// You must also provide a progress handler that receives a
-/// [`&FileProgress`][super::FileProgress] on each progress update.
+/// [`&FileProgress`][super::FileProgress] containing progress state.
+///
 /// You can control the progress update frequency with the
 /// [`options.progress_update_byte_interval`][FileCopyWithProgressOptions::progress_update_byte_interval] option.
-/// That option is the *minumum* amount of bytes written between two progress reports, meaning we can't guarantee
-/// a specific amount of progress reports per file size.
-/// We do, however, guarantee at least one progress report (the final one).
+/// This option is the *minumum* amount of bytes written between two progress reports.
+/// As such this function does not guarantee a specific amount of progress reports per file size.
+/// It does, however, guarantee at least one progress report: the final one, which happens when the file is completely copied.
 ///
 ///
 /// ## Options
@@ -263,14 +261,12 @@ where
         Ok(exists) => {
             if exists {
                 // Ensure we don't try to copy the file into itself.
-                let canonicalized_source_path =
-                    source_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToAccessSourceFile { error }
-                    })?;
-                let canonicalized_target_path =
-                    target_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToAccessTargetFile { error }
-                    })?;
+                let canonicalized_source_path = source_file_path
+                    .canonicalize()
+                    .map_err(|error| FileError::UnableToAccessSourceFile { error })?;
+                let canonicalized_target_path = target_file_path
+                    .canonicalize()
+                    .map_err(|error| FileError::UnableToAccessTargetFile { error })?;
 
                 if canonicalized_source_path.eq(&canonicalized_target_path) {
                     return Err(FileError::SourceAndTargetAreTheSameFile);

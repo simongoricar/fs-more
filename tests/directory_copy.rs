@@ -91,7 +91,25 @@ pub fn copy_directory_with_progress() -> TestResult<()> {
             allow_existing_target_directory: true,
             ..Default::default()
         },
-        |progress| last_progress = Some(progress.clone()),
+        |progress| {
+            if last_progress.is_none() {
+                last_progress = Some(progress.clone());
+                return;
+            };
+
+            let previous_progress = last_progress.as_ref().unwrap();
+            let progress_operation_index_delta = progress.current_operation_index - previous_progress.current_operation_index;
+
+            if progress_operation_index_delta != 0 && progress_operation_index_delta != 1 {
+                panic!(
+                    "copy_directory_with_progress reported non-consecutive operation indexes: {} and {}",
+                    previous_progress.current_operation_index,
+                    progress.current_operation_index
+                );
+            } 
+
+            last_progress = Some(progress.clone());
+        },
     )
     .unwrap_or_else(|error| {
         panic!(
@@ -107,6 +125,12 @@ pub fn copy_directory_with_progress() -> TestResult<()> {
     );
 
     let last_progress = last_progress.unwrap();
+
+    assert_eq!(
+        last_progress.current_operation_index + 1,
+        last_progress.total_operations,
+        "copy_directory_with_progress's last progress reported inconsistent operation indexes"
+    );
 
     assert_eq!(
         last_progress.bytes_finished,
