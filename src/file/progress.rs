@@ -1,7 +1,7 @@
 use std::io::Write;
 
 /// File copying or moving progress.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct FileProgress {
     /// Current number of bytes copied or moved to the destination.
     pub bytes_finished: u64,

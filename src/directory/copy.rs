@@ -2,7 +2,13 @@ use std::path::{Path, PathBuf};
 
 use crate::{
     error::{DirectoryError, FileError},
-    file::{copy_file, FileCopyOptions},
+    file::{
+        copy_file,
+        copy_file_with_progress,
+        FileCopyOptions,
+        FileCopyWithProgressOptions,
+        FileProgress,
+    },
 };
 
 /// Options that influence the [`copy_directory`] function.
@@ -112,9 +118,6 @@ enum QueuedOperation {
         source_size_bytes: u64,
         target_path: PathBuf,
     },
-    CreateRootDirectory {
-        target_directory_path: PathBuf,
-    },
     CreateDirectory {
         target_directory_path: PathBuf,
     },
@@ -125,6 +128,8 @@ enum QueuedOperation {
 /// this function builds a list of [`QueuedOperation`]s that are needed to fully
 /// (or up to the `maximum_depth` limit)
 /// copy the source directory to the target directory.
+///
+/// The queued operations do not include creation of the `target_directory_root_path` directory.
 fn build_directory_copy_queue<S, T>(
     source_directory_root_path: S,
     target_directory_root_path: T,
@@ -148,11 +153,6 @@ where
         source_directory_path: PathBuf,
         depth: usize,
     }
-
-    // Push the initial (root) directory.
-    operation_queue.push(QueuedOperation::CreateRootDirectory {
-        target_directory_path: target_directory_root_path.clone(),
-    });
 
     directory_scan_queue.push(PendingDirectoryScan {
         source_directory_path: source_directory_root_path.clone(),
@@ -255,41 +255,13 @@ where
     S: Into<PathBuf>,
     T: AsRef<Path>,
 {
-    let source_directory_path = source_directory_path.into();
-    let target_directory_path = target_directory_path.as_ref();
+    let source_directory_path =
+        validate_source_directory_path(source_directory_path.into())?;
 
-    // Ensure the source directory path exists. We use `try_exists`
-    // instead of `exists` to catch permission and other IO errors
-    // as distinct from the `DirectoryError::NotFound` error.
-    match source_directory_path.try_exists() {
-        Ok(exists) => {
-            if !exists {
-                return Err(DirectoryError::SourceRootDirectoryNotFound);
-            }
-        }
-        Err(error) => {
-            return Err(DirectoryError::UnableToAccessSource { error });
-        }
-    }
-
-    if !source_directory_path.is_dir() {
-        return Err(DirectoryError::SourceRootDirectoryIsNotADirectory);
-    }
-
-
-    match target_directory_path.try_exists() {
-        Ok(exists) => {
-            if exists && !options.allow_existing_target_directory {
-                return Err(DirectoryError::TargetItemAlreadyExists);
-            }
-        }
-        Err(error) => {
-            return Err(DirectoryError::UnableToAccessSource { error });
-        }
-    }
-
-    let source_directory_path = std::fs::canonicalize(source_directory_path)
-        .map_err(|error| DirectoryError::PathError { error })?;
+    let target_directory_path = validate_target_directory_path(
+        target_directory_path.as_ref(),
+        options.allow_existing_target_directory,
+    )?;
 
     // Initialize a queue of file copy or directory create operations.
     let operation_queue = build_directory_copy_queue(
@@ -310,6 +282,22 @@ where
 
     // TODO feature flag to use fs-err?
 
+    // Create root target directory if needed.
+    if target_directory_path.exists() {
+        if !target_directory_path.is_dir() {
+            return Err(DirectoryError::TargetItemAlreadyExists);
+        }
+
+        if !options.allow_existing_target_directory {
+            return Err(DirectoryError::TargetItemAlreadyExists);
+        }
+    } else {
+        std::fs::create_dir(target_directory_path)
+            .map_err(|error| DirectoryError::UnableToAccessTarget { error })?;
+
+        num_directories_created += 1;
+    }
+
     for operation in operation_queue {
         match operation {
             QueuedOperation::CopyFile {
@@ -318,7 +306,13 @@ where
                 target_path,
             } => {
                 if target_path.exists() {
-                    return Err(DirectoryError::TargetItemAlreadyExists);
+                    if !target_path.is_file() {
+                        return Err(DirectoryError::TargetItemAlreadyExists);
+                    }
+
+                    if !options.overwrite_existing_files {
+                        return Err(DirectoryError::TargetItemAlreadyExists);
+                    }
                 }
 
                 copy_file(
@@ -352,27 +346,6 @@ where
                 num_files_copied += 1;
                 total_bytes_copied += source_size_bytes;
             }
-            QueuedOperation::CreateRootDirectory {
-                target_directory_path,
-            } => {
-                if target_directory_path.exists() {
-                    if !target_directory_path.is_dir() {
-                        return Err(DirectoryError::TargetItemAlreadyExists);
-                    }
-
-                    if !options.allow_existing_target_directory {
-                        return Err(DirectoryError::TargetItemAlreadyExists);
-                    }
-
-                    continue;
-                }
-
-                std::fs::create_dir(target_directory_path).map_err(|error| {
-                    DirectoryError::UnableToAccessTarget { error }
-                })?;
-
-                num_directories_created += 1;
-            }
             QueuedOperation::CreateDirectory {
                 target_directory_path,
             } => {
@@ -404,7 +377,328 @@ where
     })
 }
 
-// TODO Write integration tests for directory functions.
+
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum DirectoryCopyOperation {
+    CreatingDirectory {
+        target_path: PathBuf,
+    },
+    CopyingFile {
+        target_path: PathBuf,
+        progress: FileProgress,
+    },
+}
+
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct DirectoryCopyProgress {
+    pub bytes_total: u64,
+
+    pub bytes_finished: u64,
+
+    pub files_copied: usize,
+
+    pub directories_created: usize,
+
+    // TODO Should there be an operation index to distinguish `current_operation`s?
+    pub current_operation: DirectoryCopyOperation,
+}
+
+/// Options that influence the [`copy_directory_with_progress`] function.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct DirectoryCopyWithProgressOptions {
+    /// Specifies whether you allow the target directory to exist before copying.
+    /// If `false`, it will be created as part of the directory copy operation.
+    pub allow_existing_target_directory: bool,
+
+    /// Specifies whether to allow target subdirectories to already exist
+    /// when copying.
+    ///
+    /// Only has an effect / makes sense if `allow_existing_target_directory` is `true`.
+    pub overwrite_existing_subdirectories: bool,
+
+    /// Specifies whether to overwrite an existing target file if it already exists before copying.
+    ///
+    /// Only has an effect / makes sense if `allow_existing_target_directory` is `true`.
+    pub overwrite_existing_files: bool,
+
+    /// Maximum depth of the source directory to copy.
+    ///
+    /// - `None` indicates no limit.
+    /// - `Some(0)` means a directory copy operation that copies only the files and
+    ///   creates directories directly in the root directory and doesn't scan any subdirectories.
+    /// - `Some(1)` includes the root directory's contents and one level of its subdirectories.
+    pub maximum_copy_depth: Option<usize>,
+
+    /// Internal buffer size (for both reading and writing) when copying filea,
+    /// defaults to 64 KiB.
+    pub buffer_size: usize,
+
+    /// *Minimum* amount of bytes written between two consecutive progress reports.
+    /// Defaults to 64 KiB.
+    ///
+    /// *Note that the interval can be larger.*
+    pub progress_update_byte_interval: u64,
+}
+
+impl Default for DirectoryCopyWithProgressOptions {
+    fn default() -> Self {
+        Self {
+            allow_existing_target_directory: false,
+            overwrite_existing_subdirectories: false,
+            overwrite_existing_files: false,
+            maximum_copy_depth: None,
+            // 64 KiB
+            buffer_size: 1024 * 64,
+            // 64 KiB
+            progress_update_byte_interval: 1024 * 64,
+        }
+    }
+}
+
+
+fn validate_source_directory_path(
+    source_directory_path: PathBuf,
+) -> Result<PathBuf, DirectoryError> {
+    // Ensure the source directory path exists. We use `try_exists`
+    // instead of `exists` to catch permission and other IO errors
+    // as distinct from the `DirectoryError::NotFound` error.
+    match source_directory_path.try_exists() {
+        Ok(exists) => {
+            if !exists {
+                return Err(DirectoryError::SourceRootDirectoryNotFound);
+            }
+        }
+        Err(error) => {
+            return Err(DirectoryError::UnableToAccessSource { error });
+        }
+    }
+
+    if !source_directory_path.is_dir() {
+        return Err(DirectoryError::SourceRootDirectoryIsNotADirectory);
+    }
+
+    std::fs::canonicalize(source_directory_path)
+        .map_err(|error| DirectoryError::PathError { error })
+}
+
+fn validate_target_directory_path(
+    target_directory_path: &Path,
+    allow_existing_target_directory: bool,
+) -> Result<&Path, DirectoryError> {
+    match target_directory_path.try_exists() {
+        Ok(exists) => {
+            if exists && !allow_existing_target_directory {
+                return Err(DirectoryError::TargetItemAlreadyExists);
+            }
+        }
+        Err(error) => {
+            return Err(DirectoryError::UnableToAccessSource { error });
+        }
+    }
+
+    Ok(target_directory_path)
+}
+
+/// TODO Add documentation.
+pub fn copy_directory_with_progress<S, T, F>(
+    source_directory_path: S,
+    target_directory_path: T,
+    options: DirectoryCopyWithProgressOptions,
+    mut progress_handler: F,
+) -> Result<FinishedDirectoryCopy, DirectoryError>
+where
+    S: Into<PathBuf>,
+    T: AsRef<Path>,
+    F: FnMut(&DirectoryCopyProgress),
+{
+    let source_directory_path =
+        validate_source_directory_path(source_directory_path.into())?;
+
+    let target_directory_path = validate_target_directory_path(
+        target_directory_path.as_ref(),
+        options.allow_existing_target_directory,
+    )?;
+
+    // Initialize a queue of file copy or directory create operations.
+    let operation_queue = build_directory_copy_queue(
+        source_directory_path,
+        target_directory_path,
+        options.maximum_copy_depth,
+    )?;
+
+    let bytes_total = operation_queue
+        .iter()
+        .filter_map(|item| match item {
+            QueuedOperation::CopyFile {
+                source_size_bytes, ..
+            } => Some(*source_size_bytes),
+            QueuedOperation::CreateDirectory { .. } => None,
+        })
+        .sum::<u64>();
+
+
+    let mut progress = DirectoryCopyProgress {
+        bytes_total,
+        bytes_finished: 0,
+        files_copied: 0,
+        directories_created: 0,
+        current_operation: DirectoryCopyOperation::CreatingDirectory {
+            target_path: target_directory_path.to_path_buf(),
+        },
+    };
+
+    // Create root target directory if needed.
+    if target_directory_path.exists() {
+        if !target_directory_path.is_dir() {
+            return Err(DirectoryError::TargetItemAlreadyExists);
+        }
+
+        if !options.allow_existing_target_directory {
+            return Err(DirectoryError::TargetItemAlreadyExists);
+        }
+    } else {
+        progress_handler(&progress);
+
+        std::fs::create_dir(target_directory_path)
+            .map_err(|error| DirectoryError::UnableToAccessTarget { error })?;
+
+        progress.directories_created += 1;
+    }
+
+
+    for operation in operation_queue {
+        match operation {
+            QueuedOperation::CopyFile {
+                source_path,
+                source_size_bytes,
+                target_path,
+            } => {
+                if target_path.exists() {
+                    if !target_path.is_file() {
+                        return Err(DirectoryError::TargetItemAlreadyExists);
+                    }
+
+                    if !options.overwrite_existing_files {
+                        return Err(DirectoryError::TargetItemAlreadyExists);
+                    }
+                }
+
+                progress.current_operation =
+                    DirectoryCopyOperation::CopyingFile {
+                        target_path: target_path.clone(),
+                        progress: FileProgress {
+                            bytes_finished: 0,
+                            bytes_total: source_size_bytes,
+                        },
+                    };
+
+                let mut did_update_with_fresh_total = false;
+                let bytes_copied_before = progress.bytes_finished;
+
+                let num_bytes_copied = copy_file_with_progress(
+                    source_path,
+                    target_path,
+                    FileCopyWithProgressOptions {
+                        overwrite_existing: options.overwrite_existing_files,
+                        skip_existing: false,
+                        buffer_size: options.buffer_size,
+                        progress_update_byte_interval: options
+                            .progress_update_byte_interval,
+                    },
+                    |new_file_progress| {
+                        if let DirectoryCopyOperation::CopyingFile {
+                            progress: file_progress, ..
+                        } = &mut progress.current_operation
+                        {
+                            // It is somewhat possible that a file is written to between the scanning phase and copying.
+                            // In that case, it is *possible* that the file size changes, which means we should listen
+                            // to the size `copy_file_with_progress` is reporting. There is no point
+                            // to doing this each update, so we do it only once.
+                            if !did_update_with_fresh_total {
+                                file_progress.bytes_total =
+                                new_file_progress.bytes_total;
+                                did_update_with_fresh_total = true;
+                            }
+
+                            file_progress.bytes_finished =
+                            new_file_progress.bytes_finished;
+                            progress.bytes_finished = bytes_copied_before + file_progress.bytes_finished;
+                            progress_handler(&progress);
+                        } else {
+                            panic!("bug: `progress.current_operation` miraculously doesn't match CopyingFile");
+                        }
+                    },
+                )
+                .map_err(|error| match error {
+                    FileError::NotFound => DirectoryError::SourceItemNotFound,
+                    FileError::NotAFile => DirectoryError::SourceItemNotFound,
+                    FileError::UnableToAccessSourceFile { error } => {
+                        DirectoryError::UnableToAccessSource { error }
+                    }
+                    FileError::AlreadyExists => {
+                        DirectoryError::TargetItemAlreadyExists
+                    }
+                    FileError::UnableToAccessTargetFile { error } => {
+                        DirectoryError::UnableToAccessTarget { error }
+                    }
+                    FileError::SourceAndTargetAreTheSameFile => {
+                        DirectoryError::SourceAndTargetAreTheSame
+                    }
+                    FileError::OtherIoError { error } => {
+                        DirectoryError::OtherIoError { error }
+                    }
+                })?;
+
+                progress.files_copied += 1;
+
+                // FIXME Fix attempt to subtrack with overflow here
+                debug_assert_eq!(
+                    progress.bytes_finished - num_bytes_copied,
+                    bytes_copied_before,
+                    "bug: reported incorrect amount of copied bytes"
+                );
+            }
+            QueuedOperation::CreateDirectory {
+                target_directory_path,
+            } => {
+                if target_directory_path.exists() {
+                    if !target_directory_path.is_dir() {
+                        return Err(DirectoryError::TargetItemAlreadyExists);
+                    }
+
+                    if !options.overwrite_existing_subdirectories {
+                        return Err(DirectoryError::TargetItemAlreadyExists);
+                    }
+
+                    continue;
+                }
+
+                progress.current_operation =
+                    DirectoryCopyOperation::CreatingDirectory {
+                        target_path: target_directory_path.clone(),
+                    };
+                progress_handler(&progress);
+
+                std::fs::create_dir(target_directory_path).map_err(|error| {
+                    DirectoryError::UnableToAccessTarget { error }
+                })?;
+
+                progress.directories_created += 1;
+            }
+        }
+    }
+
+    progress_handler(&progress);
+
+    Ok(FinishedDirectoryCopy {
+        total_bytes_copied: progress.bytes_finished,
+        num_files_copied: progress.files_copied,
+        num_directories_created: progress.directories_created,
+    })
+}
+
 
 #[cfg(test)]
 mod tests {

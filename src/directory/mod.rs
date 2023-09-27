@@ -4,6 +4,14 @@ mod copy;
 mod scan;
 mod size;
 
-pub use copy::{copy_directory, DirectoryCopyOptions, FinishedDirectoryCopy};
+pub use copy::{
+    copy_directory,
+    copy_directory_with_progress,
+    DirectoryCopyOperation,
+    DirectoryCopyOptions,
+    DirectoryCopyProgress,
+    DirectoryCopyWithProgressOptions,
+    FinishedDirectoryCopy,
+};
 pub use scan::DirectoryScan;
 pub use size::get_directory_size;
