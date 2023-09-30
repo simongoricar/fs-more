@@ -89,22 +89,21 @@ pub struct DirectoryCopyOptions {
     /// If `false`, it will be created as part of the directory copy operation.
     pub allow_existing_target_directory: bool,
 
-    /// Specifies whether to allow target subdirectories to already exist
-    /// when copying.
-    ///
-    /// Only has an effect / makes sense if `allow_existing_target_directory` is `true`.
+    /// If enabled, [`copy_directory`] will return
+    /// `Err(`[`DirectoryError::TargetItemAlreadyExists`][crate::error::DirectoryError::TargetItemAlreadyExists]`)`
+    /// when a target directory or any of subdirectories that would otherwise be created already exist.
     pub overwrite_existing_subdirectories: bool,
 
-    /// Specifies whether to overwrite an existing target file if it already exists before copying.
-    ///
-    /// Only has an effect / makes sense if `allow_existing_target_directory` is `true`.
+    /// If enabled, [`copy_directory`] will return
+    /// `Err(`[`DirectoryError::TargetItemAlreadyExists`][crate::error::DirectoryError::TargetItemAlreadyExists]`)`
+    /// when a target file we would otherwise create and copy into already exists.
     pub overwrite_existing_files: bool,
 
     /// Maximum depth of the source directory to copy.
     ///
     /// - `None` indicates no limit.
     /// - `Some(0)` means a directory copy operation that copies only the files and
-    ///   creates directories directly in the root directory and doesn't scan any subdirectories.
+    ///   creates directories found directly in the root directory, ignoring any subdirectories.
     /// - `Some(1)` includes the root directory's contents and one level of its subdirectories.
     pub maximum_copy_depth: Option<usize>,
 }

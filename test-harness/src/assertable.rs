@@ -295,6 +295,14 @@ impl AssertableRootDirectory {
         assert_eq!(directory_scan.count(), 0);
     }
 
+    /// Assert the directory is not completely empty.
+    pub fn assert_is_not_empty(&self) {
+        let directory_scan =
+            std::fs::read_dir(self.path()).expect("failed to read contents of directory");
+
+        assert!(directory_scan.count() > 0);
+    }
+
     /// Assert contents of directory `self` and `other_directory_path` perfectly match.
     /// Structure and exact file contents are compared, but **symlinks and metadata are ignored**.
     pub fn assert_directory_contents_match_directory<P>(&self, other_directory_path: P)
@@ -399,6 +407,14 @@ impl AssertableDirectoryPath {
             std::fs::read_dir(self.path()).expect("failed to read contents of directory");
 
         assert_eq!(directory_scan.count(), 0);
+    }
+
+    /// Assert the directory is not completely empty.
+    pub fn assert_is_not_empty(&self) {
+        let directory_scan =
+            std::fs::read_dir(self.path()).expect("failed to read contents of directory");
+
+        assert!(directory_scan.count() > 0);
     }
 
     /// Assert contents of directory `self` and `other_directory_path` perfectly match.
