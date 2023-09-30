@@ -9,6 +9,8 @@ edition = "2021"
 members = ["test-harness", "test-harness-derive"]
 
 [dependencies]
+dunce = "1.0.4"
+path-clean = "1.0.1"
 thiserror = "1.0.48"
 
 [dev-dependencies]

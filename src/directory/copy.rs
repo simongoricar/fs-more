@@ -17,9 +17,7 @@ use crate::{
 /// - is a directory.
 ///
 /// The returned path is a canonicalized version of the provided path.
-fn validate_source_directory_path(
-    source_directory_path: PathBuf,
-) -> Result<PathBuf, DirectoryError> {
+fn validate_source_directory_path(source_directory_path: &Path) -> Result<PathBuf, DirectoryError> {
     // Ensure the source directory path exists. We use `try_exists`
     // instead of `exists` to catch permission and other IO errors
     // as distinct from the `DirectoryError::NotFound` error.
@@ -35,25 +33,31 @@ fn validate_source_directory_path(
     }
 
     if !source_directory_path.is_dir() {
-        return Err(DirectoryError::SourceRootDirectoryIsNotADirectory);
+        return Err(DirectoryError::SourceRootDirectoryNotADirectory);
     }
 
-    std::fs::canonicalize(source_directory_path)
-        .map_err(|error| DirectoryError::PathError { error })
+    let canonicalized_path = std::fs::canonicalize(source_directory_path)
+        .map_err(|error| DirectoryError::OtherIoError { error })?;
+
+    Ok(dunce::simplified(&canonicalized_path).to_path_buf())
 }
 
 /// Ensures the given target directory path is valid:
 /// This means either that:
 /// - it exists (if `allow_existing_target_directory == true`, otherwise, this is an `Err`),
 /// - it doesn't exist.
+///
+/// The returned path is a cleaned `target_directory_path` (with the `path_clean` library).
 fn validate_target_directory_path(
     target_directory_path: &Path,
     allow_existing_target_directory: bool,
-) -> Result<&Path, DirectoryError> {
+) -> Result<PathBuf, DirectoryError> {
     match target_directory_path.try_exists() {
         Ok(exists) => {
             if exists && !allow_existing_target_directory {
-                return Err(DirectoryError::TargetItemAlreadyExists);
+                return Err(DirectoryError::TargetItemAlreadyExists {
+                    path: target_directory_path.to_path_buf(),
+                });
             }
         }
         Err(error) => {
@@ -61,7 +65,21 @@ fn validate_target_directory_path(
         }
     }
 
-    Ok(target_directory_path)
+    let clean_path = path_clean::clean(target_directory_path);
+
+    Ok(clean_path)
+}
+
+fn validate_source_target_directory_pair(
+    source_directory_path: &Path,
+    target_directory_path: &Path,
+) -> Result<(), DirectoryError> {
+    // Ensure `target_directory_path` isn't equal or a subdirectory of `source_directory_path`˙.
+    if target_directory_path.starts_with(source_directory_path) {
+        return Err(DirectoryError::InvalidTargetDirectoryPath);
+    }
+
+    Ok(())
 }
 
 /// Options that influence the [`copy_directory`] function.
@@ -285,6 +303,8 @@ where
 ///
 /// `target_directory_path` represents a path to the directory that will contain `source_directory_path`'s contents.
 /// Barring explicit options, the path must point to a non-existing path.
+/// The `target_directory_path` is also cleaned with [`path_clean`](../../path_clean) before it's used.
+///
 /// For more information, look at these three options from the [`DirectoryCopyOptions`] struct:
 /// - [`allow_existing_target_directory`][DirectoryCopyOptions::allow_existing_target_directory],
 /// - [`overwrite_existing_subdirectories`][DirectoryCopyOptions::overwrite_existing_subdirectories], and
@@ -309,20 +329,21 @@ pub fn copy_directory<S, T>(
     options: DirectoryCopyOptions,
 ) -> Result<FinishedDirectoryCopy, DirectoryError>
 where
-    S: Into<PathBuf>,
+    S: AsRef<Path>,
     T: AsRef<Path>,
 {
-    let source_directory_path = validate_source_directory_path(source_directory_path.into())?;
-
+    let source_directory_path = validate_source_directory_path(source_directory_path.as_ref())?;
     let target_directory_path = validate_target_directory_path(
         target_directory_path.as_ref(),
         options.allow_existing_target_directory,
     )?;
 
+    validate_source_target_directory_pair(&source_directory_path, &target_directory_path)?;
+
     // Initialize a queue of file copy or directory create operations.
     let operation_queue = build_directory_copy_queue(
-        source_directory_path,
-        target_directory_path,
+        &source_directory_path,
+        &target_directory_path,
         options.maximum_copy_depth,
     )?;
 
@@ -341,11 +362,15 @@ where
     // Create root target directory if needed.
     if target_directory_path.exists() {
         if !target_directory_path.is_dir() {
-            return Err(DirectoryError::TargetItemAlreadyExists);
+            return Err(DirectoryError::TargetItemAlreadyExists {
+                path: target_directory_path.to_path_buf(),
+            });
         }
 
         if !options.allow_existing_target_directory {
-            return Err(DirectoryError::TargetItemAlreadyExists);
+            return Err(DirectoryError::TargetItemAlreadyExists {
+                path: target_directory_path.to_path_buf(),
+            });
         }
     } else {
         std::fs::create_dir(target_directory_path)
@@ -363,34 +388,40 @@ where
             } => {
                 if target_path.exists() {
                     if !target_path.is_file() {
-                        return Err(DirectoryError::TargetItemAlreadyExists);
+                        return Err(DirectoryError::TargetItemAlreadyExists {
+                            path: target_path.clone(),
+                        });
                     }
 
                     if !options.overwrite_existing_files {
-                        return Err(DirectoryError::TargetItemAlreadyExists);
+                        return Err(DirectoryError::TargetItemAlreadyExists {
+                            path: target_path.clone(),
+                        });
                     }
                 }
 
                 copy_file(
                     source_path,
-                    target_path,
+                    &target_path,
                     FileCopyOptions {
                         overwrite_existing: options.overwrite_existing_files,
                         skip_existing: false,
                     },
                 )
                 .map_err(|error| match error {
-                    FileError::NotFound => DirectoryError::SourceItemNotFound,
-                    FileError::NotAFile => DirectoryError::SourceItemNotFound,
+                    FileError::NotFound => DirectoryError::SourceContentsInvalid,
+                    FileError::NotAFile => DirectoryError::SourceContentsInvalid,
                     FileError::UnableToAccessSourceFile { error } => {
                         DirectoryError::UnableToAccessSource { error }
                     }
-                    FileError::AlreadyExists => DirectoryError::TargetItemAlreadyExists,
+                    FileError::AlreadyExists => DirectoryError::TargetItemAlreadyExists {
+                        path: target_path.clone(),
+                    },
                     FileError::UnableToAccessTargetFile { error } => {
                         DirectoryError::UnableToAccessTarget { error }
                     }
                     FileError::SourceAndTargetAreTheSameFile => {
-                        DirectoryError::SourceAndTargetAreTheSame
+                        DirectoryError::InvalidTargetDirectoryPath
                     }
                     FileError::OtherIoError { error } => DirectoryError::OtherIoError { error },
                 })?;
@@ -403,11 +434,15 @@ where
             } => {
                 if target_directory_path.exists() {
                     if !target_directory_path.is_dir() {
-                        return Err(DirectoryError::TargetItemAlreadyExists);
+                        return Err(DirectoryError::TargetItemAlreadyExists {
+                            path: target_directory_path.clone(),
+                        });
                     }
 
                     if !options.overwrite_existing_subdirectories {
-                        return Err(DirectoryError::TargetItemAlreadyExists);
+                        return Err(DirectoryError::TargetItemAlreadyExists {
+                            path: target_directory_path.clone(),
+                        });
                     }
 
                     continue;
@@ -577,11 +612,15 @@ where
 {
     if target_path.exists() {
         if !target_path.is_file() {
-            return Err(DirectoryError::TargetItemAlreadyExists);
+            return Err(DirectoryError::TargetItemAlreadyExists {
+                path: target_path.clone(),
+            });
         }
 
         if !options.overwrite_existing_files {
-            return Err(DirectoryError::TargetItemAlreadyExists);
+            return Err(DirectoryError::TargetItemAlreadyExists {
+                path: target_path.clone(),
+            });
         }
     }
 
@@ -602,7 +641,7 @@ where
 
     let num_bytes_copied = copy_file_with_progress(
         source_path,
-        target_path,
+        &target_path,
         FileCopyWithProgressOptions {
             overwrite_existing: options.overwrite_existing_files,
             skip_existing: false,
@@ -638,16 +677,18 @@ where
             )
     )
     .map_err(|error| match error {
-        FileError::NotFound => DirectoryError::SourceItemNotFound,
-        FileError::NotAFile => DirectoryError::SourceItemNotFound,
+        FileError::NotFound => DirectoryError::SourceContentsInvalid,
+        FileError::NotAFile => DirectoryError::SourceContentsInvalid,
         FileError::UnableToAccessSourceFile { error } => {
             DirectoryError::UnableToAccessSource { error }
         }
-        FileError::AlreadyExists => DirectoryError::TargetItemAlreadyExists,
+        FileError::AlreadyExists => DirectoryError::TargetItemAlreadyExists {
+            path: target_path.clone(),
+        },
         FileError::UnableToAccessTargetFile { error } => {
             DirectoryError::UnableToAccessTarget { error }
         }
-        FileError::SourceAndTargetAreTheSameFile => DirectoryError::SourceAndTargetAreTheSame,
+        FileError::SourceAndTargetAreTheSameFile => DirectoryError::InvalidTargetDirectoryPath,
         FileError::OtherIoError { error } => DirectoryError::OtherIoError { error },
     })?;
 
@@ -681,11 +722,15 @@ where
 {
     if target_directory_path.exists() {
         if !target_directory_path.is_dir() {
-            return Err(DirectoryError::TargetItemAlreadyExists);
+            return Err(DirectoryError::TargetItemAlreadyExists {
+                path: target_directory_path.clone(),
+            });
         }
 
         if !options.overwrite_existing_subdirectories {
-            return Err(DirectoryError::TargetItemAlreadyExists);
+            return Err(DirectoryError::TargetItemAlreadyExists {
+                path: target_directory_path.clone(),
+            });
         }
 
         return Ok(());
@@ -752,20 +797,22 @@ pub fn copy_directory_with_progress<S, T, F>(
     mut progress_handler: F,
 ) -> Result<FinishedDirectoryCopy, DirectoryError>
 where
-    S: Into<PathBuf>,
+    S: AsRef<Path>,
     T: AsRef<Path>,
     F: FnMut(&DirectoryCopyProgress),
 {
-    let source_directory_path = validate_source_directory_path(source_directory_path.into())?;
+    let source_directory_path = validate_source_directory_path(source_directory_path.as_ref())?;
     let target_directory_path = validate_target_directory_path(
         target_directory_path.as_ref(),
         options.allow_existing_target_directory,
     )?;
 
+    validate_source_target_directory_pair(&source_directory_path, &target_directory_path)?;
+
     // Initialize a queue of file copy or directory create operations.
     let operation_queue = build_directory_copy_queue(
-        source_directory_path,
-        target_directory_path,
+        &source_directory_path,
+        &target_directory_path,
         options.maximum_copy_depth,
     )?;
 
@@ -782,11 +829,15 @@ where
     // Create root target directory if needed.
     let mut progress = if target_directory_path.exists() {
         if !target_directory_path.is_dir() {
-            return Err(DirectoryError::TargetItemAlreadyExists);
+            return Err(DirectoryError::TargetItemAlreadyExists {
+                path: target_directory_path.to_path_buf(),
+            });
         }
 
         if !options.allow_existing_target_directory {
-            return Err(DirectoryError::TargetItemAlreadyExists);
+            return Err(DirectoryError::TargetItemAlreadyExists {
+                path: target_directory_path.to_path_buf(),
+            });
         }
 
 

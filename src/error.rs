@@ -94,25 +94,26 @@ pub enum FileSizeError {
 /// Represents an error state when copying or moving a directory.
 #[derive(Error, Debug)]
 pub enum DirectoryError {
-    /// The root source directory (the directory you want to copy) cannot be found.
-    #[error("source directory path (root) does not exist")]
+    /// The root source directory (the directory you want to copy from) cannot be found.
+    #[error("provided source directory path does not exist")]
     SourceRootDirectoryNotFound,
 
     /// The provided source directory path is not a directory.
     #[error("provided source directory path is not a directory")]
-    SourceRootDirectoryIsNotADirectory,
+    SourceRootDirectoryNotADirectory,
 
-    /// A directory or file in the source directory has dissapeared since being scanned
-    /// by the same function.
-    #[error("a directory or file inside the source directory has dissapeared mid-copy")]
-    SourceItemNotFound,
+    /// The target directory path points to an invalid location, because (one of):
+    /// - source and target directory are the same
+    /// - target directory is a subdirectory of the source directory.
+    #[error("provided target directory path points to an invalid location")]
+    InvalidTargetDirectoryPath,
 
-    // TODO Rework and reword this.
-    /// Canonicalization or other path-related error.
-    #[error("path error: {error}")]
-    PathError { error: std::io::Error },
+    /// A directory or file in the source directory
+    /// has disappeared since being scanned by the same function.
+    #[error("a directory or file inside the source directory has disappeared")]
+    SourceContentsInvalid,
 
-    /// A source directory or file cannot be accessed
+    /// A source directory or file cannot be read
     /// (e.g. due to missing permissions).
     ///
     /// The inner [`std::io::Error`] will likely describe the real cause of this error.
@@ -126,14 +127,10 @@ pub enum DirectoryError {
     #[error("unable to access target directory or file")]
     UnableToAccessTarget { error: std::io::Error },
 
-    /// The target directory or file already exists.
+    /// A target directory or file already exists.
+    /// The `path` field contains the path that already existed and caused this error.
     #[error("target directory or file already exists")]
-    TargetItemAlreadyExists,
-
-    // TODO Is this used?
-    /// The source and target paths point to the same path.
-    #[error("source and target path are the same")]
-    SourceAndTargetAreTheSame,
+    TargetItemAlreadyExists { path: PathBuf },
 
     /// A scanned subdirectory's path is not inside the root directory.
     #[error("a scanned subdirectory's path is not inside the root directory")]
@@ -171,10 +168,11 @@ pub enum DirectorySizeScanError {
     #[error("provided directory path is not a directory nor a symbolic link to one")]
     RootIsNotADirectory,
 
-    /// A file that was scanned on initialization of [`DirectoryScan`][crate::directory::DirectoryScan]
+    /// A file or directory that was scanned on initialization
+    /// of [`DirectoryScan`][crate::directory::DirectoryScan]
     /// is no longer there or no longer a file.
-    #[error("scanned file no longer exists or isn't a file anymore: {path}")]
-    FileNoLongerExists { path: PathBuf },
+    #[error("scanned file or directory no longer exists or isn't a file anymore: {path}")]
+    EntryNoLongerExists { path: PathBuf },
 
     /// The file cannot be accessed (e.g. due to missing permissions).
     ///

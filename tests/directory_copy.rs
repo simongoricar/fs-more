@@ -1,8 +1,12 @@
-use fs_more::directory::{
-    DirectoryCopyOptions,
-    DirectoryCopyProgress,
-    DirectoryCopyWithProgressOptions,
-    DirectoryScan,
+use assert_matches::assert_matches;
+use fs_more::{
+    directory::{
+        DirectoryCopyOptions,
+        DirectoryCopyProgress,
+        DirectoryCopyWithProgressOptions,
+        DirectoryScan,
+    },
+    error::DirectoryError,
 };
 use fs_more_test_harness::{
     error::TestResult,
@@ -179,5 +183,103 @@ pub fn copy_directory_with_progress() -> TestResult<()> {
 
     harness.destroy()?;
     empty_harness.destroy()?;
+    Ok(())
+}
+
+
+#[test]
+pub fn disallow_copy_directory_into_itself() -> TestResult<()> {
+    let harness = DeepTreeHarness::new()?;
+
+    let copy_result = fs_more::directory::copy_directory(
+        harness.root.path(),
+        harness.root.path(),
+        DirectoryCopyOptions {
+            allow_existing_target_directory: true,
+            ..Default::default()
+        },
+    );
+
+    assert_matches!(
+        copy_result,
+        Err(DirectoryError::InvalidTargetDirectoryPath),
+        "copy_directory should have errored when trying to copy a directory into itself"
+    );
+
+    harness.destroy()?;
+    Ok(())
+}
+
+#[test]
+pub fn disallow_copy_directory_into_subdirectory_of_itself() -> TestResult<()> {
+    let harness = DeepTreeHarness::new()?;
+
+    let copy_result = fs_more::directory::copy_directory(
+        harness.root.path(),
+        harness.dir_world.path(),
+        DirectoryCopyOptions {
+            allow_existing_target_directory: true,
+            ..Default::default()
+        },
+    );
+
+    assert_matches!(
+        copy_result,
+        Err(DirectoryError::InvalidTargetDirectoryPath),
+        "copy_directory should have errored when trying to \
+        copy a directory into a subdirectory of itself"
+    );
+
+    harness.destroy()?;
+    Ok(())
+}
+
+#[test]
+pub fn disallow_copy_directory_with_progress_into_itself() -> TestResult<()> {
+    let harness = DeepTreeHarness::new()?;
+
+    let copy_result = fs_more::directory::copy_directory_with_progress(
+        harness.root.path(),
+        harness.root.path(),
+        DirectoryCopyWithProgressOptions {
+            allow_existing_target_directory: true,
+            ..Default::default()
+        },
+        |_| {},
+    );
+
+    assert_matches!(
+        copy_result,
+        Err(DirectoryError::InvalidTargetDirectoryPath),
+        "copy_directory_with_progress should have errored when trying to \
+        copy a directory into itself"
+    );
+
+    harness.destroy()?;
+    Ok(())
+}
+
+#[test]
+pub fn disallow_copy_directory_with_progress_into_subdirectory_of_itself() -> TestResult<()> {
+    let harness = DeepTreeHarness::new()?;
+
+    let copy_result = fs_more::directory::copy_directory_with_progress(
+        harness.root.path(),
+        harness.dir_world.path(),
+        DirectoryCopyWithProgressOptions {
+            allow_existing_target_directory: true,
+            ..Default::default()
+        },
+        |_| {},
+    );
+
+    assert_matches!(
+        copy_result,
+        Err(DirectoryError::InvalidTargetDirectoryPath),
+        "copy_directory_with_progress should have errored when trying to \
+        copy a directory into a subdirectory of itself"
+    );
+
+    harness.destroy()?;
     Ok(())
 }

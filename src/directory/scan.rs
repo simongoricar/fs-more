@@ -186,11 +186,11 @@ impl DirectoryScan {
 
     /// Returns a total size of the scanned files in bytes.
     ///
-    /// *Be careful:* This goes over all the scanned files and queries their size.
-    /// This means you get an up-to-date directory size if you call this multiple times
+    /// *Be careful:* This goes over all the scanned files and directories and queries their size.
+    /// This means you get a fully up-to-date directory size if you happen to call this multiple times
     /// after modifying the files, but it also means that it will return an `Err` with
-    /// [`DirectorySizeScanError::FileNoLongerExists`][crate::error::DirectorySizeScanError::FileNoLongerExists]
-    /// if some file that was previously scanned has been removed since.
+    /// [`DirectorySizeScanError::EntryNoLongerExists`][crate::error::DirectorySizeScanError::EntryNoLongerExists]
+    /// if some file or directory that was previously scanned has been removed since.
     ///
     /// *Be careful:* if you initialized [`DirectoryScan`][Self] with a depth parameter
     /// that is smaller than the actual depth of the directory tree you're scanning,
@@ -203,10 +203,10 @@ impl DirectoryScan {
         for file_path in &self.files {
             let file_size_bytes =
                 get_file_size_in_bytes(file_path).map_err(|error| match error {
-                    FileSizeError::NotFound => DirectorySizeScanError::FileNoLongerExists {
+                    FileSizeError::NotFound => DirectorySizeScanError::EntryNoLongerExists {
                         path: file_path.clone(),
                     },
-                    FileSizeError::NotAFile => DirectorySizeScanError::FileNoLongerExists {
+                    FileSizeError::NotAFile => DirectorySizeScanError::EntryNoLongerExists {
                         path: file_path.clone(),
                     },
                     FileSizeError::UnableToAccessFile { error } => {
@@ -218,6 +218,17 @@ impl DirectoryScan {
                 })?;
 
             total_bytes += file_size_bytes;
+        }
+
+        for directory_path in &self.directories {
+            let directory_size_bytes = directory_path
+                .metadata()
+                .map_err(|_| DirectorySizeScanError::EntryNoLongerExists {
+                    path: directory_path.to_path_buf(),
+                })?
+                .len();
+
+            total_bytes += directory_size_bytes;
         }
 
         Ok(total_bytes)
