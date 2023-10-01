@@ -149,7 +149,7 @@ name = "fs-more-test-harness"
 version = "0.1.0"
 dependencies = [
  "assert_fs",
- "fs-more-test-harness-derive",
+ "fs-more-test-harness-macros",
  "once_cell",
  "rand",
  "rand_chacha",
@@ -157,7 +157,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fs-more-test-harness-derive"
+name = "fs-more-test-harness-macros"
 version = "0.1.0"
 dependencies = [
  "proc-macro-error",

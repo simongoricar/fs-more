@@ -1,4 +1,4 @@
-use fs_more_test_harness_derive::fs_harness_tree;
+use fs_more_test_harness_macros::fs_harness_tree;
 
 use crate::assertable::{AssertableFilePath, AssertableRootDirectory};
 

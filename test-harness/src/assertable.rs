@@ -228,7 +228,7 @@ pub enum AssertableFilePathError {
 ///
 /// Allows the user to assert certain things, such as the root directory existing or not.
 ///
-/// Mainly intended to be used with the [`FilesystemTreeHarness`](../../fs_more_test_harness_derive/derive.FilesystemTreeHarness.html)
+/// Mainly intended to be used with the [`FilesystemTreeHarness`](../../fs_more_test_harness_macros/derive.FilesystemTreeHarness.html)
 /// macro, but can also be used standalone, see the [`new`][Self::new] initialization method.
 pub struct AssertableRootDirectory {
     #[allow(dead_code)]
@@ -323,7 +323,7 @@ impl AssertableRootDirectory {
 ///
 /// Allows the user to assert certain things, such as the directory existing or not.
 ///
-/// Mainly intended to be used with the [`FilesystemTreeHarness`](../../fs_more_test_harness_derive/derive.FilesystemTreeHarness.html)
+/// Mainly intended to be used with the [`FilesystemTreeHarness`](../../fs_more_test_harness_macros/derive.FilesystemTreeHarness.html)
 /// macro, but can also be used standalone, see the [`from_path`][Self::from_path] initialization method.
 pub struct AssertableDirectoryPath {
     /// Directory path.
@@ -332,7 +332,7 @@ pub struct AssertableDirectoryPath {
 
 impl AssertableDirectoryPath {
     /// *Warning:* this initialization method is intended for the
-    /// [`FilesystemTreeHarness`](../../fs_more_test_harness_derive/derive.FilesystemTreeHarness.html)
+    /// [`FilesystemTreeHarness`](../../fs_more_test_harness_macros/derive.FilesystemTreeHarness.html)
     /// procedural macro - as such, ignore this method in your own uses.
     pub fn from_child_path(child_path: ChildPath) -> Self {
         Self {
@@ -432,7 +432,7 @@ impl AssertableDirectoryPath {
 ///
 /// Allows the user to assert certain things, such as the file existing or not, or its contents.
 ///
-/// Mainly intended to be used with the [`FilesystemTreeHarness`](../../fs_more_test_harness_derive/derive.FilesystemTreeHarness.html)
+/// Mainly intended to be used with the [`FilesystemTreeHarness`](../../fs_more_test_harness_macros/derive.FilesystemTreeHarness.html)
 /// macro, but can also be used standalone, see these initialization methods:
 /// - [`from_path_pure`][Self::from_path_pure] and
 /// - [`from_path_with_expected_content`][Self::from_path_with_expected_content].
@@ -460,7 +460,7 @@ pub struct AssertableFilePath {
 
 impl AssertableFilePath {
     /// *Warning:* this initialization method is intended for the
-    /// [`FilesystemTreeHarness`](../../fs_more_test_harness_derive/derive.FilesystemTreeHarness.html)
+    /// [`FilesystemTreeHarness`](../../fs_more_test_harness_macros/derive.FilesystemTreeHarness.html)
     /// procedural macro - as such, ignore this method in your own uses.
     pub fn from_child_path(child_path: ChildPath, original_contents: &'static [u8]) -> Self {
         Self {

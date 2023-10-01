@@ -1,5 +1,5 @@
 [package]
-name = "fs-more-test-harness-derive"
+name = "fs-more-test-harness-macros"
 version = "0.1.0"
 edition = "2021"
 
