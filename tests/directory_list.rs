@@ -125,6 +125,11 @@ pub fn scan_directory_with_limited_depth() -> TestResult<()> {
 pub fn directory_size_via_directory_scan() -> TestResult<()> {
     let harness = SimpleTreeHarness::new()?;
 
+    let actual_size_in_bytes = harness.binary_file_a.path().metadata().unwrap().len()
+        + harness.binary_file_b.path().metadata().unwrap().len()
+        + harness.subdirectory_b.path().metadata().unwrap().len();
+
+
     let scan_result =
         fs_more::directory::DirectoryScan::scan_with_options(harness.root.path(), None, false);
 
@@ -144,8 +149,7 @@ pub fn directory_size_via_directory_scan() -> TestResult<()> {
 
     // One 32 KiB file, one 64 KiB file.
     assert_eq!(
-        size_in_bytes,
-        1024 * (32 + 64),
+        size_in_bytes, actual_size_in_bytes,
         "Unexpected total size in bytes (expected one 32 KiB and one 64 KiB file)"
     );
 
@@ -157,6 +161,10 @@ pub fn directory_size_via_directory_scan() -> TestResult<()> {
 #[test]
 pub fn directory_size_via_directory_scan_with_depth_limit() -> TestResult<()> {
     let harness = SimpleTreeHarness::new()?;
+
+    let actual_size_in_bytes = harness.binary_file_a.path().metadata().unwrap().len()
+        + harness.subdirectory_b.path().metadata().unwrap().len();
+
 
     let scan_result =
         fs_more::directory::DirectoryScan::scan_with_options(harness.root.path(), Some(0), false);
@@ -177,8 +185,7 @@ pub fn directory_size_via_directory_scan_with_depth_limit() -> TestResult<()> {
 
     // Just one 32 KiB file.
     assert_eq!(
-        size_in_bytes,
-        1024 * 32,
+        size_in_bytes, actual_size_in_bytes,
         "Unexpected total size in bytes (expected one 32 KiB file in depth-limited scan)"
     );
 
@@ -193,6 +200,11 @@ pub fn directory_size_via_directory_scan_with_depth_limit() -> TestResult<()> {
 pub fn directory_size_via_size_function() -> TestResult<()> {
     let harness = SimpleTreeHarness::new()?;
 
+    let actual_size_in_bytes = harness.binary_file_a.path().metadata().unwrap().len()
+        + harness.binary_file_b.path().metadata().unwrap().len()
+        + harness.subdirectory_b.path().metadata().unwrap().len();
+
+
     let size_in_bytes_result = fs_more::directory::get_directory_size(harness.root.path(), false);
 
 
@@ -206,8 +218,7 @@ pub fn directory_size_via_size_function() -> TestResult<()> {
 
     // One 32 KiB file, one 64 KiB file.
     assert_eq!(
-        size_in_bytes,
-        1024 * (32 + 64),
+        size_in_bytes, actual_size_in_bytes,
         "Unexpected total size in bytes (expected one 32 KiB and one 64 KiB file)"
     );
 
