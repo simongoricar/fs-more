@@ -126,7 +126,7 @@ pub fn forbid_copy_into_self() -> TestResult<()> {
 }
 
 #[test]
-pub fn forbid_case_insensitive_copy_into_self() -> Result<(), FixtureError> {
+pub fn case_insensitive_copy_into_self() -> Result<(), FixtureError> {
     let harness = SimpleFileHarness::new()?;
 
     // Generates an upper-case version of the file name.
@@ -152,19 +152,37 @@ pub fn forbid_case_insensitive_copy_into_self() -> Result<(), FixtureError> {
         },
     );
 
-    assert!(
-        file_copy_result.is_err(),
-        "copy_file should have errored when trying to copy a file into itself, \
-        even when the case is different"
-    );
+    #[cfg(unix)]
+    {
+        assert!(
+            file_copy_result.is_ok(),
+            "copy_file should have ok-ed (on unix) when trying to copy a file into itself, \
+            even when the case is different"
+        );
 
-    let file_copy_err = file_copy_result.unwrap_err();
-    assert_matches!(
-        file_copy_err,
-        FileError::SourceAndTargetAreTheSameFile,
-        "copy_file should have errored with SourceAndTargetAreTheSameFile, got {} instead",
-        file_copy_err
-    );
+        assert_eq!(
+            file_copy_result.unwrap(),
+            harness.test_file.path().metadata().unwrap().len()
+        );
+    }
+
+    #[cfg(windows)]
+    {
+        assert!(
+            file_copy_result.is_err(),
+            "copy_file should have errored (on windows) when trying to copy a file into itself, \
+            even when the case is different"
+        );
+
+        let file_copy_err = file_copy_result.unwrap_err();
+        assert_matches!(
+            file_copy_err,
+            FileError::SourceAndTargetAreTheSameFile,
+            "copy_file should have errored with SourceAndTargetAreTheSameFile, got {} instead",
+            file_copy_err
+        );
+    }
+
 
     harness.test_file.assert_exists();
     harness.test_file.assert_content_unchanged();
@@ -213,6 +231,11 @@ pub fn forbid_non_trivial_copy_into_self() -> Result<(), FixtureError> {
     };
 
     let target_file = AssertableFilePath::from_path_pure(target_file_path);
+
+    #[cfg(unix)]
+    target_file.assert_not_exists();
+
+    #[cfg(windows)]
     target_file.assert_exists();
 
 
@@ -225,24 +248,45 @@ pub fn forbid_non_trivial_copy_into_self() -> Result<(), FixtureError> {
         },
     );
 
-    assert!(
-        file_copy_result.is_err(),
-        "copy_file should have errored when trying to copy a file into itself, \
-        even when the case is different and the path includes .."
-    );
+    #[cfg(unix)]
+    {
+        assert!(
+            file_copy_result.is_ok(),
+            "copy_file should have ok-ed (on unix) when trying to copy a file into itself \
+            even when the case is different and the path includes .."
+        );
 
-    let file_copy_err = file_copy_result.unwrap_err();
-    assert_matches!(
-        file_copy_err,
-        FileError::SourceAndTargetAreTheSameFile,
-        "copy_file should have errored with SourceAndTargetAreTheSameFile, got {} instead",
-        file_copy_err
-    );
+        assert_eq!(
+            file_copy_result.unwrap(),
+            harness.binary_file_b.path().metadata().unwrap().len()
+        );
+
+        target_file.assert_exists();
+    }
+
+    #[cfg(windows)]
+    {
+        assert!(
+            file_copy_result.is_err(),
+            "copy_file should have errored when trying to copy a file into itself, \
+            even when the case is different and the path includes .."
+        );
+
+        let file_copy_err = file_copy_result.unwrap_err();
+        assert_matches!(
+            file_copy_err,
+            FileError::SourceAndTargetAreTheSameFile,
+            "copy_file should have errored with SourceAndTargetAreTheSameFile, got {} instead",
+            file_copy_err
+        );
+
+        target_file.assert_exists();
+    }
+
 
     harness.binary_file_b.assert_exists();
     harness.binary_file_b.assert_content_unchanged();
 
-    target_file.assert_exists();
 
     harness.destroy()?;
     Ok(())

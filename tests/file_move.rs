@@ -123,6 +123,11 @@ pub fn forbid_case_insensitive_move_into_itself() -> TestResult<()> {
     let target_file = AssertableFilePath::from_path_pure(
         harness.foo_bar.path().with_file_name(upper_case_file_name),
     );
+
+    #[cfg(unix)]
+    target_file.assert_not_exists();
+
+    #[cfg(windows)]
     target_file.assert_exists();
 
     let file_move_result: Result<u64, FileError> = fs_more::file::move_file(
@@ -133,22 +138,40 @@ pub fn forbid_case_insensitive_move_into_itself() -> TestResult<()> {
         },
     );
 
-    assert!(
-        file_move_result.is_err(),
-        "move_file should have errored, but got {}.",
-        file_move_result.unwrap()
-    );
+    #[cfg(unix)]
+    {
+        assert!(
+            file_move_result.is_ok(),
+            "move_file should have ok-ed (on unix), but got {}",
+            file_move_result.unwrap_err(),
+        );
 
-    let move_err = file_move_result.unwrap_err();
-    assert_matches!(
-        move_err,
-        FileError::SourceAndTargetAreTheSameFile,
-        "move_file should have errored with SourceAndTargetAreTheSameFile, got {}.",
-        move_err
-    );
+        target_file.assert_exists();
+        harness.foo_bar.assert_not_exists();
+    }
 
-    harness.foo_bar.assert_exists();
-    harness.foo_bar.assert_content_unchanged();
+    #[cfg(windows)]
+    {
+        assert!(
+            file_move_result.is_err(),
+            "move_file should have errored, but got {}.",
+            file_move_result.unwrap()
+        );
+
+        let move_err = file_move_result.unwrap_err();
+        assert_matches!(
+            move_err,
+            FileError::SourceAndTargetAreTheSameFile,
+            "move_file should have errored with SourceAndTargetAreTheSameFile, got {}.",
+            move_err
+        );
+
+        target_file.assert_exists();
+
+        harness.foo_bar.assert_exists();
+        harness.foo_bar.assert_content_unchanged();
+    }
+
 
 
     harness.destroy()?;
