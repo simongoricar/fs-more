@@ -1,5 +1,9 @@
-//! A set of extensions of the [`std::fs`] module
-//! (mostly for copying and moving files and directories).
+//! Convenient Rust file and directory operations.
+//!
+//! Features include: scanning directories, calculating file or directory sizes,
+//! copying or moving files or directories,
+//! copying or moving **with progress**, and more filesystem-oriented tools
+//! that [`std::fs`] doesn't provide.
 //!
 //!
 //! ### Attribution
@@ -7,7 +11,8 @@
 //! <details>
 //! <summary>Inspired by <code>fs_extra</code></summary>
 //!
-//! Heavily inspired by the `fs_extra` library (thank you!), which is MIT-licensed:
+//! `fs-more` isn't quite a fork, but has been inspired by
+//! the [`fs_extra`](https://github.com/webdesus/fs_extra) library (thank you!), which is MIT-licensed:
 //!
 //! ```markdown
 //! MIT License

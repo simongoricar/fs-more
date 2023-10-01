@@ -1,5 +1,8 @@
 fs-more
 =======
+![MSRV](https://img.shields.io/badge/MSRV-1.63.0-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
 
 Convenient Rust file and directory operations.
 Features include: scanning directories, calculating file or directory sizes, 
