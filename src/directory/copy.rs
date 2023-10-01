@@ -17,7 +17,9 @@ use crate::{
 /// - is a directory.
 ///
 /// The returned path is a canonicalized version of the provided path.
-fn validate_source_directory_path(source_directory_path: &Path) -> Result<PathBuf, DirectoryError> {
+pub(super) fn validate_source_directory_path(
+    source_directory_path: &Path,
+) -> Result<PathBuf, DirectoryError> {
     // Ensure the source directory path exists. We use `try_exists`
     // instead of `exists` to catch permission and other IO errors
     // as distinct from the `DirectoryError::NotFound` error.
@@ -48,7 +50,7 @@ fn validate_source_directory_path(source_directory_path: &Path) -> Result<PathBu
 /// - it doesn't exist.
 ///
 /// The returned path is a cleaned `target_directory_path` (with the `path_clean` library).
-fn validate_target_directory_path(
+pub(super) fn validate_target_directory_path(
     target_directory_path: &Path,
     allow_existing_target_directory: bool,
 ) -> Result<PathBuf, DirectoryError> {
@@ -70,7 +72,7 @@ fn validate_target_directory_path(
     Ok(clean_path)
 }
 
-fn validate_source_target_directory_pair(
+pub(super) fn validate_source_target_directory_pair(
     source_directory_path: &Path,
     target_directory_path: &Path,
 ) -> Result<(), DirectoryError> {
@@ -186,11 +188,12 @@ pub struct FinishedDirectoryCopy {
 #[derive(Clone, Debug)]
 enum QueuedOperation {
     CopyFile {
-        source_path: PathBuf,
+        source_file_path: PathBuf,
         source_size_bytes: u64,
-        target_path: PathBuf,
+        target_file_path: PathBuf,
     },
     CreateDirectory {
+        source_size_bytes: u64,
         target_directory_path: PathBuf,
     },
 }
@@ -265,12 +268,19 @@ where
                 let file_size_in_bytes = file_metadata.len();
 
                 operation_queue.push(QueuedOperation::CopyFile {
-                    source_path: directory_item_source_path,
+                    source_file_path: directory_item_source_path,
                     source_size_bytes: file_size_in_bytes,
-                    target_path: directory_item_target_path,
+                    target_file_path: directory_item_target_path,
                 });
             } else if item_type.is_dir() {
+                let directory_metadata = directory_item
+                    .metadata()
+                    .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
+
+                let directory_size_in_bytes = directory_metadata.len();
+
                 operation_queue.push(QueuedOperation::CreateDirectory {
+                    source_size_bytes: directory_size_in_bytes,
                     target_directory_path: directory_item_target_path,
                 });
 
@@ -381,9 +391,9 @@ where
     for operation in operation_queue {
         match operation {
             QueuedOperation::CopyFile {
-                source_path,
+                source_file_path: source_path,
                 source_size_bytes,
-                target_path,
+                target_file_path: target_path,
             } => {
                 if target_path.exists() {
                     if !target_path.is_file() {
@@ -429,6 +439,7 @@ where
                 total_bytes_copied += source_size_bytes;
             }
             QueuedOperation::CreateDirectory {
+                source_size_bytes,
                 target_directory_path,
             } => {
                 if target_directory_path.exists() {
@@ -451,6 +462,7 @@ where
                     .map_err(|error| DirectoryError::UnableToAccessTarget { error })?;
 
                 num_directories_created += 1;
+                total_bytes_copied += source_size_bytes;
             }
         };
     }
@@ -712,6 +724,7 @@ where
 /// If the given path exists, but is not a directory, an error is returned as well.
 fn execute_create_directory_operation_with_progress<F>(
     target_directory_path: PathBuf,
+    source_size_bytes: u64,
     options: &DirectoryCopyWithProgressOptions,
     progress: &mut DirectoryCopyProgress,
     progress_handler: &mut F,
@@ -746,6 +759,7 @@ where
         .map_err(|error| DirectoryError::UnableToAccessTarget { error })?;
 
     progress.directories_created += 1;
+    progress.bytes_finished += source_size_bytes;
 
     Ok(())
 }
@@ -817,11 +831,13 @@ where
 
     let bytes_total = operation_queue
         .iter()
-        .filter_map(|item| match item {
+        .map(|item| match item {
             QueuedOperation::CopyFile {
                 source_size_bytes, ..
-            } => Some(*source_size_bytes),
-            QueuedOperation::CreateDirectory { .. } => None,
+            } => *source_size_bytes,
+            QueuedOperation::CreateDirectory {
+                source_size_bytes, ..
+            } => *source_size_bytes,
         })
         .sum::<u64>();
 
@@ -881,9 +897,9 @@ where
     for operation in operation_queue {
         match operation {
             QueuedOperation::CopyFile {
-                source_path,
+                source_file_path: source_path,
                 source_size_bytes,
-                target_path,
+                target_file_path: target_path,
             } => execute_copy_file_operation_with_progress(
                 source_path,
                 source_size_bytes,
@@ -893,9 +909,11 @@ where
                 &mut progress_handler,
             )?,
             QueuedOperation::CreateDirectory {
+                source_size_bytes,
                 target_directory_path,
             } => execute_create_directory_operation_with_progress(
                 target_directory_path,
+                source_size_bytes,
                 &options,
                 &mut progress,
                 &mut progress_handler,
