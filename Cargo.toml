@@ -2,12 +2,40 @@
 name = "fs-more"
 version = "0.1.0"
 rust-version = "1.63.0"
+authors = [
+    "Simon Goričar <simon.peter.goricar@gmail.com>"
+]
 edition = "2021"
+description = "Convenient file and directory operations (including copy/move with progress)."
+readme = "README.md"
+keywords = [
+    "file",
+    "directory",
+    "filesystem",
+    "fs",
+    "copy",
+    "move",
+    "progress"
+]
+categories = [
+    "filesystem"
+]
+license-file = "LICENSE"
+repository = "https://github.com/DefaultSimon/fs-more"
+include = [
+    "/src",
+    "test-harness",
+    "test-harness-macros",
+    "tests"
+]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
-members = ["test-harness", "test-harness-macros"]
+members = [
+    "test-harness",
+    "test-harness-macros"
+]
 
 [dependencies]
 dunce = "1.0.4"
