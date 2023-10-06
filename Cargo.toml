@@ -24,9 +24,9 @@ license-file = "LICENSE"
 repository = "https://github.com/DefaultSimon/fs-more"
 include = [
     "/src",
-    "test-harness",
-    "test-harness-macros",
-    "tests"
+    "/test-harness",
+    "/test-harness-macros",
+    "/tests"
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
