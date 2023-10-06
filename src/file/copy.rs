@@ -10,6 +10,7 @@ use super::{
 };
 use crate::error::FileError;
 
+
 /// Options that influence the [`copy_file`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct FileCopyOptions {
@@ -38,7 +39,8 @@ pub struct FileCopyOptions {
 /// unless `options.skip_existing` is `true`, in which case `Ok(0)` is returned.
 ///
 /// ## Internals
-/// This function internally delegates copying to [`std::fs::copy`] from the standard library (unlike [`copy_file_with_progress`]).
+/// This function internally delegates copying to [`std::fs::copy`] from the standard library
+/// (but note that [`copy_file_with_progress`] does not).
 pub fn copy_file<P, T>(
     source_file_path: P,
     target_file_path: T,

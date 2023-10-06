@@ -96,29 +96,36 @@ pub enum FileSizeError {
 pub enum DirectoryError {
     /// The root source directory (the directory you want to copy from) cannot be found.
     #[error("provided source directory path does not exist")]
-    SourceRootDirectoryNotFound,
+    SourceDirectoryNotFound,
 
     /// The provided source directory path is not a directory.
     #[error("provided source directory path is not a directory")]
-    SourceRootDirectoryNotADirectory,
+    SourceDirectoryIsNotADirectory,
 
-    /// The target directory path points to an invalid location, because (one of):
-    /// - source and target directory are the same
-    /// - target directory is a subdirectory of the source directory.
-    #[error("provided target directory path points to an invalid location")]
-    InvalidTargetDirectoryPath,
-
-    /// A directory or file in the source directory
-    /// has disappeared since being scanned by the same function.
-    #[error("a directory or file inside the source directory has disappeared")]
-    SourceContentsInvalid,
-
-    /// A source directory or file cannot be read
-    /// (e.g. due to missing permissions).
+    /// A source directory or file cannot be read.
+    /// This can happen, among other things, due to missing permissions or files/directories being removed externally mid-copy or mid-move.
     ///
     /// The inner [`std::io::Error`] will likely describe the real cause of this error.
     #[error("unable to access source directory or file")]
     UnableToAccessSource { error: std::io::Error },
+
+    /// A directory or file in the source directory
+    /// has disappeared since being scanned by the same function.
+    #[error("a directory or file inside the source directory has been removed mid-process")]
+    SourceContentsInvalid,
+
+    /// The target directory path points to an invalid location, because (one of):
+    /// - source and target directory are the same,
+    /// - target directory is a subdirectory of the source directory, or,
+    /// - target path already exists and is not a directory.
+    #[error("target directory path points to an invalid location")]
+    InvalidTargetDirectoryPath,
+
+    /// Returned when the the target directory rule is set to
+    /// [`TargetDirectoryRules::AllowEmpty`][crate::directory::TargetDirectoryRules::AllowEmpty],
+    /// but the given target directory isn't empty.
+    #[error("target directory is not empty, but configured rules require so")]
+    TargetDirectoryIsNotEmpty,
 
     /// A target directory or file cannot be created / written to
     /// (e.g. due to missing permissions).
@@ -129,9 +136,10 @@ pub enum DirectoryError {
 
     /// A target directory or file already exists.
     /// The `path` field contains the path that already existed and caused this error.
-    #[error("target directory or file already exists")]
+    #[error("target directory or file already exists: {}", .path.display())]
     TargetItemAlreadyExists { path: PathBuf },
 
+    // TODO Revisit how this works.
     /// A scanned subdirectory's path is not inside the root directory.
     #[error("a scanned subdirectory's path is not inside the root directory")]
     SubdirectoryEscapesRoot,

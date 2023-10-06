@@ -1,4 +1,9 @@
-use std::path::PathBuf;
+use std::{
+    fs::read_dir,
+    path::{Path, PathBuf},
+};
+
+use thiserror::Error;
 
 use crate::{
     error::{DirectoryScanError, DirectorySizeScanError, FileSizeError},
@@ -233,4 +238,47 @@ impl DirectoryScan {
 
         Ok(total_bytes)
     }
+}
+
+
+#[derive(Error, Debug)]
+pub(crate) enum DirectoryIsEmptyError {
+    #[error("given path does not exist")]
+    NotFound,
+
+    #[error("given path does not lead to a directory")]
+    NotADirectory,
+
+    #[error("unable to read contents of directory due to an std::io::Error: {error}")]
+    UnableToReadDirectory { error: std::io::Error },
+}
+
+/// Returns `Ok(true)` if the given directory is completely empty, `Ok(false)` otherwise.
+///
+/// Does not check whether the path exists, meaning the error return type is
+/// a very uninformative [`std::io::Error`].
+pub(crate) fn directory_is_empty_unchecked(directory_path: &Path) -> std::io::Result<bool> {
+    let mut directory_read = read_dir(directory_path)?;
+    Ok(directory_read.next().is_none())
+}
+
+/// Returns `Ok(true)` if the given directory is completely empty, `Ok(false)` otherwise.
+pub(crate) fn directory_is_empty<P>(directory_path: P) -> Result<bool, DirectoryIsEmptyError>
+where
+    P: AsRef<Path>,
+{
+    let directory_path: &Path = directory_path.as_ref();
+    let directory_metadata = directory_path
+        .metadata()
+        .map_err(|_| DirectoryIsEmptyError::NotFound)?;
+
+    if !directory_metadata.is_dir() {
+        return Err(DirectoryIsEmptyError::NotADirectory);
+    }
+
+
+    let mut directory_read = read_dir(directory_path)
+        .map_err(|error| DirectoryIsEmptyError::UnableToReadDirectory { error })?;
+
+    Ok(directory_read.next().is_some())
 }
