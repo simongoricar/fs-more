@@ -122,7 +122,7 @@ pub enum DirectoryError {
     InvalidTargetDirectoryPath,
 
     /// Returned when the the target directory rule is set to
-    /// [`TargetDirectoryRules::AllowEmpty`][crate::directory::TargetDirectoryRules::AllowEmpty],
+    /// [`TargetDirectoryRule::AllowEmpty`][crate::directory::TargetDirectoryRule::AllowEmpty],
     /// but the given target directory isn't empty.
     #[error("target directory is not empty, but configured rules require so")]
     TargetDirectoryIsNotEmpty,

@@ -1,15 +1,13 @@
 use std::path::Path;
 
-use super::{copy::TargetDirectoryRules, DirectoryScan};
+use super::{copy::TargetDirectoryRule, copy_directory_unchecked, DirectoryScan};
 use crate::{
     directory::{
         copy::{
             validate_source_directory_path,
             validate_source_target_directory_pair,
             validate_target_directory_path,
-            ValidatedTargetPathInfo,
         },
-        copy_directory,
         rejoin_source_subpath_onto_target,
         DirectoryCopyOptions,
     },
@@ -23,12 +21,11 @@ pub struct DirectoryMoveOptions {
     /// If you allow a non-empty target directory, you may also specify whether you allow
     /// target files or subdirectories to already exist (and be overwritten).
     ///
-    /// See [`TargetDirectoryRules`] for more details and examples.
-    /// ```
-    pub target_directory_rule: TargetDirectoryRules,
+    /// See [`TargetDirectoryRule`] for more details and examples.
+    pub target_directory_rule: TargetDirectoryRule,
 }
 
-/// Describes actions taken by the [`copy_directory`] function.
+/// Describes actions taken by the [`copy_directory`][crate::directory::copy_directory] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct FinishedDirectoryMove {
     /// Total amount of bytes moved.
@@ -106,23 +103,25 @@ where
     T: AsRef<Path>,
 {
     let source_directory_path = validate_source_directory_path(source_directory_path.as_ref())?;
-    let ValidatedTargetPathInfo {
-        target_directory_path,
-        target_directory_exists,
-        target_directory_is_empty,
-    } = validate_target_directory_path(
+    let validated_target_path = validate_target_directory_path(
         target_directory_path.as_ref(),
         &options.target_directory_rule,
     )?;
 
-    validate_source_target_directory_pair(&source_directory_path, &target_directory_path)?;
+    validate_source_target_directory_pair(
+        &source_directory_path,
+        &validated_target_path.target_directory_path,
+    )?;
 
     let source_details = collect_source_directory_details(&source_directory_path, None)?;
 
     // We can attempt to simply rename the directory. This is much faster,
     // but will fail if the source and target paths aren't on the same mount point or filesystem or,
     // if on Windows, the target directory already exists.
-    if target_directory_is_empty.unwrap_or(true) {
+    if validated_target_path
+        .target_directory_is_empty
+        .unwrap_or(true)
+    {
         #[cfg(unix)]
         {
             // If the target directory exists, but is empty, we can (on Unix only)
@@ -139,7 +138,7 @@ where
         #[cfg(windows)]
         {
             // On Windows, `rename`'s target directory must not exist.
-            if !target_directory_exists
+            if !validated_target_path.target_directory_exists
                 && std::fs::rename(&source_directory_path, &target_directory_path).is_ok()
             {
                 return Ok(FinishedDirectoryMove {
@@ -163,7 +162,7 @@ where
                 let target_path = rejoin_source_subpath_onto_target(
                     &source_directory_path,
                     &source_path,
-                    &target_directory_path,
+                    &validated_target_path.target_directory_path,
                 )?;
 
                 std::fs::rename(source_path, target_path)
@@ -193,15 +192,14 @@ where
     // At this point a simple rename was either impossible or failed.
     // We need to copy and delete instead.
 
-    if !target_directory_exists {
+    if !validated_target_path.target_directory_exists {
         std::fs::create_dir_all(&source_directory_path)
             .map_err(|error| DirectoryError::UnableToAccessTarget { error })?;
     }
 
-    // TODO need _unchecked version of this method, which doesn't repeat the parameter validation
-    copy_directory(
-        &source_directory_path,
-        target_directory_path,
+    copy_directory_unchecked(
+        source_directory_path.clone(),
+        validated_target_path,
         DirectoryCopyOptions {
             target_directory_rule: options.target_directory_rule,
             maximum_copy_depth: None,

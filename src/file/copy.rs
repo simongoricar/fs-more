@@ -136,8 +136,8 @@ impl Default for FileCopyWithProgressOptions {
 /// them in buffered readers and writers and our progress tracker and then using
 /// the [`std::io::copy`] function to copy the entire file.
 ///
-/// *Warning:* no checks (e.g. whether source exists or whether target is a directory or already exists)
-/// are done.
+/// *Warning:* no checks are performed before copying
+/// (e.g. whether source exists or whether target is a directory or already exists).
 pub(crate) fn copy_file_with_progress_unchecked<F>(
     source_file_path: &Path,
     target_file_path: &Path,

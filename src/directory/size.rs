@@ -6,15 +6,16 @@ use crate::{
 };
 
 
-/// Returns the size of the directory and all its files
+/// Returns the size of the directory and all its files in bytes
 /// (including files in its subdirectories).
 ///
-/// There is no depth limit, the directory tree is traversed as far as needed.
+/// There is no depth limit, the directory tree is traversed as deep as needed.
 ///
-/// *Note:* this is essentially nothing more than a shortcut for initializing
-/// a [`DirectoryScan`] with unlimited depth and calling the
+/// #### Implementation note
+/// Note that this function is nothing more than a shortcut for initializing
+/// a [`DirectoryScan`] with unlimited depth (`None`) and calling its
 /// [`total_size_in_bytes`][DirectoryScan::total_size_in_bytes] method.
-pub fn get_directory_size<P>(
+pub fn directory_size_in_bytes<P>(
     directory_path: P,
     follow_symbolic_links: bool,
 ) -> Result<u64, DirectorySizeScanError>

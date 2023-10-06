@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use super::scan::directory_is_empty_unchecked;
+use super::scan::is_directory_empty_unchecked;
 use crate::{
     error::{DirectoryError, FileError},
     file::{
@@ -45,7 +45,7 @@ pub(super) fn validate_source_directory_path(
     Ok(dunce::simplified(&canonicalized_path).to_path_buf())
 }
 
-pub(crate) struct ValidatedTargetPathInfo {
+pub(crate) struct ValidatedTargetPath {
     pub(crate) target_directory_path: PathBuf,
     pub(crate) target_directory_exists: bool,
     pub(crate) target_directory_is_empty: Option<bool>,
@@ -61,8 +61,8 @@ pub(crate) struct ValidatedTargetPathInfo {
 /// - a `bool`, which indicates whether the directory needs to be created.
 pub(super) fn validate_target_directory_path(
     target_directory_path: &Path,
-    target_directory_rules: &TargetDirectoryRules,
-) -> Result<ValidatedTargetPathInfo, DirectoryError> {
+    target_directory_rules: &TargetDirectoryRule,
+) -> Result<ValidatedTargetPath, DirectoryError> {
     let target_directory_exists = target_directory_path
         .try_exists()
         .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
@@ -74,7 +74,7 @@ pub(super) fn validate_target_directory_path(
     }
 
     let is_empty = if target_directory_exists {
-        directory_is_empty_unchecked(target_directory_path)
+        is_directory_empty_unchecked(target_directory_path)
             .map(Some)
             .map_err(|error| DirectoryError::OtherIoError { error })?
     } else {
@@ -83,12 +83,12 @@ pub(super) fn validate_target_directory_path(
 
 
     match target_directory_rules {
-        TargetDirectoryRules::DisallowExisting if target_directory_exists => {
+        TargetDirectoryRule::DisallowExisting if target_directory_exists => {
             return Err(DirectoryError::TargetItemAlreadyExists {
                 path: target_directory_path.to_path_buf(),
             });
         }
-        TargetDirectoryRules::AllowEmpty if target_directory_exists => {
+        TargetDirectoryRule::AllowEmpty if target_directory_exists => {
             if !is_empty.unwrap_or(true) {
                 return Err(DirectoryError::TargetDirectoryIsNotEmpty);
             }
@@ -98,7 +98,7 @@ pub(super) fn validate_target_directory_path(
 
     let clean_path = path_clean::clean(target_directory_path);
 
-    Ok(ValidatedTargetPathInfo {
+    Ok(ValidatedTargetPath {
         target_directory_path: clean_path,
         target_directory_exists,
         target_directory_is_empty: is_empty,
@@ -124,14 +124,14 @@ pub(super) fn validate_source_target_directory_pair(
 /// if not, you may also specify whether you allow files and directories to be overwritten.
 ///
 /// ## Defaults
-/// [`Default`] is implemented for this enum. The default value is [`TargetDirectoryRules::AllowEmpty`].
+/// [`Default`] is implemented for this enum. The default value is [`TargetDirectoryRule::AllowEmpty`].
 ///
 /// ## Examples
 /// If you wanted the associated [`copy_directory`] or [`copy_directory_with_progress`] function
 /// to *return an error if the target directory already exists*,
-/// you'd use [`TargetDirectoryRules::DisallowExisting`];
+/// you'd use [`TargetDirectoryRule::DisallowExisting`];
 ///
-/// If you wanted to copy into an *existing empty target directory*, you'd use [`TargetDirectoryRules::AllowEmpty`].
+/// If you wanted to copy into an *existing empty target directory*, you'd use [`TargetDirectoryRule::AllowEmpty`].
 ///
 /// If the target directory could already exist and have some files or directories inside, you'd use the following:
 /// ```rust
@@ -152,7 +152,7 @@ pub(super) fn validate_source_target_directory_pair(
 /// };
 /// ```
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum TargetDirectoryRules {
+pub enum TargetDirectoryRule {
     /// Indicates the associated function should return an error if the target directory already exists.
     DisallowExisting,
 
@@ -174,22 +174,22 @@ pub enum TargetDirectoryRules {
     },
 }
 
-impl Default for TargetDirectoryRules {
+impl Default for TargetDirectoryRule {
     fn default() -> Self {
         Self::AllowEmpty
     }
 }
 
-impl TargetDirectoryRules {
+impl TargetDirectoryRule {
     pub fn allows_existing_target_directory(&self) -> bool {
         !matches!(self, Self::DisallowExisting)
     }
 
     pub fn should_overwrite_existing_files(&self) -> bool {
         match self {
-            TargetDirectoryRules::DisallowExisting => false,
-            TargetDirectoryRules::AllowEmpty => false,
-            TargetDirectoryRules::AllowNonEmpty {
+            TargetDirectoryRule::DisallowExisting => false,
+            TargetDirectoryRule::AllowEmpty => false,
+            TargetDirectoryRule::AllowNonEmpty {
                 overwrite_existing_files,
                 ..
             } => *overwrite_existing_files,
@@ -198,9 +198,9 @@ impl TargetDirectoryRules {
 
     pub fn should_overwrite_existing_directories(&self) -> bool {
         match self {
-            TargetDirectoryRules::DisallowExisting => false,
-            TargetDirectoryRules::AllowEmpty => false,
-            TargetDirectoryRules::AllowNonEmpty {
+            TargetDirectoryRule::DisallowExisting => false,
+            TargetDirectoryRule::AllowEmpty => false,
+            TargetDirectoryRule::AllowNonEmpty {
                 overwrite_existing_subdirectories,
                 ..
             } => *overwrite_existing_subdirectories,
@@ -218,9 +218,8 @@ pub struct DirectoryCopyOptions {
     /// If you allow a non-empty target directory, you may also specify whether you allow
     /// target files or subdirectories to already exist (and be overwritten).
     ///
-    /// See [`TargetDirectoryRules`] for more details and examples.
-    /// ```
-    pub target_directory_rule: TargetDirectoryRules,
+    /// See [`TargetDirectoryRule`] for more details and examples.
+    pub target_directory_rule: TargetDirectoryRule,
 
     /// Maximum depth of the source directory to copy.
     ///
@@ -235,7 +234,7 @@ pub struct DirectoryCopyOptions {
 impl Default for DirectoryCopyOptions {
     fn default() -> Self {
         Self {
-            target_directory_rule: TargetDirectoryRules::default(),
+            target_directory_rule: TargetDirectoryRule::default(),
             maximum_copy_depth: None,
         }
     }
@@ -426,7 +425,7 @@ where
 
 fn check_operation_queue_for_collisions(
     queue: &[QueuedOperation],
-    target_directory_rules: &TargetDirectoryRules,
+    target_directory_rules: &TargetDirectoryRule,
 ) -> Result<(), DirectoryError> {
     let can_overwrite_files = target_directory_rules.should_overwrite_existing_files();
     let can_overwrite_directories = target_directory_rules.should_overwrite_existing_directories();
@@ -466,62 +465,27 @@ fn check_operation_queue_for_collisions(
 }
 
 
-/// Copy an entire directory from `source_directory_path` to `target_directory_path`.
-///
-/// `source_directory_path` must point to an existing directory path.
-///
-/// `target_directory_path` represents a path to the directory that will contain `source_directory_path`'s contents.
-/// Barring explicit options, the path must point to a non-existing path.
-/// The `target_directory_path` is also cleaned with [`path_clean`](../../path_clean) before it's used.
-///
-/// For more information, look at these three options from the [`DirectoryCopyOptions`] struct:
-/// - [`allow_existing_target_directory`][DirectoryCopyOptions::allow_existing_target_directory],
-/// - [`overwrite_existing_subdirectories`][DirectoryCopyOptions::overwrite_existing_subdirectories], and
-/// - [`overwrite_existing_files`][DirectoryCopyOptions::overwrite_existing_files].
-///
-///
-/// ### Copy depth
-/// Depending on the [`DirectoryCopyOptions::maximum_copy_depth`] option, calling this function means copying:
-/// - `Some(0)` -- a single directory and its direct descendants (files and direct directories, but *not their contents*, i.e. just empty directories),
-/// - `Some(1+)` -- files and subdirectories (and their files and directories, etc.) up to a certain depth limit (e.g. `Some(1)` copies direct descendants as well as one layer deeper),
-/// - `None` -- the entire subtree. **This is probably what you want most of the time**.
-///
-/// ### Return value
-/// Upon success, the function returns information about the files and directories that were copied or created
-/// as well as the total amount of bytes copied, see [`FinishedDirectoryCopy`].
-///
-/// ### Warnings
-/// *Warning:* this function **does not follow symbolic links**.
-pub fn copy_directory<S, T>(
+pub(crate) fn copy_directory_unchecked<S>(
     source_directory_path: S,
-    target_directory_path: T,
+    validated_target_path: ValidatedTargetPath,
     options: DirectoryCopyOptions,
 ) -> Result<FinishedDirectoryCopy, DirectoryError>
 where
-    S: AsRef<Path>,
-    T: AsRef<Path>,
+    S: Into<PathBuf>,
 {
-    let allows_existing_target_directory = options
-        .target_directory_rule
-        .allows_existing_target_directory();
+    let source_directory_path: PathBuf = source_directory_path.into();
+    let ValidatedTargetPath {
+        target_directory_path,
+        target_directory_exists,
+        ..
+    } = validated_target_path;
+
     let should_overwrite_files = options
         .target_directory_rule
         .should_overwrite_existing_files();
     let should_overwrite_directories = options
         .target_directory_rule
         .should_overwrite_existing_directories();
-
-    let source_directory_path = validate_source_directory_path(source_directory_path.as_ref())?;
-    let ValidatedTargetPathInfo {
-        target_directory_path,
-        target_directory_exists,
-        ..
-    } = validate_target_directory_path(
-        target_directory_path.as_ref(),
-        &options.target_directory_rule,
-    )?;
-
-    validate_source_target_directory_pair(&source_directory_path, &target_directory_path)?;
 
     // Initialize a queue of file copy or directory create operations.
     let operation_queue = build_directory_copy_queue(
@@ -647,6 +611,63 @@ where
 }
 
 
+/// Copy an entire directory from `source_directory_path` to `target_directory_path`.
+///
+/// - `source_directory_path` must point to an existing directory path.
+/// - `target_directory_path` represents a path to the directory that will contain `source_directory_path`'s contents.
+///
+/// ### Target directory
+/// Depending on the [`options.target_directory_rules`][DirectoryCopyOptions::target_directory_rule] option,
+/// the `target_directory_path` must:
+/// - [`DisallowExisting`][TargetDirectoryRule::DisallowExisting]: not exist,
+/// - [`AllowEmpty`][TargetDirectoryRule::AllowEmpty]: either not exist or be empty, or,
+/// - [`AllowNonEmpty`][TargetDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
+///   the specified overwriting rules are respected (see variant's fields).
+///
+/// If the specified target directory rule does not hold,
+/// `Err(`[`DirectoryError::InvalidTargetDirectoryPath`]`)` or
+/// `Err(`[`DirectoryError::TargetDirectoryIsNotEmpty`]`)` is returned (depending on the rule).
+///
+/// ### Copy depth
+/// Depending on the [`DirectoryCopyOptions::maximum_copy_depth`] option, calling this function means copying:
+/// - `Some(0)` -- a single directory and its direct descendants (files and direct directories, but *not their contents*, i.e. just empty directories),
+/// - `Some(1+)` -- files and subdirectories (and their files and directories, etc.) up to a certain depth limit (e.g. `Some(1)` copies direct descendants as well as one layer deeper),
+/// - `None` -- the entire subtree. **This is probably what you want most of the time**.
+///
+/// ### Return value
+/// Upon success, the function returns information about the files and directories that were copied or created
+/// as well as the total amount of bytes copied, see [`FinishedDirectoryCopy`].
+///
+/// ### Warnings
+/// *Warning:* this function **does not follow symbolic links**.
+pub fn copy_directory<S, T>(
+    source_directory_path: S,
+    target_directory_path: T,
+    options: DirectoryCopyOptions,
+) -> Result<FinishedDirectoryCopy, DirectoryError>
+where
+    S: AsRef<Path>,
+    T: AsRef<Path>,
+{
+    let source_directory_path = validate_source_directory_path(source_directory_path.as_ref())?;
+    let validated_target_path = validate_target_directory_path(
+        target_directory_path.as_ref(),
+        &options.target_directory_rule,
+    )?;
+
+    validate_source_target_directory_pair(
+        &source_directory_path,
+        &validated_target_path.target_directory_path,
+    )?;
+
+    copy_directory_unchecked(
+        source_directory_path,
+        validated_target_path,
+        options,
+    )
+}
+
+
 /// Describes a directory copy operation.
 ///
 /// Used in progress reporting in [`copy_directory_with_progress`].
@@ -730,9 +751,8 @@ pub struct DirectoryCopyWithProgressOptions {
     /// If you allow a non-empty target directory, you may also specify whether you allow
     /// target files or subdirectories to already exist (and be overwritten).
     ///
-    /// See [`TargetDirectoryRules`] for more details and examples.
-    /// ```
-    pub target_directory_rule: TargetDirectoryRules,
+    /// See [`TargetDirectoryRule`] for more details and examples.
+    pub target_directory_rule: TargetDirectoryRule,
 
     /// Maximum depth of the source directory to copy.
     ///
@@ -756,7 +776,7 @@ pub struct DirectoryCopyWithProgressOptions {
 impl Default for DirectoryCopyWithProgressOptions {
     fn default() -> Self {
         Self {
-            target_directory_rule: TargetDirectoryRules::default(),
+            target_directory_rule: TargetDirectoryRule::default(),
             maximum_copy_depth: None,
             // 64 KiB
             buffer_size: 1024 * 64,
@@ -934,14 +954,20 @@ where
 
 /// Copy an entire directory from `source_directory_path` to `target_directory_path`.
 ///
-/// `source_directory_path` must point to an existing directory path.
+/// - `source_directory_path` must point to an existing directory path.
+/// - `target_directory_path` represents a path to the directory that will contain `source_directory_path`'s contents.
 ///
-/// `target_directory_path` represents a path to the directory that will contain `source_directory_path`'s contents.
-/// Barring explicit options, the path must point to a non-existing path.
-/// For more information, look at these three options from the [`DirectoryCopyOptions`] struct:
-/// - [`allow_existing_target_directory`][DirectoryCopyOptions::allow_existing_target_directory],
-/// - [`overwrite_existing_subdirectories`][DirectoryCopyOptions::overwrite_existing_subdirectories], and
-/// - [`overwrite_existing_files`][DirectoryCopyOptions::overwrite_existing_files].
+/// ### Target directory
+/// Depending on the [`options.target_directory_rules`][DirectoryCopyOptions::target_directory_rule] option,
+/// the `target_directory_path` must:
+/// - [`DisallowExisting`][TargetDirectoryRule::DisallowExisting]: not exist,
+/// - [`AllowEmpty`][TargetDirectoryRule::AllowEmpty]: either not exist or be empty, or,
+/// - [`AllowNonEmpty`][TargetDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
+///   the specified overwriting rules are respected (see variant's fields).
+///
+/// If the specified target directory rule does not hold,
+/// `Err(`[`DirectoryError::InvalidTargetDirectoryPath`]`)` or
+/// `Err(`[`DirectoryError::TargetDirectoryIsNotEmpty`]`)` is returned (depending on the rule).
 ///
 /// ## Progress reporting
 /// You must also provide a progress handler closure that will receive
@@ -984,15 +1010,12 @@ where
     let allows_existing_target_directory = options
         .target_directory_rule
         .allows_existing_target_directory();
-    let should_overwrite_files = options
-        .target_directory_rule
-        .should_overwrite_existing_files();
     let should_overwrite_directories = options
         .target_directory_rule
         .should_overwrite_existing_directories();
 
     let source_directory_path = validate_source_directory_path(source_directory_path.as_ref())?;
-    let ValidatedTargetPathInfo {
+    let ValidatedTargetPath {
         target_directory_path,
         target_directory_exists,
         ..

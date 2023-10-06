@@ -1,4 +1,4 @@
-use fs_more::directory::{DirectoryMoveOptions, DirectoryScan, TargetDirectoryRules};
+use fs_more::directory::{DirectoryMoveOptions, DirectoryScan, TargetDirectoryRule};
 use fs_more_test_harness::{
     error::TestResult,
     trees::{DeepTreeHarness, EmptyTreeHarness},
@@ -21,7 +21,7 @@ pub fn move_directory() -> TestResult<()> {
         harness.root.path(),
         empty_harness.root.path(),
         DirectoryMoveOptions {
-            target_directory_rule: TargetDirectoryRules::AllowEmpty,
+            target_directory_rule: TargetDirectoryRule::AllowEmpty,
         },
     );
 

@@ -7,7 +7,7 @@ use thiserror::Error;
 
 use crate::{
     error::{DirectoryScanError, DirectorySizeScanError, FileSizeError},
-    file::get_file_size_in_bytes,
+    file::file_size_in_bytes,
 };
 
 
@@ -206,21 +206,20 @@ impl DirectoryScan {
         let mut total_bytes = 0;
 
         for file_path in &self.files {
-            let file_size_bytes =
-                get_file_size_in_bytes(file_path).map_err(|error| match error {
-                    FileSizeError::NotFound => DirectorySizeScanError::EntryNoLongerExists {
-                        path: file_path.clone(),
-                    },
-                    FileSizeError::NotAFile => DirectorySizeScanError::EntryNoLongerExists {
-                        path: file_path.clone(),
-                    },
-                    FileSizeError::UnableToAccessFile { error } => {
-                        DirectorySizeScanError::UnableToAccessFile { error }
-                    }
-                    FileSizeError::OtherIoError { error } => {
-                        DirectorySizeScanError::OtherIoError { error }
-                    }
-                })?;
+            let file_size_bytes = file_size_in_bytes(file_path).map_err(|error| match error {
+                FileSizeError::NotFound => DirectorySizeScanError::EntryNoLongerExists {
+                    path: file_path.clone(),
+                },
+                FileSizeError::NotAFile => DirectorySizeScanError::EntryNoLongerExists {
+                    path: file_path.clone(),
+                },
+                FileSizeError::UnableToAccessFile { error } => {
+                    DirectorySizeScanError::UnableToAccessFile { error }
+                }
+                FileSizeError::OtherIoError { error } => {
+                    DirectorySizeScanError::OtherIoError { error }
+                }
+            })?;
 
             total_bytes += file_size_bytes;
         }
@@ -242,7 +241,7 @@ impl DirectoryScan {
 
 
 #[derive(Error, Debug)]
-pub(crate) enum DirectoryIsEmptyError {
+pub enum DirectoryIsEmptyError {
     #[error("given path does not exist")]
     NotFound,
 
@@ -257,13 +256,13 @@ pub(crate) enum DirectoryIsEmptyError {
 ///
 /// Does not check whether the path exists, meaning the error return type is
 /// a very uninformative [`std::io::Error`].
-pub(crate) fn directory_is_empty_unchecked(directory_path: &Path) -> std::io::Result<bool> {
+pub(crate) fn is_directory_empty_unchecked(directory_path: &Path) -> std::io::Result<bool> {
     let mut directory_read = read_dir(directory_path)?;
     Ok(directory_read.next().is_none())
 }
 
-/// Returns `Ok(true)` if the given directory is completely empty, `Ok(false)` otherwise.
-pub(crate) fn directory_is_empty<P>(directory_path: P) -> Result<bool, DirectoryIsEmptyError>
+/// Returns a `bool` indicating whether the given directory is completely empty (no files and no subdirectories).
+pub fn is_directory_empty<P>(directory_path: P) -> Result<bool, DirectoryIsEmptyError>
 where
     P: AsRef<Path>,
 {

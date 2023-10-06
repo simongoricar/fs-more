@@ -1,4 +1,4 @@
-//! File copying, moving and removal operations. Includes progress monitoring variants.
+//! File sizing, copying, moving and removal operations. Includes progress monitoring variants.
 
 use std::path::Path;
 
@@ -8,16 +8,11 @@ mod progress;
 mod remove;
 mod size;
 
-pub use copy::{copy_file, copy_file_with_progress, FileCopyOptions, FileCopyWithProgressOptions};
-pub use progress::{FileProgress, ProgressWriter};
-pub use r#move::{
-    move_file,
-    move_file_with_progress,
-    FileMoveOptions,
-    FileMoveWithProgressOptions,
-};
-pub use remove::remove_file;
-pub use size::get_file_size_in_bytes;
+pub use copy::*;
+pub use progress::*;
+pub use r#move::*;
+pub use remove::*;
+pub use size::*;
 
 use crate::error::FileError;
 

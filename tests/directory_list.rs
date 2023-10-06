@@ -205,7 +205,8 @@ pub fn directory_size_via_size_function() -> TestResult<()> {
         + harness.subdirectory_b.path().metadata().unwrap().len();
 
 
-    let size_in_bytes_result = fs_more::directory::get_directory_size(harness.root.path(), false);
+    let size_in_bytes_result =
+        fs_more::directory::directory_size_in_bytes(harness.root.path(), false);
 
 
     assert!(

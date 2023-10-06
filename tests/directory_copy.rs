@@ -5,7 +5,7 @@ use fs_more::{
         DirectoryCopyProgress,
         DirectoryCopyWithProgressOptions,
         DirectoryScan,
-        TargetDirectoryRules,
+        TargetDirectoryRule,
     },
     error::DirectoryError,
     file::FileCopyOptions,
@@ -33,7 +33,7 @@ pub fn copy_directory() -> TestResult<()> {
         harness.root.path(),
         empty_harness.root.path(),
         DirectoryCopyOptions {
-            target_directory_rule: TargetDirectoryRules::AllowEmpty,
+            target_directory_rule: TargetDirectoryRule::AllowEmpty,
             ..Default::default()
         },
     )
@@ -92,9 +92,8 @@ pub fn copy_directory_respect_maximum_depth_option() -> TestResult<()> {
         harness.root.path(),
         empty_harness.root.path(),
         DirectoryCopyOptions {
-            target_directory_rule: TargetDirectoryRules::AllowEmpty,
+            target_directory_rule: TargetDirectoryRule::AllowEmpty,
             maximum_copy_depth: MAXIMUM_DEPTH,
-            ..Default::default()
         },
     )
     .unwrap_or_else(|error| {
@@ -147,7 +146,7 @@ pub fn copy_directory_with_progress() -> TestResult<()> {
         harness.root.path(),
         empty_harness.root.path(),
         DirectoryCopyWithProgressOptions {
-            target_directory_rule: TargetDirectoryRules::AllowEmpty,
+            target_directory_rule: TargetDirectoryRule::AllowEmpty,
             ..Default::default()
         },
         |progress| {
@@ -263,7 +262,7 @@ pub fn copy_directory_with_progress_respect_depth_option() -> TestResult<()> {
         harness.root.path(),
         empty_harness.root.path(),
         DirectoryCopyWithProgressOptions {
-            target_directory_rule: TargetDirectoryRules::AllowEmpty,
+            target_directory_rule: TargetDirectoryRule::AllowEmpty,
             maximum_copy_depth: MAXIMUM_DEPTH,
             ..Default::default()
         },
@@ -324,7 +323,7 @@ pub fn error_on_copy_directory_with_progress_on_existing_file_without_option() -
         harness.root.path(),
         empty_harness.root.path(),
         DirectoryCopyWithProgressOptions {
-            target_directory_rule: TargetDirectoryRules::AllowNonEmpty {
+            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
                 overwrite_existing_files: false,
                 overwrite_existing_subdirectories: true,
             },
@@ -377,7 +376,7 @@ pub fn error_on_copy_directory_with_progress_on_existing_directory_without_optio
         harness.root.path(),
         empty_harness.root.path(),
         DirectoryCopyWithProgressOptions {
-            target_directory_rule: TargetDirectoryRules::AllowNonEmpty {
+            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
                 overwrite_existing_files: true,
                 overwrite_existing_subdirectories: false,
             },
@@ -421,7 +420,7 @@ pub fn disallow_copy_directory_into_itself() -> TestResult<()> {
         harness.root.path(),
         harness.root.path(),
         DirectoryCopyOptions {
-            target_directory_rule: TargetDirectoryRules::AllowNonEmpty {
+            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
                 overwrite_existing_subdirectories: true,
                 overwrite_existing_files: true,
             },
@@ -447,7 +446,7 @@ pub fn disallow_copy_directory_into_subdirectory_of_itself() -> TestResult<()> {
         harness.root.path(),
         harness.dir_world.path(),
         DirectoryCopyOptions {
-            target_directory_rule: TargetDirectoryRules::AllowNonEmpty {
+            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
                 overwrite_existing_subdirectories: true,
                 overwrite_existing_files: true,
             },
@@ -474,7 +473,7 @@ pub fn disallow_copy_directory_with_progress_into_itself() -> TestResult<()> {
         harness.root.path(),
         harness.root.path(),
         DirectoryCopyWithProgressOptions {
-            target_directory_rule: TargetDirectoryRules::AllowNonEmpty {
+            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
                 overwrite_existing_subdirectories: true,
                 overwrite_existing_files: true,
             },
@@ -502,7 +501,7 @@ pub fn disallow_copy_directory_with_progress_into_subdirectory_of_itself() -> Te
         harness.root.path(),
         harness.dir_world.path(),
         DirectoryCopyWithProgressOptions {
-            target_directory_rule: TargetDirectoryRules::AllowNonEmpty {
+            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
                 overwrite_existing_subdirectories: true,
                 overwrite_existing_files: true,
             },
@@ -533,7 +532,7 @@ pub fn error_on_copy_directory_on_existing_target_directory_without_option() -> 
         harness.root.path(),
         empty_harness.root.path(),
         DirectoryCopyOptions {
-            target_directory_rule: TargetDirectoryRules::DisallowExisting,
+            target_directory_rule: TargetDirectoryRule::DisallowExisting,
             ..Default::default()
         },
     );
@@ -589,7 +588,7 @@ pub fn error_on_copy_directory_on_existing_file_without_option() -> TestResult<(
         harness.root.path(),
         empty_harness.root.path(),
         DirectoryCopyOptions {
-            target_directory_rule: TargetDirectoryRules::AllowNonEmpty {
+            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
                 overwrite_existing_files: false,
                 overwrite_existing_subdirectories: false,
             },
@@ -654,7 +653,7 @@ pub fn error_on_copy_directory_on_existing_subdirectory_without_option() -> Test
         harness.root.path(),
         empty_harness.root.path(),
         DirectoryCopyOptions {
-            target_directory_rule: TargetDirectoryRules::AllowNonEmpty {
+            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
                 overwrite_existing_files: true,
                 overwrite_existing_subdirectories: false,
             },

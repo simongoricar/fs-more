@@ -12,7 +12,7 @@ pub struct FileProgress {
 
 
 /// A file write progress handler that implements `Write` and just passes data through.
-pub struct ProgressWriter<W: Write, F: FnMut(&FileProgress)> {
+pub(crate) struct ProgressWriter<W: Write, F: FnMut(&FileProgress)> {
     /// Current file copying or moving progress.
     progress: FileProgress,
 

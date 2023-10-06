@@ -5,8 +5,8 @@ use crate::error::FileSizeError;
 /// Retrieve the size of a file in bytes.
 ///
 /// If the provided path is a symbolic link leading to a file,
-/// the size of the file the link is pointing to is returned.
-pub fn get_file_size_in_bytes<P>(file_path: P) -> Result<u64, FileSizeError>
+/// the size of the file the link is pointing to, not of the link itself, is returned.
+pub fn file_size_in_bytes<P>(file_path: P) -> Result<u64, FileSizeError>
 where
     P: AsRef<Path>,
 {
