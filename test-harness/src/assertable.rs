@@ -397,6 +397,34 @@ impl AssertableDirectoryPath {
         self.path().join(sub_path)
     }
 
+    /// Creates a symbolic link to a target directory.
+    pub fn symlink_to_directory<P>(&self, target_path: P) -> Result<(), AssertableFilePathError>
+    where
+        P: AsRef<Path>,
+    {
+        #[cfg(windows)]
+        {
+            std::os::windows::fs::symlink_dir(target_path.as_ref(), &self.directory_path)
+                .map_err(|error| AssertableFilePathError::OtherIoError { error })?;
+        }
+
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(target_path.as_ref(), &self.file_path)
+                .map_err(|error| AssertableFilePathError::OtherIoError { error })?;
+        }
+
+        #[cfg(not(any(windows, unix)))]
+        {
+            compile_error!(
+                "fs-more supports only the following values of target_family: unix and windows \
+                (notably, wasm is unsupported)."
+            );
+        }
+
+        Ok(())
+    }
+
     /// Assert the directory exists.
     pub fn assert_exists(&self) {
         assert!(self.directory_path.exists() && self.directory_path.is_dir());
@@ -405,6 +433,21 @@ impl AssertableDirectoryPath {
     /// Assert the directory does not exist.
     pub fn assert_not_exists(&self) {
         assert!(!self.directory_path.exists());
+    }
+
+    /// Asserts that this path leads to a directory which is not a symlink.
+    pub fn assert_is_directory(&self) {
+        assert!(self.directory_path.is_dir() && !self.directory_path.is_symlink());
+    }
+
+    /// Asserts that this path leads to a symbolic link to a directory.
+    pub fn assert_is_symlink_to_directory(&self) {
+        assert!(self.directory_path.is_symlink() && self.directory_path.is_dir());
+    }
+
+    /// Asserts that this path leads to a symbolic link (either a file or directory).
+    pub fn assert_is_symlink(&self) {
+        assert!(self.directory_path.is_symlink());
     }
 
     /// Assert the directory is completely empty.
@@ -541,6 +584,7 @@ impl AssertableFilePath {
         &self.file_path
     }
 
+    /// Ensures the parent directory of this file exists (i.e. creates the parent directory if it doesn't exist).
     pub fn ensure_parent_directory_exists(&self) -> Result<(), AssertableFilePathError> {
         let parent_directory = self
             .file_path
@@ -551,6 +595,7 @@ impl AssertableFilePath {
             .map_err(|error| AssertableFilePathError::OtherIoError { error })
     }
 
+    /// Creates an empty file.
     pub fn touch(&self) -> Result<(), AssertableFilePathError> {
         self.ensure_parent_directory_exists()?;
 
@@ -561,6 +606,7 @@ impl AssertableFilePath {
         Ok(())
     }
 
+    /// Creates a symbolic link to a target file.
     pub fn symlink_to_file<P>(&self, target_path: P) -> Result<(), AssertableFilePathError>
     where
         P: AsRef<Path>,
@@ -587,6 +633,7 @@ impl AssertableFilePath {
 
         Ok(())
     }
+
 
     /// Returns the file size in bytes. If the file is a symbolic link,
     /// this function returns the size of the file the symbolic link points to.
@@ -633,19 +680,9 @@ impl AssertableFilePath {
         assert!(self.file_path.is_file() && !self.file_path.is_symlink());
     }
 
-    /// Asserts that this path leads to a directory which is not a symlink.
-    pub fn assert_is_directory(&self) {
-        assert!(self.file_path.is_dir() && !self.file_path.is_symlink());
-    }
-
     /// Asserts that this path leads to a symbolic link to a file.
     pub fn assert_is_symlink_to_file(&self) {
         assert!(self.file_path.is_symlink() && self.file_path.is_file());
-    }
-
-    /// Asserts that this path leads to a symbolic link to a directory.
-    pub fn assert_is_symlink_to_directory(&self) {
-        assert!(self.file_path.is_symlink() && self.file_path.is_dir());
     }
 
     /// Asserts that this path leads to a symbolic link (either a file or directory).

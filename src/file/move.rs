@@ -42,7 +42,7 @@ impl Default for FileMoveOptions {
 /// ## Symbolic links
 /// If the `source_file_path` is a symbolic link to a file, the contents of the file that the link points to
 /// will be copied to the `target_file_path` and the original `source_file_path` symbolic link will be removed
-/// (i.e. the link destination will be untouched, but we won't preserve the link).
+/// (i.e. the link destination will be untouched, but we won't preserve the link on the target file).
 ///
 /// ## Internals
 /// This function will first attempt to move the file with [`std::fs::rename`].
@@ -185,7 +185,7 @@ impl Default for FileMoveWithProgressOptions {
 /// ## Symbolic links
 /// If the `source_file_path` is a symbolic link to a file, the contents of the file that the link points to
 /// will be copied to the `target_file_path` and the original `source_file_path` symbolic link will be removed
-/// (i.e. the link destination will be untouched, but we won't preserve the link).
+/// (i.e. the link destination will be untouched, but we won't preserve the link on the target file).
 ///
 /// ## Internals
 /// This function will first attempt to move the file with [`std::fs::rename`].

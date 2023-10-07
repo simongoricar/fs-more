@@ -32,14 +32,6 @@ pub fn move_directory() -> TestResult<()> {
         "move_directory reported incorrect amount of bytes moved"
     );
 
-    // DEBUGONLY
-    println!(
-        "comparison: {},\nsource: {},\ntarget: {}",
-        harness_for_comparison.root.path().display(),
-        harness.root.path().display(),
-        empty_harness.root.path().display()
-    );
-    std::thread::sleep(std::time::Duration::from_secs(480));
 
     harness.root.assert_not_exists();
     empty_harness.root.assert_is_not_empty();
@@ -49,6 +41,6 @@ pub fn move_directory() -> TestResult<()> {
         .assert_directory_contents_match_directory(empty_harness.root.path());
 
     empty_harness.destroy()?;
-    harness.destroy()?;
+    // No need to destroy `harness` as the directory no longer exists due to being moved.
     Ok(())
 }

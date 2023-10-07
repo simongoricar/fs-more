@@ -45,6 +45,7 @@ pub(super) fn validate_source_directory_path(
     Ok(dunce::simplified(&canonicalized_path).to_path_buf())
 }
 
+/// Information about a validated target path (used in copying and moving directories).
 pub(crate) struct ValidatedTargetPath {
     pub(crate) target_directory_path: PathBuf,
     pub(crate) target_directory_exists: bool,
@@ -135,8 +136,8 @@ pub(super) fn validate_source_target_directory_pair(
 ///
 /// If the target directory could already exist and have some files or directories in it, you can use the following rule:
 /// ```rust
-/// # use crate::directory::TargetDirectoryRules;
-/// let rules = TargetDirectoryRules::AllowExistingDirectory {
+/// # use fs_more::directory::TargetDirectoryRule;
+/// let rules = TargetDirectoryRule::AllowNonEmpty {
 ///     overwrite_existing_subdirectories: false,
 ///     overwrite_existing_files: false,
 /// };
@@ -146,8 +147,8 @@ pub(super) fn validate_source_target_directory_pair(
 ///
 /// If you want files and/or directories to be overwritten, you may set the flags for overwriting to `true`:
 /// ```rust
-/// # use crate::directory::TargetDirectoryRules;
-/// let rules = TargetDirectoryRules::AllowExistingDirectory {
+/// # use fs_more::directory::TargetDirectoryRule;
+/// let rules = TargetDirectoryRule::AllowNonEmpty {
 ///     overwrite_existing_subdirectories: true,
 ///     overwrite_existing_files: true,
 /// };
@@ -299,10 +300,10 @@ pub struct FinishedDirectoryCopy {
     /// Total amount of bytes copied.
     pub total_bytes_copied: u64,
 
-    /// Amount of files copied when copying the directory.
+    /// Number of files copied when copying the directory.
     pub num_files_copied: usize,
 
-    /// Amount of directories created when copying the directory.
+    /// Number of directories created when copying the directory.
     pub num_directories_created: usize,
 }
 
@@ -351,13 +352,12 @@ where
 
     // Scan the source directory and queue all copy and
     // directory create operations that need to happen.
-    let mut directory_scan_queue = Vec::new();
-
     struct PendingDirectoryScan {
         source_directory_path: PathBuf,
         depth: usize,
     }
 
+    let mut directory_scan_queue = Vec::new();
     directory_scan_queue.push(PendingDirectoryScan {
         source_directory_path: source_directory_root_path.clone(),
         depth: 0,
@@ -402,6 +402,7 @@ where
                     .metadata()
                     .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
 
+                // Note that this is the size of the directory itself, not of its contents.
                 let directory_size_in_bytes = directory_metadata.len();
 
                 operation_queue.push(QueuedOperation::CreateDirectory {
@@ -423,6 +424,51 @@ where
                         depth: next_directory.depth + 1,
                     });
                 }
+            } else if item_type.is_symlink() {
+                // If the path is a symbolic link, we need to follow it and queue a copy from the destination file.
+                // Can point to either a directory or a file.
+
+                // Now we should retrieve the metadata of the target of the symbolic link
+                // (unlike DirEntry::metadata, this metadata call *does* follow symolic links).
+                let underlying_path = std::fs::canonicalize(&directory_item_source_path)
+                    .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
+
+                let underlying_item_metadata = underlying_path
+                    .metadata()
+                    .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
+
+                if underlying_item_metadata.is_file() {
+                    let underlying_file_size_in_bytes = underlying_item_metadata.len();
+
+                    operation_queue.push(QueuedOperation::CopyFile {
+                        source_file_path: underlying_path,
+                        source_size_bytes: underlying_file_size_in_bytes,
+                        target_file_path: directory_item_target_path,
+                    });
+                } else if underlying_item_metadata.is_dir() {
+                    // Note that this is the size of the directory itself, not of its contents.
+                    let underlying_directory_size_in_bytes = underlying_item_metadata.len();
+
+                    operation_queue.push(QueuedOperation::CreateDirectory {
+                        source_size_bytes: underlying_directory_size_in_bytes,
+                        target_directory_path: directory_item_target_path,
+                    });
+
+                    // If we haven't reached the maximum depth yet, we queue the directory for scanning.
+                    if let Some(maximum_depth) = maximum_depth {
+                        if next_directory.depth < maximum_depth {
+                            directory_scan_queue.push(PendingDirectoryScan {
+                                source_directory_path: directory_item_source_path,
+                                depth: next_directory.depth + 1,
+                            });
+                        }
+                    } else {
+                        directory_scan_queue.push(PendingDirectoryScan {
+                            source_directory_path: directory_item_source_path,
+                            depth: next_directory.depth + 1,
+                        });
+                    }
+                }
             }
         }
     }
@@ -430,6 +476,9 @@ where
     Ok(operation_queue)
 }
 
+/// Given a list of queued operations, this function validates that
+/// the files we'd be copying into or target directories we'd create don't exist yet
+/// (or however the [`TargetDirectoryRule`] is configured).
 fn check_operation_queue_for_collisions(
     queue: &[QueuedOperation],
     target_directory_rules: &TargetDirectoryRule,
@@ -472,6 +521,9 @@ fn check_operation_queue_for_collisions(
 }
 
 
+/// Perform a copy from `source_directory_path` to `validated_target_path`.
+///
+/// For more details, see [`copy_directory`].
 pub(crate) fn copy_directory_unchecked<S>(
     source_directory_path: S,
     validated_target_path: ValidatedTargetPath,
@@ -531,6 +583,7 @@ where
         num_directories_created += 1;
     }
 
+    // Execute all queued operations (copying files and creating directories).
     for operation in operation_queue {
         match operation {
             QueuedOperation::CopyFile {
@@ -641,12 +694,17 @@ where
 /// - `Some(1+)` -- files and subdirectories (and their files and directories, etc.) up to a certain depth limit (e.g. `Some(1)` copies direct descendants as well as one layer deeper),
 /// - `None` -- the entire subtree. **This is probably what you want most of the time**.
 ///
+/// ## Symbolic links
+/// - If the `source_directory_path` directory contains a symbolic link to a file,
+/// the contents of the file it points to will be copied
+/// into the corresponding subpath inside `target_file_path`
+/// (same behaviour as `cp` without `-P` on Unix, i.e. link is followed, but not preserved).
+/// - If the `source_directory_path` directory contains a symbolic link to a directory,
+/// the directory and its contents will be copied as normal - the links will be followed, but not preserved.
+///
 /// ### Return value
 /// Upon success, the function returns information about the files and directories that were copied or created
 /// as well as the total amount of bytes copied, see [`FinishedDirectoryCopy`].
-///
-/// ### Warnings
-/// *Warning:* this function **does not follow symbolic links**.
 pub fn copy_directory<S, T>(
     source_directory_path: S,
     target_directory_path: T,
@@ -997,12 +1055,17 @@ where
 /// - `Some(1+)` -- files and subdirectories (and their files and directories, etc.) up to a certain depth limit (e.g. `Some(1)` copies direct descendants as well as one layer deeper),
 /// - `None` -- the entire subtree. **This is probably what you want most of the time**.
 ///
+/// ## Symbolic links
+/// - If the `source_directory_path` directory contains a symbolic link to a file,
+/// the contents of the file it points to will be copied
+/// into the corresponding subpath inside `target_file_path`
+/// (same behaviour as `cp` without `-P` on Unix, i.e. link is followed, but not preserved).
+/// - If the `source_directory_path` directory contains a symbolic link to a directory,
+/// the directory and its contents will be copied as normal - the links will be followed, but not preserved.
+///
 /// ## Return value
 /// Upon success, the function returns information about the files and directories that were copied or created
 /// as well as the total amount of bytes copied, see [`FinishedDirectoryCopy`].
-///
-/// ## Warnings
-/// *Warning:* this function **does not follow symbolic links**.
 pub fn copy_directory_with_progress<S, T, F>(
     source_directory_path: S,
     target_directory_path: T,
@@ -1014,6 +1077,7 @@ where
     T: AsRef<Path>,
     F: FnMut(&DirectoryCopyProgress),
 {
+    // TODO Test how this and copy_directory handle symbolic links to directories.
     let allows_existing_target_directory = options
         .target_directory_rule
         .allows_existing_target_directory();

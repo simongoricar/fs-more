@@ -11,7 +11,7 @@ use fs_more::{
     file::FileCopyOptions,
 };
 use fs_more_test_harness::{
-    assertable::AssertableFilePath,
+    assertable::{AssertableDirectoryPath, AssertableFilePath},
     error::TestResult,
     trees::{DeepTreeHarness, EmptyTreeHarness},
 };
@@ -677,5 +677,221 @@ pub fn error_on_copy_directory_on_existing_subdirectory_without_option() -> Test
 
     harness.destroy()?;
     empty_harness.destroy()?;
+    Ok(())
+}
+
+
+#[test]
+pub fn copy_directory_symbolic_link_to_file_behaviour() -> TestResult<()> {
+    let harness = DeepTreeHarness::new()?;
+    let empty_harness = EmptyTreeHarness::new()?;
+
+    let symlinked_file =
+        AssertableFilePath::from_path(harness.root.child_path("file_a-symlinked.bin"));
+    symlinked_file.assert_not_exists();
+    symlinked_file.symlink_to_file(harness.file_a.path())?;
+    symlinked_file.assert_is_symlink_to_file();
+
+    fs_more::directory::copy_directory(
+        harness.root.path(),
+        empty_harness.root.path(),
+        DirectoryCopyOptions::default(),
+    )
+    .unwrap();
+
+    let previously_symlinked_file_in_target =
+        AssertableFilePath::from_path(empty_harness.root.child_path("file_a-symlinked.bin"));
+    previously_symlinked_file_in_target.assert_exists();
+    previously_symlinked_file_in_target.assert_is_file();
+
+    empty_harness.destroy()?;
+    harness.destroy()?;
+    Ok(())
+}
+
+#[test]
+pub fn copy_directory_with_progress_symbolic_link_to_file_behaviour() -> TestResult<()> {
+    let harness = DeepTreeHarness::new()?;
+    let empty_harness = EmptyTreeHarness::new()?;
+
+    let symlinked_file =
+        AssertableFilePath::from_path(harness.root.child_path("file_a-symlinked.bin"));
+    symlinked_file.assert_not_exists();
+    symlinked_file.symlink_to_file(harness.file_a.path())?;
+    symlinked_file.assert_is_symlink_to_file();
+
+    fs_more::directory::copy_directory_with_progress(
+        harness.root.path(),
+        empty_harness.root.path(),
+        DirectoryCopyWithProgressOptions::default(),
+        |_| {},
+    )
+    .unwrap();
+
+    let previously_symlinked_file_in_target =
+        AssertableFilePath::from_path(empty_harness.root.child_path("file_a-symlinked.bin"));
+    previously_symlinked_file_in_target.assert_exists();
+    previously_symlinked_file_in_target.assert_is_file();
+
+    empty_harness.destroy()?;
+    harness.destroy()?;
+    Ok(())
+}
+
+
+#[test]
+pub fn copy_directory_symbolic_link_to_directory_behaviour() -> TestResult<()> {
+    let harness = DeepTreeHarness::new()?;
+    let empty_harness = EmptyTreeHarness::new()?;
+
+    let symlinked_dir =
+        AssertableDirectoryPath::from_path(harness.root.child_path("symlinked-directory"));
+    symlinked_dir.assert_not_exists();
+    symlinked_dir.symlink_to_directory(harness.dir_foo.path())?;
+    symlinked_dir.assert_is_symlink_to_directory();
+
+    fs_more::directory::copy_directory(
+        harness.root.path(),
+        empty_harness.root.path(),
+        DirectoryCopyOptions::default(),
+    )
+    .unwrap();
+
+    let previously_symlinked_dir_in_target =
+        AssertableDirectoryPath::from_path(empty_harness.root.child_path("symlinked-directory"));
+    previously_symlinked_dir_in_target.assert_exists();
+    previously_symlinked_dir_in_target
+        .assert_directory_contents_match_directory(harness.dir_foo.path());
+
+    empty_harness.destroy()?;
+    harness.destroy()?;
+    Ok(())
+}
+
+#[test]
+pub fn copy_directory_with_progress_symbolic_link_to_directory_behaviour() -> TestResult<()> {
+    let harness = DeepTreeHarness::new()?;
+    let empty_harness = EmptyTreeHarness::new()?;
+
+    let symlinked_dir =
+        AssertableDirectoryPath::from_path(harness.root.child_path("symlinked-directory"));
+    symlinked_dir.assert_not_exists();
+    symlinked_dir.symlink_to_directory(harness.dir_foo.path())?;
+    symlinked_dir.assert_is_symlink_to_directory();
+
+    fs_more::directory::copy_directory_with_progress(
+        harness.root.path(),
+        empty_harness.root.path(),
+        DirectoryCopyWithProgressOptions::default(),
+        |_| {},
+    )
+    .unwrap();
+
+    let previously_symlinked_dir_in_target =
+        AssertableDirectoryPath::from_path(empty_harness.root.child_path("symlinked-directory"));
+    previously_symlinked_dir_in_target.assert_exists();
+    previously_symlinked_dir_in_target
+        .assert_directory_contents_match_directory(harness.dir_foo.path());
+
+    empty_harness.destroy()?;
+    harness.destroy()?;
+    Ok(())
+}
+
+#[test]
+pub fn copy_directory_symbolic_link_to_directory_respect_depth_limit() -> TestResult<()> {
+    let harness = DeepTreeHarness::new()?;
+    let empty_harness = EmptyTreeHarness::new()?;
+
+    let symlinked_dir =
+        AssertableDirectoryPath::from_path(harness.root.child_path("symlinked-directory"));
+    symlinked_dir.assert_not_exists();
+    symlinked_dir.symlink_to_directory(harness.dir_foo.path())?;
+    symlinked_dir.assert_is_symlink_to_directory();
+
+    fs_more::directory::copy_directory(
+        harness.root.path(),
+        empty_harness.root.path(),
+        DirectoryCopyOptions {
+            maximum_copy_depth: Some(1),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+
+    let previously_symlinked_dir_in_target =
+        AssertableDirectoryPath::from_path(empty_harness.root.child_path("symlinked-directory"));
+    previously_symlinked_dir_in_target.assert_exists();
+
+    let previously_symlinked_file_b = AssertableFilePath::from_path(
+        empty_harness
+            .root
+            .child_path("symlinked-directory")
+            .join(harness.file_b.path().file_name().unwrap()),
+    );
+    previously_symlinked_file_b.assert_is_file();
+    previously_symlinked_file_b.assert_content_matches_file(harness.file_b.path());
+
+    let previously_symlinked_file_c = AssertableFilePath::from_path(
+        empty_harness
+            .root
+            .child_path("symlinked-directory")
+            .join(harness.dir_bar.path().file_name().unwrap())
+            .join(harness.file_c.path().file_name().unwrap()),
+    );
+    previously_symlinked_file_c.assert_not_exists();
+
+    empty_harness.destroy()?;
+    harness.destroy()?;
+    Ok(())
+}
+
+#[test]
+pub fn copy_directory_with_progress_symbolic_link_to_directory_respect_depth_limit(
+) -> TestResult<()> {
+    let harness = DeepTreeHarness::new()?;
+    let empty_harness = EmptyTreeHarness::new()?;
+
+    let symlinked_dir =
+        AssertableDirectoryPath::from_path(harness.root.child_path("symlinked-directory"));
+    symlinked_dir.assert_not_exists();
+    symlinked_dir.symlink_to_directory(harness.dir_foo.path())?;
+    symlinked_dir.assert_is_symlink_to_directory();
+
+    fs_more::directory::copy_directory_with_progress(
+        harness.root.path(),
+        empty_harness.root.path(),
+        DirectoryCopyWithProgressOptions {
+            maximum_copy_depth: Some(1),
+            ..Default::default()
+        },
+        |_| {},
+    )
+    .unwrap();
+
+    let previously_symlinked_dir_in_target =
+        AssertableDirectoryPath::from_path(empty_harness.root.child_path("symlinked-directory"));
+    previously_symlinked_dir_in_target.assert_exists();
+
+    let previously_symlinked_file_b = AssertableFilePath::from_path(
+        empty_harness
+            .root
+            .child_path("symlinked-directory")
+            .join(harness.file_b.path().file_name().unwrap()),
+    );
+    previously_symlinked_file_b.assert_is_file();
+    previously_symlinked_file_b.assert_content_matches_file(harness.file_b.path());
+
+    let previously_symlinked_file_c = AssertableFilePath::from_path(
+        empty_harness
+            .root
+            .child_path("symlinked-directory")
+            .join(harness.dir_bar.path().file_name().unwrap())
+            .join(harness.file_c.path().file_name().unwrap()),
+    );
+    previously_symlinked_file_c.assert_not_exists();
+
+    empty_harness.destroy()?;
+    harness.destroy()?;
     Ok(())
 }

@@ -103,8 +103,8 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
         abort_call_site!("Missing field name.");
     };
 
-    /// Find matching attributes (one of #[root]/#[file(...)]/#[directory(...)]) and parse their contents.
-    /// Unknown attributes are ignored.
+    // Find matching attributes (one of #[root]/#[file(...)]/#[directory(...)]) and parse their contents.
+    // Unknown attributes are ignored.
     for attribute in &field.attrs {
         if !matches!(attribute.style, syn::AttrStyle::Outer) {
             continue;
