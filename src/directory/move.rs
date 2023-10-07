@@ -14,6 +14,7 @@ use crate::{
     error::{DirectoryError, DirectoryScanError, DirectorySizeScanError},
 };
 
+/// Options that influence the [`move_directory`] function.
 pub struct DirectoryMoveOptions {
     /// Specifies whether you allow the target directory to exist before moving
     /// and whether it must be empty or not.

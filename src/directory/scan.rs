@@ -11,16 +11,28 @@ use crate::{
 };
 
 
-/// A way to scan a directory's contents (either a single directory,
-/// up to a certain subdirectory limit or the entire subtree).
+/// A directory scanner abstraction.
 ///
-/// **Be careful!** If you set `follow_symbolic_links` to `true` in [`Self::scan_with_options`],
-/// the resulting `files` and `directories` *might not all be sub-paths of the root* `directory_path`
-/// (as we follow any symbolic links leading elsewhere and include their full target path in the results).
+/// ### Scan depth
+/// Maximum scanning depth can be configured by setting
+/// the `maximum_scan_depth` parameter in the [`DirectoryScan::scan_with_options`] initializer to:
+/// - `Some(0)` -- scans direct contents of the directory (a single layer of files and directories),
+/// - `Some(1+)` -- scans up to a certain subdirectory limit, or,
+/// - `None` -- scans the entire subtree, as deep as required.
+///
+/// ### Symbolic links
+/// **Careful!** This scanner follows symbolic links.
+///
+/// This means that if you set the `follow_symbolic_links` option to `true` (see [`Self::scan_with_options`]),
+/// the resulting `files` and `directories` included in the scan results
+/// *might not all be sub-paths of the root* `directory_path`.
+///
+/// This is because we followed symbolic links included their full target path in the results,
+/// not their original path.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DirectoryScan {
     /// The directory that was scanned.
-    pub root_directory_path: PathBuf,
+    pub(crate) root_directory_path: PathBuf,
 
     /// The maximum depth setting used in this scan.
     ///
@@ -28,18 +40,23 @@ pub struct DirectoryScan {
     /// - `Some(0)` means a scan that returns only the files and directories directly
     /// in the root directory and doesn't scan any subdirectories.
     /// - `Some(1)` includes the root directory's contents and one level of its subdirectories.
-    pub maximum_scanned_depth: Option<usize>,
+    pub(crate) maximum_scanned_depth: Option<usize>,
 
     /// Indicates whether the scan that was performed wasn't deep enough to cover
-    /// *all* the subdirectories (i.e. there are subdirectories deeper than the depth limit allowed).
+    /// all of the files and subdirectories (i.e. there are subdirectories deeper than the depth limit allowed).
     ///
-    /// In many situations this flag being `true` isn't a bad sign. If you're intentionaly
-    /// limiting the scan depth to avoid problematic scan times, this is fine.
+    /// In some situations this flag being `true` isn't a bad sign -- if you're intentionaly
+    /// limiting the scan depth to avoid problematic scan times or other reasons, this is likely fine.
     ///
-    /// *Be warned, however*, that if you call something like [`self.total_size_in_bytes()`][Self::total_size_in_bytes],
-    /// you need to keep in mind that, if this flag is `true`, the value returned by that method likely doesn't cover
-    /// the *entire* contents of the directory.
-    pub is_deeper_than_scan_allows: bool,
+    /// Also note that if you set `maximum_scan_depth` to `None`, *this flag can never be `true`*.
+    ///
+    /// ## Warning
+    /// *Be warned, however*, that if you call e.g. the [`self.total_size_in_bytes()`][Self::total_size_in_bytes] method,
+    /// you need to keep in mind that, if this flag is `true`, the number of bytes likely doesn't cover
+    /// the *entire* contents of the directory (as they weren't scanned). To get the correct size of a directory
+    /// and its contents, ideally perform a scan without a depth limit and then use the [`self.total_size_in_bytes()`][Self::total_size_in_bytes]
+    /// method as before to get the correct result.
+    pub is_real_directory_deeper_than_scan: bool,
 
     /// Files that were found in the scan.
     pub files: Vec<PathBuf>,
@@ -49,10 +66,10 @@ pub struct DirectoryScan {
 }
 
 impl DirectoryScan {
-    /// Perform a new directory scan.
+    /// Perform a directory scan.
     ///
     /// `directory_path` must point to a directory that exists,
-    /// otherwise an `Err` with [`DirectoryScanError::NotFound`][crate::error::DirectoryScanError::NotFound] is returned.
+    /// otherwise an `Err(`[`DirectoryScanError::NotFound`][crate::error::DirectoryScanError::NotFound]`)` is returned.
     pub fn scan_with_options<P>(
         directory_path: P,
         maximum_scan_depth: Option<usize>,
@@ -183,10 +200,21 @@ impl DirectoryScan {
         Ok(Self {
             root_directory_path: directory_path,
             maximum_scanned_depth: maximum_scan_depth,
-            is_deeper_than_scan_allows,
+            is_real_directory_deeper_than_scan: is_deeper_than_scan_allows,
             files: file_list,
             directories: directory_list,
         })
+    }
+
+
+    /// Returns a slice of all scanned files (items are full file paths).
+    pub fn files(&self) -> &[PathBuf] {
+        &self.files
+    }
+
+    /// Returns a slice of all scanned directories (items are full directory paths).
+    pub fn directories(&self) -> &[PathBuf] {
+        &self.directories
     }
 
     /// Returns a total size of the scanned files in bytes.

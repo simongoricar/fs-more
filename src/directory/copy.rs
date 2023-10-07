@@ -749,7 +749,7 @@ pub enum DirectoryCopyOperation {
 }
 
 
-/// Current directory copying progress.
+/// Represents the progress of copying a directory.
 ///
 /// Used to report directory copying progress to a user-provided closure, see [`copy_directory_with_progress`].
 #[derive(Clone, PartialEq, Eq, Debug)]

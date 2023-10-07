@@ -40,7 +40,7 @@ pub fn scan_directory() -> TestResult<()> {
         "Unexpected amount of scanned files."
     );
 
-    assert!(!scan.is_deeper_than_scan_allows);
+    assert!(!scan.is_real_directory_deeper_than_scan);
     assert_eq!(scan.maximum_scanned_depth, None);
 
 
@@ -93,7 +93,7 @@ pub fn scan_directory_with_limited_depth() -> TestResult<()> {
         "Unexpected amount of scanned files."
     );
 
-    assert!(scan.is_deeper_than_scan_allows);
+    assert!(scan.is_real_directory_deeper_than_scan);
     assert_eq!(scan.maximum_scanned_depth, Some(0));
 
 
@@ -141,7 +141,7 @@ pub fn directory_size_via_directory_scan() -> TestResult<()> {
     );
     let scan = scan_result.unwrap();
 
-    assert!(!scan.is_deeper_than_scan_allows);
+    assert!(!scan.is_real_directory_deeper_than_scan);
 
     let size_in_bytes = scan
         .total_size_in_bytes()
@@ -177,7 +177,7 @@ pub fn directory_size_via_directory_scan_with_depth_limit() -> TestResult<()> {
     );
     let scan = scan_result.unwrap();
 
-    assert!(scan.is_deeper_than_scan_allows);
+    assert!(scan.is_real_directory_deeper_than_scan);
 
     let size_in_bytes = scan
         .total_size_in_bytes()
