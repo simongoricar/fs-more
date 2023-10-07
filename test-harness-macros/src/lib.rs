@@ -9,6 +9,7 @@ const ASSERTABLE_FILE_PATH_STRUCT_TYPE_NAME: &str = "AssertableFilePath";
 const ASSERTABLE_DIRECTORY_PATH_STRUCT_TYPE_NAME: &str = "AssertableDirectoryPath";
 
 
+/// Type of a parsed field.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum FieldPathType {
     Root,
@@ -16,8 +17,8 @@ enum FieldPathType {
     Directory,
 }
 
-
-fn infer_field_path_type_from_field_type(field: &syn::Field) -> Option<FieldPathType> {
+/// Given a field, infer the `FieldPathType` type we would expect it to be annotated with.
+fn infer_field_path_type_from_field_value_type(field: &syn::Field) -> Option<FieldPathType> {
     let syn::Type::Path(field_value_type) = &field.ty else {
         return None;
     };
@@ -50,27 +51,32 @@ fn infer_field_path_type_from_field_type(field: &syn::Field) -> Option<FieldPath
 }
 
 
+/// Represents a parsed #[root]-annotated struct field.
 struct RootField {
     field_ident: syn::Ident,
 }
 
+/// Represents a parsed #[file(...)]-annotated struct field.
 struct FileField {
     field_ident: syn::Ident,
     file_path: syn::LitStr,
     file_contents: Option<syn::Expr>,
 }
 
+/// Represents a parsed #[directory(...)]-annotated struct field.
 struct DirectoryField {
     field_ident: syn::Ident,
     directory_path: syn::LitStr,
 }
 
+/// Represents one of several parsable annotated struct fields.
 enum ParsedField {
     Root(RootField),
     File(FileField),
     Directory(DirectoryField),
 }
 
+/// Represents an entire parsed struct.
 struct ParsedStruct {
     all_field_idents: Vec<syn::Ident>,
 
@@ -88,13 +94,17 @@ const FILE_ATTRIBUTE_NAME: &str = "file";
 const DIRECTORY_ATTRIBUTE_NAME: &str = "directory";
 
 
+/// Parse a single field on a struct. If the field is not annotated, `None` is returned.
+/// If the field is annotated incorrectly, the macro aborts.
 fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
-    let path_type_inferred_from_field_type = infer_field_path_type_from_field_type(field);
+    let path_type_inferred_from_field_type = infer_field_path_type_from_field_value_type(field);
 
     let Some(field_ident) = field.ident.clone() else {
         abort_call_site!("Missing field name.");
     };
 
+    /// Find matching attributes (one of #[root]/#[file(...)]/#[directory(...)]) and parse their contents.
+    /// Unknown attributes are ignored.
     for attribute in &field.attrs {
         if !matches!(attribute.style, syn::AttrStyle::Outer) {
             continue;
@@ -102,10 +112,13 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
 
         match &attribute.meta {
             syn::Meta::Path(attribute_path) => {
+                // Here we check and parse the #[root] field attribute.
                 if !attribute_path.is_ident(ROOT_ATTRIBUTE_NAME) {
                     continue;
                 }
 
+                // #[root]-annotated fields *must* be of type `AssertableRootDirectory`
+                // (provided by `ASSERTABLE_ROOT_DIRECTORY_TYPE_NAME`).
                 let Some(inferred_path_type) = path_type_inferred_from_field_type.as_ref() else {
                     abort_call_site!(
                         "Field {} has the #[{}] attribute, \
@@ -133,7 +146,10 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
                 return Some(ParsedField::Root(RootField { field_ident }));
             }
             syn::Meta::List(list_attribute) => {
+                // Here we check and parse the #[file(...)] field attribute.
                 if list_attribute.path.is_ident(FILE_ATTRIBUTE_NAME) {
+                    // #[file(...)]-annotated fields *must* be of type `AssertableFilePath`
+                    // (provided by `ASSERTABLE_FILE_PATH_STRUCT_TYPE_NAME`).
                     let Some(inferred_path_type) = path_type_inferred_from_field_type.as_ref()
                     else {
                         abort_call_site!(
@@ -159,6 +175,8 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
                         );
                     };
 
+                    // Parse `path` and `content` field-value pair inside this attribute.
+                    // If no `path` field-value pair is found, the macro aborts (that field is required).
                     let subattributes: Punctuated<MetaNameValue, Token![,]> = list_attribute
                         .parse_args_with(Punctuated::parse_terminated)
                         .unwrap_or_else(|_| abort_call_site!(
@@ -170,11 +188,11 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
                             list_attribute.to_token_stream()
                         ));
 
-                    let mut path_subattribute: Option<syn::LitStr> = None;
-                    let mut contents_subattribute: Option<syn::Expr> = None;
-
                     const FILE_PATH_SUBATTRIBUTE_NAME: &str = "path";
                     const FILE_CONTENT_SUBATTRIBUTE_NAME: &str = "content";
+
+                    let mut path_subattribute: Option<syn::LitStr> = None;
+                    let mut contents_subattribute: Option<syn::Expr> = None;
 
                     for subattribute in subattributes {
                         if subattribute.path.is_ident(FILE_PATH_SUBATTRIBUTE_NAME) {
@@ -243,6 +261,10 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
                         file_contents: contents_subattribute,
                     }));
                 } else if list_attribute.path.is_ident(DIRECTORY_ATTRIBUTE_NAME) {
+                    // Here we check and parse the #[directory(...)] field attribute.
+
+                    // #[directory(...)]-annotated fields *must* be of type `AssertableDirectoryPath`
+                    // (provided by `ASSERTABLE_DIRECTORY_PATH_STRUCT_TYPE_NAME`).
                     let Some(inferred_path_type) = path_type_inferred_from_field_type.as_ref()
                     else {
                         abort_call_site!(
@@ -251,7 +273,7 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
                             expected type {}, got {}.",
                             DIRECTORY_ATTRIBUTE_NAME,
                             field_ident.to_string(),
-                            ASSERTABLE_FILE_PATH_STRUCT_TYPE_NAME,
+                            ASSERTABLE_DIRECTORY_PATH_STRUCT_TYPE_NAME,
                             field.ty.to_token_stream(),
                         );
                     };
@@ -263,11 +285,13 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
                             expected type {}, got {}.",
                             DIRECTORY_ATTRIBUTE_NAME,
                             field_ident.to_string(),
-                            ASSERTABLE_FILE_PATH_STRUCT_TYPE_NAME,
+                            ASSERTABLE_DIRECTORY_PATH_STRUCT_TYPE_NAME,
                             field.ty.to_token_stream(),
                         );
                     };
 
+                    // Parse `path` field-value pair inside this attribute.
+                    // If no such field-value pair is found, the macro aborts (that field is required).
                     let subattributes: Punctuated<MetaNameValue, Token![,]> = list_attribute
                         .parse_args_with(Punctuated::parse_terminated)
                         .unwrap_or_else(|_| {
@@ -280,15 +304,14 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
                         });
 
 
+                    const DIRECTORY_PATH_SUBATTRIBUTE_NAME: &str = "path";
                     let mut path_subattribute: Option<syn::LitStr> = None;
 
-                    const DIRECTORY_PATH_SUBATTRIBUTE_NAME: &str = "path";
 
                     for subattribute in subattributes {
                         if !subattribute.path.is_ident(DIRECTORY_PATH_SUBATTRIBUTE_NAME) {
                             continue;
                         }
-
 
                         let syn::Expr::Lit(path_literal) = &subattribute.value else {
                             abort_call_site!(
@@ -358,6 +381,10 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
     }
 }
 
+/// Remove `#[root]`, `#[file(...)]` and `#[directory(...)]` attributes from the given field.
+///
+/// As we're operating under an attribute macro, we must clean up our fields, otherwise they would be emitted
+/// and the compiler would raise an error about unknown attributes.
 fn remove_our_macro_attributes_from_field(field: &mut syn::Field) {
     field.attrs.retain(|attribute| {
         if !matches!(attribute.style, syn::AttrStyle::Outer) {
@@ -375,6 +402,7 @@ fn remove_our_macro_attributes_from_field(field: &mut syn::Field) {
     });
 }
 
+/// Add simple auto-generated documentation to a field.
 fn add_documentation_to_field(field: &mut syn::Field, parsed_data: &ParsedField) {
     let documentation_lines = match parsed_data {
         ParsedField::Root(root_field) => {
@@ -440,6 +468,7 @@ fn add_documentation_to_field(field: &mut syn::Field, parsed_data: &ParsedField)
         }));
 }
 
+/// Parse an entire struct annotated with `#[fs_harness_tree]`.
 fn parse_struct_data(mut struct_data: ItemStruct) -> (ItemStruct, ParsedStruct) {
     let mut all_field_idents: Vec<syn::Ident> = Vec::with_capacity(struct_data.fields.len());
 
@@ -451,6 +480,7 @@ fn parse_struct_data(mut struct_data: ItemStruct) -> (ItemStruct, ParsedStruct) 
         abort_call_site!("Can only be used on structs with named fields.");
     };
 
+    // Attempt to parse each field individually. This will ignore non-annotated or unknown fields.
     for field in &mut named_fields.named {
         let Some(parsed_field) = parse_struct_field(field) else {
             continue;
@@ -498,6 +528,10 @@ fn parse_struct_data(mut struct_data: ItemStruct) -> (ItemStruct, ParsedStruct) 
     )
 }
 
+/// Returns an initialization expression for the `#[root]`-annotated field.
+///
+/// This basically just initializes the `AssertableRootDirectory` with the provided
+/// `TempDir` variable (`temporary_dir_variable_ident`).
 fn generate_initialization_expression_for_root_field(
     field: &RootField,
     temporary_dir_variable_ident: syn::Ident,
@@ -514,6 +548,10 @@ fn generate_initialization_expression_for_root_field(
     }
 }
 
+/// Returns an initialization expression for the `#[file(...)]`-annotated field.
+///
+/// This basically initializes a `AssertableFilePath` on the specified path and, optionally,
+/// writes the required data into the file.
 fn generate_initialization_expression_for_file_field(
     field: &FileField,
     temporary_dir_variable_ident: syn::Ident,
@@ -553,6 +591,9 @@ fn generate_initialization_expression_for_file_field(
     }
 }
 
+/// Returns an initialization expression for the `#[directory(...)]`-annotated field.
+///
+/// This basically just initializes a `AssertableDirectoryPath` from the provided directory path.
 fn generate_initialization_expression_for_directory_field(
     field: &DirectoryField,
     temporary_dir_variable_ident: syn::Ident,
@@ -575,6 +616,11 @@ fn generate_initialization_expression_for_directory_field(
     }
 }
 
+/// Generate an `impl` block for the provided `parsed` struct.
+///
+/// The contents of the `impl` are:
+/// - the `new() -> Self` method and
+/// - the `destroy(self) -> Result<(), FixtureError>` method.
 fn generate_impl(
     parsed: ParsedStruct,
     struct_name: syn::Ident,
@@ -657,6 +703,53 @@ fn generate_impl(
     )
 }
 
+/// This attribute macro is a handy way of initializing directory trees for testing `fs-more`.
+///
+/// ## Example
+/// ```rust
+/// use fs_more_test_harness_macros::fs_harness_tree;
+/// use fs_more_test_harness::assertable::{AssertableRootDirectory, AssertableFilePath, AssertableDirectoryPath};
+///
+/// // This generates some pseudo-random (but deterministically seeded) data that we can use to write to our file tree.
+/// static BINARY_DATA_A: Lazy<Vec<u8>> = lazy_generate_seeded_binary_data!(1024 * 32, 2903489125012);
+/// static BINARY_DATA_B: Lazy<Vec<u8>> = lazy_generate_seeded_binary_data!(1024 * 64, 2397591013122);
+///
+/// #[fs_harness_tree]
+/// pub struct SimpleTreeHarness {
+///     // Each tree harness must have precisely one #[root] annotation on a field of type `AssertableRootDirectory`.
+///     //
+///     // The value of this field, or rather the path it represents, is the root of this directory tree.
+///     #[root]
+///     pub root: AssertableRootDirectory,
+///
+///     // Tree harnesses can have one or more #[file(...)] annotations on fields of type `AssertableFilePath`.
+///     //
+///     // The `path` field is required - it specifies the path of the given file to be created on initalization.
+///     // The `content` field is optional - it specified, it represents the content of the file as an expression resolving into `&[u8]`.
+///     //
+///     // The value of this field, or rather the path it represents, is the configured file path.
+///     #[file(
+///         path = "binary_file_a.bin",
+///         content = BINARY_DATA_A.as_slice(),
+///     )]
+///     pub binary_file_a: AssertableFilePath,
+///
+///     // Tree harnesses can have one or more #[directory(...)] annotations on fields of type `AssertableDirectoryPath`.
+///     //
+///     // The `path` field is required - it specifies the path of the given directory to be created on initalization.
+///     //
+///     // The value of this field, or rather the path it represents, is the configured directory path.
+///     #[directory(path = "subdirectory_b")]
+///     pub subdirectory_b: AssertableDirectoryPath,
+///     
+///     // It is your responsibility to ensure that the "subdirectory_b" directory exists in this tree (see above).
+///     #[file(
+///         path = "subdirectory_b/binary_file_b.bin",
+///         content = BINARY_DATA_B.as_slice(),
+///     )]
+///     pub binary_file_b: AssertableFilePath,
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn fs_harness_tree(_attributes: TokenStream, data: TokenStream) -> TokenStream {
     let struct_data = match syn::parse::<ItemStruct>(data) {
@@ -668,7 +761,6 @@ pub fn fs_harness_tree(_attributes: TokenStream, data: TokenStream) -> TokenStre
 
     let (modified_struct, parsed_data) = parse_struct_data(struct_data);
 
-
     let struct_name = modified_struct.ident.clone();
     let (impl_generics, ty_generics, where_clause) = modified_struct.generics.split_for_impl();
 
@@ -679,9 +771,6 @@ pub fn fs_harness_tree(_attributes: TokenStream, data: TokenStream) -> TokenStre
         ty_generics,
         where_clause,
     );
-
-    // TODO Parse struct fields, remove any parsed field attributes, add field documentation.
-    // TODO Then, do the same as before in the derive macro.
 
     quote! {
         #modified_struct

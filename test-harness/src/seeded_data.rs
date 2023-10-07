@@ -1,4 +1,4 @@
-/// Expands to a randomly generated (seeded) [`Vec<u8>`] (runtime-generated).
+/// Expands to a randomly generated (but deterministically seeded) [`Vec<u8>`] (still runtime-generated).
 ///
 /// ## Examples
 /// To generate 16 KiB of random data with the seed `37510903939111`:
@@ -34,7 +34,7 @@ macro_rules! generate_seeded_binary_data {
     }};
 }
 
-/// Expands to a *lazily* randomly generated (seeded) [`Vec<u8>`] (still runtime-generated).
+/// Expands to a *lazily* randomly generated (but deterministically seeded) [`Vec<u8>`] (runtime-generated).
 ///
 /// This is almost the same as [`generate_seeded_binary_data`], but wraps the
 /// `Vec<u8>` in a [`once_cell::sync::Lazy`][../once_cell/sync/struct.Lazy.html],
