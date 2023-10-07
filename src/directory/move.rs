@@ -44,12 +44,14 @@ struct DirectoryContentDetails {
     pub(crate) total_directories: usize,
 }
 
+/// Scans the provided directory (no depth limit).
+/// 
+/// The returned struct contains information about the total number files and directories and the total directory size.
 #[rustfmt::skip]
 fn collect_source_directory_details(
-    source_directory_path: &Path,
-    maximum_scan_depth: Option<usize>,
+    source_directory_path: &Path
 ) -> Result<DirectoryContentDetails, DirectoryError> {
-    let scan = DirectoryScan::scan_with_options(source_directory_path, maximum_scan_depth, false)
+    let scan = DirectoryScan::scan_with_options(source_directory_path, None, false)
         .map_err(|error| match error {
             DirectoryScanError::NotFound => 
                 DirectoryError::SourceDirectoryNotFound,
@@ -92,7 +94,27 @@ fn collect_source_directory_details(
     })
 }
 
-
+/// Move a directory from `source_directory_path` to `target_directory_path`.
+///
+/// - `source_directory_path` must point to an existing directory path.
+/// - `target_directory_path` represents a path to the directory that will contain `source_directory_path`'s contents.
+///
+///
+/// ### Target directory
+/// Depending on the [`options.target_directory_rule`][DirectoryMoveOptions::target_directory_rule] option,
+/// the `target_directory_path` must:
+/// - [`DisallowExisting`][TargetDirectoryRule::DisallowExisting]: not exist,
+/// - [`AllowEmpty`][TargetDirectoryRule::AllowEmpty]: either not exist or be empty, or,
+/// - [`AllowNonEmpty`][TargetDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
+///   the specified overwriting rules are respected (see fields).
+///
+///
+/// ### Return value
+/// Upon success, the function returns the number of files and directories that were moved
+/// as well as the total amount of bytes moved, see [`FinishedDirectoryMove`].
+///
+/// ### Warnings
+/// *Warning:* this function **does not follow symbolic links**.
 pub fn move_directory<S, T>(
     source_directory_path: S,
     target_directory_path: T,
@@ -113,7 +135,7 @@ where
         &validated_target_path.target_directory_path,
     )?;
 
-    let source_details = collect_source_directory_details(&source_directory_path, None)?;
+    let source_details = collect_source_directory_details(&source_directory_path)?;
 
     // We can attempt to simply rename the directory. This is much faster,
     // but will fail if the source and target paths aren't on the same mount point or filesystem or,

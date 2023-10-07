@@ -127,13 +127,13 @@ pub(super) fn validate_source_target_directory_pair(
 /// [`Default`] is implemented for this enum. The default value is [`TargetDirectoryRule::AllowEmpty`].
 ///
 /// ## Examples
-/// If you wanted the associated [`copy_directory`] or [`copy_directory_with_progress`] function
-/// to *return an error if the target directory already exists*,
-/// you'd use [`TargetDirectoryRule::DisallowExisting`];
+/// If you want the associated directory copying or moving function to
+/// *return an error if the target directory already exists*, use [`TargetDirectoryRule::DisallowExisting`];
 ///
-/// If you wanted to copy into an *existing empty target directory*, you'd use [`TargetDirectoryRule::AllowEmpty`].
+/// If you want to copy into an *existing empty target directory*, you should use [`TargetDirectoryRule::AllowEmpty`]
+/// (this rule *does not require* the target directory to exist and will create one if missing).
 ///
-/// If the target directory could already exist and have some files or directories inside, you'd use the following:
+/// If the target directory could already exist and have some files or directories in it, you can use the following rule:
 /// ```rust
 /// # use crate::directory::TargetDirectoryRules;
 /// let rules = TargetDirectoryRules::AllowExistingDirectory {
@@ -142,8 +142,9 @@ pub(super) fn validate_source_target_directory_pair(
 /// };
 /// ```
 ///
-/// This would still not overwrite any overlapping files. If you want files and/or directories to be overwritten,
-/// you may set the flags for overwriting to `true`:
+/// This will still not overwrite any overlapping files (i.e. a merge without overwrites will be performed).
+///
+/// If you want files and/or directories to be overwritten, you may set the flags for overwriting to `true`:
 /// ```rust
 /// # use crate::directory::TargetDirectoryRules;
 /// let rules = TargetDirectoryRules::AllowExistingDirectory {
@@ -162,14 +163,14 @@ pub enum TargetDirectoryRule {
 
     /// Indicates that an existing non-empty target directory should not cause an error.
     AllowNonEmpty {
-        /// If enabled, [`copy_directory`] or [`copy_directory_with_progress`] will return
+        /// If enabled, the associated function will return
         /// `Err(`[`DirectoryError::TargetItemAlreadyExists`][crate::error::DirectoryError::TargetItemAlreadyExists]`)`
-        /// if a target directory or any of subdirectories that would otherwise be created already exist.
+        /// if a target directory or any of subdirectories that would otherwise need to be freshly created already exist.
         overwrite_existing_subdirectories: bool,
 
-        /// If enabled, [`copy_directory`] or [`copy_directory_with_progress`] will return
+        /// If enabled, the associated function will return
         /// `Err(`[`DirectoryError::TargetItemAlreadyExists`][crate::error::DirectoryError::TargetItemAlreadyExists]`)`
-        /// if a target file we would otherwise create and copy into already exists.
+        /// if a target file we would otherwise freshly create and copy into already exists.
         overwrite_existing_files: bool,
     },
 }
@@ -181,10 +182,14 @@ impl Default for TargetDirectoryRule {
 }
 
 impl TargetDirectoryRule {
+    /// Indicates whether this rule allows the target directory
+    /// to exist before performing an operation.
     pub fn allows_existing_target_directory(&self) -> bool {
         !matches!(self, Self::DisallowExisting)
     }
 
+    /// Indicates whether this rule allows existing files
+    /// in the target directory to be overwritten with contents of the source.
     pub fn should_overwrite_existing_files(&self) -> bool {
         match self {
             TargetDirectoryRule::DisallowExisting => false,
@@ -196,6 +201,8 @@ impl TargetDirectoryRule {
         }
     }
 
+    /// Indicates whether this rule allows existing (sub)directories
+    /// in the target directory to be "overwritten" with contents of the source (sub)directory.
     pub fn should_overwrite_existing_directories(&self) -> bool {
         match self {
             TargetDirectoryRule::DisallowExisting => false,
@@ -611,18 +618,18 @@ where
 }
 
 
-/// Copy an entire directory from `source_directory_path` to `target_directory_path`.
+/// Copy a directory from `source_directory_path` to `target_directory_path`.
 ///
 /// - `source_directory_path` must point to an existing directory path.
 /// - `target_directory_path` represents a path to the directory that will contain `source_directory_path`'s contents.
 ///
 /// ### Target directory
-/// Depending on the [`options.target_directory_rules`][DirectoryCopyOptions::target_directory_rule] option,
+/// Depending on the [`options.target_directory_rule`][DirectoryCopyOptions::target_directory_rule] option,
 /// the `target_directory_path` must:
 /// - [`DisallowExisting`][TargetDirectoryRule::DisallowExisting]: not exist,
 /// - [`AllowEmpty`][TargetDirectoryRule::AllowEmpty]: either not exist or be empty, or,
 /// - [`AllowNonEmpty`][TargetDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
-///   the specified overwriting rules are respected (see variant's fields).
+///   the specified overwriting rules are respected (see fields).
 ///
 /// If the specified target directory rule does not hold,
 /// `Err(`[`DirectoryError::InvalidTargetDirectoryPath`]`)` or

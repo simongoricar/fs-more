@@ -220,8 +220,14 @@ pub enum AssertableFilePathError {
     #[error("provided file path exists, but is not a file")]
     NotAFile,
 
-    #[error("other std::io::Error: {0}")]
-    OtherIoError(#[from] std::io::Error),
+    #[error("unable to compute parent directory")]
+    NoParentDirectory,
+
+    #[error("other std::io::Error: {error}")]
+    OtherIoError {
+        #[from]
+        error: std::io::Error,
+    },
 }
 
 /// A root directory path abstraction for testing purposes.
@@ -434,7 +440,7 @@ impl AssertableDirectoryPath {
 ///
 /// Mainly intended to be used with the [`FilesystemTreeHarness`](../../fs_more_test_harness_macros/derive.FilesystemTreeHarness.html)
 /// macro, but can also be used standalone, see these initialization methods:
-/// - [`from_path_pure`][Self::from_path_pure] and
+/// - [`from_path`][Self::from_path] and
 /// - [`from_path_with_expected_content`][Self::from_path_with_expected_content].
 pub struct AssertableFilePath {
     /// File path.
@@ -474,7 +480,7 @@ impl AssertableFilePath {
     /// This initialization method *does not interact with the filesystem at all*.
     /// Therefore, the "expected" contents of the file (see the [`expected_content`][Self::expected_content] method)
     /// will be set to `None` (i.e. unknown).
-    pub fn from_path_pure<P>(file_path: P) -> Self
+    pub fn from_path<P>(file_path: P) -> Self
     where
         P: Into<PathBuf>,
     {
@@ -514,7 +520,7 @@ impl AssertableFilePath {
 
     /// Initialize a new assertable file path by providing just a file path.
     ///
-    /// Just like [`from_path_pure`][Self::from_path_pure],
+    /// Just like [`from_path`][Self::from_path],
     /// this initialization method *does not interact with the filesystem at all*.
     ///
     /// Therefore, the "expected" contents of the file (see the [`expected_content`][Self::expected_content] method)
@@ -533,6 +539,64 @@ impl AssertableFilePath {
     /// Returns this assertable file's filesystem path as a [`Path`][std::path::Path] reference.
     pub fn path(&self) -> &Path {
         &self.file_path
+    }
+
+    pub fn ensure_parent_directory_exists(&self) -> Result<(), AssertableFilePathError> {
+        let parent_directory = self
+            .file_path
+            .parent()
+            .ok_or_else(|| AssertableFilePathError::NoParentDirectory)?;
+
+        std::fs::create_dir_all(parent_directory)
+            .map_err(|error| AssertableFilePathError::OtherIoError { error })
+    }
+
+    pub fn touch(&self) -> Result<(), AssertableFilePathError> {
+        self.ensure_parent_directory_exists()?;
+
+        let file = std::fs::File::create(&self.file_path)
+            .map_err(|error| AssertableFilePathError::OtherIoError { error })?;
+        drop(file);
+
+        Ok(())
+    }
+
+    pub fn symlink_to_file<P>(&self, target_path: P) -> Result<(), AssertableFilePathError>
+    where
+        P: AsRef<Path>,
+    {
+        #[cfg(windows)]
+        {
+            std::os::windows::fs::symlink_file(target_path.as_ref(), &self.file_path)
+                .map_err(|error| AssertableFilePathError::OtherIoError { error })?;
+        }
+
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(target_path.as_ref(), &self.file_path)
+                .map_err(|error| AssertableFilePathError::OtherIoError { error })?;
+        }
+
+        #[cfg(not(any(windows, unix)))]
+        {
+            compile_error!(
+                "fs-more supports only the following values of target_family: unix and windows \
+                (notably, wasm is unsupported)."
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Returns the file size in bytes. If the file is a symbolic link,
+    /// this function returns the size of the file the symbolic link points to.
+    pub fn file_size_in_bytes(&self) -> Result<u64, AssertableFilePathError> {
+        let file_metadata = self
+            .file_path
+            .metadata()
+            .map_err(|error| AssertableFilePathError::OtherIoError { error })?;
+
+        Ok(file_metadata.len())
     }
 
     /// Sets the content the [`assert_content_unchanged`][Self::assert_content_unchanged]
@@ -556,7 +620,7 @@ impl AssertableFilePath {
     /// ## Panics
     /// This will panic if the expected contents are unknown
     /// (e.g. when using the [`from_path_with_expected_content`][Self::from_path_with_expected_content]
-    /// or [`from_path_pure`][Self::from_path_pure]
+    /// or [`from_path`][Self::from_path]
     /// methods to initialize [`Self`]).
     pub fn expected_content_unchecked(&self) -> &[u8] {
         self.expected_file_content
@@ -564,9 +628,34 @@ impl AssertableFilePath {
             .expect("Expected file content is unknown.")
     }
 
+    /// Asserts that this path leads to a file which is not a symlink.
+    pub fn assert_is_file(&self) {
+        assert!(self.file_path.is_file() && !self.file_path.is_symlink());
+    }
+
+    /// Asserts that this path leads to a directory which is not a symlink.
+    pub fn assert_is_directory(&self) {
+        assert!(self.file_path.is_dir() && !self.file_path.is_symlink());
+    }
+
+    /// Asserts that this path leads to a symbolic link to a file.
+    pub fn assert_is_symlink_to_file(&self) {
+        assert!(self.file_path.is_symlink() && self.file_path.is_file());
+    }
+
+    /// Asserts that this path leads to a symbolic link to a directory.
+    pub fn assert_is_symlink_to_directory(&self) {
+        assert!(self.file_path.is_symlink() && self.file_path.is_dir());
+    }
+
+    /// Asserts that this path leads to a symbolic link (either a file or directory).
+    pub fn assert_is_symlink(&self) {
+        assert!(self.file_path.is_symlink());
+    }
+
     /// Assert this file exists.
     pub fn assert_exists(&self) {
-        assert!(self.file_path.exists() && self.file_path.is_file());
+        assert!(self.file_path.exists());
     }
 
     /// Assert this file does not exist.
@@ -580,7 +669,7 @@ impl AssertableFilePath {
     /// ## Panics
     /// This will also panic if the expected contents are unknown
     /// (e.g. when using the [`from_path_with_expected_content`][Self::from_path_with_expected_content]
-    /// or [`from_path_pure`][Self::from_path_pure]
+    /// or [`from_path`][Self::from_path]
     /// methods to initialize [`Self`]).
     pub fn assert_content_unchanged(&self) {
         let Some(expected_contents) = self.expected_file_content.as_ref() else {

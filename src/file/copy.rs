@@ -7,6 +7,7 @@ use std::{
 use super::{
     progress::{FileProgress, ProgressWriter},
     validate_source_file_path,
+    ValidatedSourceFilePath,
 };
 use crate::error::FileError;
 
@@ -25,6 +26,16 @@ pub struct FileCopyOptions {
     pub skip_existing: bool,
 }
 
+#[allow(clippy::derivable_impls)]
+impl Default for FileCopyOptions {
+    fn default() -> Self {
+        Self {
+            overwrite_existing: false,
+            skip_existing: false,
+        }
+    }
+}
+
 
 /// Copy a single file from the `source_file_path` to the `target_file_path`.
 ///
@@ -37,6 +48,10 @@ pub struct FileCopyOptions {
 /// If `options.overwrite_existing` is `false` and the target file exists, this function will
 /// return `Err` with [`FileError::AlreadyExists`][crate::error::FileError::AlreadyExists],
 /// unless `options.skip_existing` is `true`, in which case `Ok(0)` is returned.
+///
+/// ## Symbolic links
+/// If `source_file_path` is a symbolic link to a file, the contents of the file it points to will be copied to `target_file_path`
+/// (same behaviour as `cp` without `-P` on Unix).
 ///
 /// ## Internals
 /// This function internally delegates copying to [`std::fs::copy`] from the standard library
@@ -53,7 +68,9 @@ where
     let source_file_path = source_file_path.as_ref();
     let target_file_path = target_file_path.as_ref();
 
-    validate_source_file_path(source_file_path)?;
+    let ValidatedSourceFilePath {
+        source_file_path, ..
+    } = validate_source_file_path(source_file_path)?;
 
     // Ensure the target file path doesn't exist yet
     // (unless `overwrite_existing` is `true`)
@@ -226,7 +243,6 @@ where
 /// As such this function does not guarantee a specific amount of progress reports per file size.
 /// It does, however, guarantee at least one progress report: the final one, which happens when the file is completely copied.
 ///
-///
 /// ## Options
 /// If [`options.overwrite_existing`][FileCopyWithProgressOptions::overwrite_existing] is `true`,
 /// an existing target file will be overwritten (if it happens to exist, otherwise the flag is ignored).
@@ -236,6 +252,11 @@ where
 /// with [`FileError::AlreadyExists`][crate::error::FileError::AlreadyExists],
 /// unless [`options.skip_existing`][FileCopyWithProgressOptions::skip_existing] is `true`,
 /// in which case `Ok(0)` is returned.
+///
+/// ## Symbolic links
+/// If `source_file_path` is a symbolic link to a file, the contents of the file it points to will be copied to `target_file_path`
+/// (same behaviour as `cp` without `-P` on Unix).
+///
 ///
 /// ## Internals
 /// This function handles copying itself by opening handles of both files itself
@@ -254,7 +275,9 @@ where
     let source_file_path = source_file_path.as_ref();
     let target_file_path = target_file_path.as_ref();
 
-    validate_source_file_path(source_file_path)?;
+    let ValidatedSourceFilePath {
+        source_file_path, ..
+    } = validate_source_file_path(source_file_path)?;
 
     // Ensure the target file path doesn't exist yet
     // (unless `overwrite_existing` is `true`)
@@ -291,7 +314,7 @@ where
     // can't report progress otherwise. This is delegated to the `copy_file_with_progress_unchecked`
     // function which is used in other parts of the library as well.
     copy_file_with_progress_unchecked(
-        source_file_path,
+        &source_file_path,
         target_file_path,
         options,
         progress_handler,

@@ -1,18 +1,20 @@
 use assert_matches::assert_matches;
-use fs_more::{error::FileError, file::FileMoveOptions};
+use fs_more::{
+    error::FileError,
+    file::{FileMoveOptions, FileMoveWithProgressOptions},
+};
 use fs_more_test_harness::{
     assertable::AssertableFilePath,
     error::TestResult,
-    trees::SimpleFileHarness,
+    trees::{SimpleFileHarness, SimpleTreeHarness},
 };
 
 #[test]
 pub fn move_file() -> TestResult<()> {
     let harness = SimpleFileHarness::new()?;
 
-    let target_file = AssertableFilePath::from_path_pure(
-        harness.test_file.path().with_file_name("test_file2.txt"),
-    );
+    let target_file =
+        AssertableFilePath::from_path(harness.test_file.path().with_file_name("test_file2.txt"));
 
     let file_copy_result: Result<u64, FileError> = fs_more::file::move_file(
         harness.test_file.path(),
@@ -120,9 +122,8 @@ pub fn forbid_case_insensitive_move_into_itself() -> TestResult<()> {
         .to_string_lossy()
         .to_uppercase();
 
-    let target_file = AssertableFilePath::from_path_pure(
-        harness.foo_bar.path().with_file_name(upper_case_file_name),
-    );
+    let target_file =
+        AssertableFilePath::from_path(harness.foo_bar.path().with_file_name(upper_case_file_name));
 
     #[cfg(unix)]
     target_file.assert_not_exists();
@@ -249,6 +250,87 @@ pub fn forbid_move_overwriting_target_file_without_flag() -> TestResult<()> {
     harness.test_file.assert_content_unchanged();
     harness.foo_bar.assert_content_unchanged();
 
+
+    harness.destroy()?;
+    Ok(())
+}
+
+/// **On Windows**, creating symbolic links requires administrator privileges, unless Developer mode is enabled.
+/// See [https://stackoverflow.com/questions/58038683/allow-mklink-for-a-non-admin-user].
+#[test]
+pub fn move_file_symlink_behaviour() -> TestResult<()> {
+    let harness = SimpleTreeHarness::new()?;
+
+    let symlinked_file = AssertableFilePath::from_path(harness.root.child_path("my-symlink.txt"));
+    symlinked_file.assert_not_exists();
+    symlinked_file.symlink_to_file(harness.binary_file_a.path())?;
+    symlinked_file.assert_is_symlink();
+
+    let real_file_size_in_bytes = symlinked_file.file_size_in_bytes()?;
+
+    let target_file =
+        AssertableFilePath::from_path(harness.root.child_path("my-moved-symlink.txt"));
+    target_file.assert_not_exists();
+
+
+    let num_copied_bytes = fs_more::file::move_file(
+        symlinked_file.path(),
+        target_file.path(),
+        FileMoveOptions::default(),
+    )
+    .unwrap();
+
+    assert_eq!(real_file_size_in_bytes, num_copied_bytes);
+
+    symlinked_file.assert_not_exists();
+    harness.binary_file_a.assert_content_unchanged();
+    target_file.assert_is_file();
+
+    assert_eq!(
+        real_file_size_in_bytes,
+        target_file.file_size_in_bytes()?
+    );
+
+    harness.destroy()?;
+    Ok(())
+}
+
+/// **On Windows**, creating symbolic links requires administrator privileges, unless Developer mode is enabled.
+/// See [https://stackoverflow.com/questions/58038683/allow-mklink-for-a-non-admin-user].
+#[test]
+pub fn move_file_with_progress_symlink_behaviour() -> TestResult<()> {
+    let harness = SimpleTreeHarness::new()?;
+
+    let symlinked_file = AssertableFilePath::from_path(harness.root.child_path("my-symlink.txt"));
+    symlinked_file.assert_not_exists();
+    symlinked_file.symlink_to_file(harness.binary_file_a.path())?;
+    symlinked_file.assert_is_symlink();
+
+    let real_file_size_in_bytes = symlinked_file.file_size_in_bytes()?;
+
+    let target_file =
+        AssertableFilePath::from_path(harness.root.child_path("my-moved-symlink.txt"));
+    target_file.assert_not_exists();
+
+
+    let num_copied_bytes = fs_more::file::move_file_with_progress(
+        symlinked_file.path(),
+        target_file.path(),
+        FileMoveWithProgressOptions::default(),
+        |_| {},
+    )
+    .unwrap();
+
+    assert_eq!(real_file_size_in_bytes, num_copied_bytes);
+
+    symlinked_file.assert_not_exists();
+    harness.binary_file_a.assert_content_unchanged();
+    target_file.assert_is_file();
+
+    assert_eq!(
+        real_file_size_in_bytes,
+        target_file.file_size_in_bytes()?
+    );
 
     harness.destroy()?;
     Ok(())

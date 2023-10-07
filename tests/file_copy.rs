@@ -21,9 +21,8 @@ use fs_more_test_harness::{
 pub fn copy_file() -> TestResult<()> {
     let harness = SimpleFileHarness::new()?;
 
-    let target_file = AssertableFilePath::from_path_pure(
-        harness.test_file.path().with_file_name("test_file2.txt"),
-    );
+    let target_file =
+        AssertableFilePath::from_path(harness.test_file.path().with_file_name("test_file2.txt"));
     target_file.assert_not_exists();
 
     let file_copy_result: Result<u64, FileError> = fs_more::file::copy_file(
@@ -56,7 +55,7 @@ pub fn copy_file() -> TestResult<()> {
 pub fn copy_binary_file() -> TestResult<()> {
     let harness = SimpleTreeHarness::new()?;
 
-    let target_file = AssertableFilePath::from_path_pure(
+    let target_file = AssertableFilePath::from_path(
         harness
             .binary_file_a
             .path()
@@ -138,9 +137,8 @@ pub fn case_insensitive_copy_into_self() -> Result<(), FixtureError> {
         .to_string_lossy()
         .to_uppercase();
 
-    let target_file = AssertableFilePath::from_path_pure(
-        harness.test_file.path().with_file_name(target_file_name),
-    );
+    let target_file =
+        AssertableFilePath::from_path(harness.test_file.path().with_file_name(target_file_name));
 
 
     let file_copy_result = fs_more::file::copy_file(
@@ -230,7 +228,7 @@ pub fn forbid_non_trivial_copy_into_self() -> Result<(), FixtureError> {
         grandparent_directory.join(non_trivial_subpath)
     };
 
-    let target_file = AssertableFilePath::from_path_pure(target_file_path);
+    let target_file = AssertableFilePath::from_path(target_file_path);
 
     #[cfg(unix)]
     target_file.assert_not_exists();
@@ -403,9 +401,8 @@ pub fn skip_existing_target_file_move_with_flag() -> TestResult<()> {
 pub fn copy_file_with_progress() -> TestResult<()> {
     let harness = SimpleFileHarness::new()?;
 
-    let target_file = AssertableFilePath::from_path_pure(
-        harness.test_file.path().with_file_name("test_file2.txt"),
-    );
+    let target_file =
+        AssertableFilePath::from_path(harness.test_file.path().with_file_name("test_file2.txt"));
     target_file.assert_not_exists();
 
     let expected_final_file_size_bytes = harness.test_file.path().metadata()?.len();
@@ -457,6 +454,86 @@ pub fn copy_file_with_progress() -> TestResult<()> {
     target_file.assert_exists();
     target_file.assert_content_matches_expected_value_of_assertable(&harness.test_file);
 
+
+    harness.destroy()?;
+    Ok(())
+}
+
+
+/// **On Windows**, creating symbolic links requires administrator privileges, unless Developer mode is enabled.
+/// See [https://stackoverflow.com/questions/58038683/allow-mklink-for-a-non-admin-user].
+#[test]
+pub fn copy_file_symlink_behaviour() -> TestResult<()> {
+    let harness = SimpleTreeHarness::new()?;
+
+    let symlinked_file = AssertableFilePath::from_path(harness.root.child_path("my-symlink.txt"));
+    symlinked_file.assert_not_exists();
+    symlinked_file.symlink_to_file(harness.binary_file_a.path())?;
+    symlinked_file.assert_is_symlink();
+
+    let real_file_size_in_bytes = symlinked_file.file_size_in_bytes()?;
+
+    let target_file =
+        AssertableFilePath::from_path(harness.root.child_path("my-copied-symlink.txt"));
+    target_file.assert_not_exists();
+
+
+    let num_copied_bytes = fs_more::file::copy_file(
+        symlinked_file.path(),
+        target_file.path(),
+        FileCopyOptions::default(),
+    )
+    .unwrap();
+
+    assert_eq!(real_file_size_in_bytes, num_copied_bytes);
+
+    symlinked_file.assert_is_symlink();
+    target_file.assert_is_file();
+
+    assert_eq!(
+        real_file_size_in_bytes,
+        target_file.file_size_in_bytes()?
+    );
+
+    harness.destroy()?;
+    Ok(())
+}
+
+/// **On Windows**, creating symbolic links requires administrator privileges, unless Developer mode is enabled.
+/// See [https://stackoverflow.com/questions/58038683/allow-mklink-for-a-non-admin-user].
+#[test]
+pub fn copy_file_with_progress_symlink_behaviour() -> TestResult<()> {
+    let harness = SimpleTreeHarness::new()?;
+
+    let symlinked_file = AssertableFilePath::from_path(harness.root.child_path("my-symlink.txt"));
+    symlinked_file.assert_not_exists();
+    symlinked_file.symlink_to_file(harness.binary_file_a.path())?;
+    symlinked_file.assert_is_symlink_to_file();
+
+    let real_file_size_in_bytes = symlinked_file.file_size_in_bytes()?;
+
+    let target_file =
+        AssertableFilePath::from_path(harness.root.child_path("my-copied-symlink.txt"));
+    target_file.assert_not_exists();
+
+
+    let num_copied_bytes = fs_more::file::copy_file_with_progress(
+        symlinked_file.path(),
+        target_file.path(),
+        FileCopyWithProgressOptions::default(),
+        |_| {},
+    )
+    .unwrap();
+
+    assert_eq!(real_file_size_in_bytes, num_copied_bytes);
+
+    symlinked_file.assert_is_symlink_to_file();
+    target_file.assert_is_file();
+
+    assert_eq!(
+        real_file_size_in_bytes,
+        target_file.file_size_in_bytes()?
+    );
 
     harness.destroy()?;
     Ok(())

@@ -31,7 +31,7 @@ pub fn remove_file() -> TestResult<()> {
 pub fn fail_file_removal_when_it_doesnt_exist() -> TestResult<()> {
     let harness = SimpleFileHarness::new()?;
 
-    let non_existent_file = AssertableFilePath::from_path_pure(
+    let non_existent_file = AssertableFilePath::from_path(
         harness
             .foo_bar
             .path()

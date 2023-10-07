@@ -6,13 +6,25 @@ use super::{
     FileCopyWithProgressOptions,
     FileProgress,
 };
-use crate::error::{FileError, FileRemoveError};
+use crate::{
+    error::{FileError, FileRemoveError},
+    file::ValidatedSourceFilePath,
+};
 
 /// Options that influence the [`move_file`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct FileMoveOptions {
     /// Whether to allow overwriting the target file if it already exists.
     pub overwrite_existing: bool,
+}
+
+#[allow(clippy::derivable_impls)]
+impl Default for FileMoveOptions {
+    fn default() -> Self {
+        Self {
+            overwrite_existing: false,
+        }
+    }
 }
 
 
@@ -26,6 +38,11 @@ pub struct FileMoveOptions {
 ///
 /// If `options.overwrite_existing` is `false` and the target file exists, this function will
 /// return `Err` with [`FileError::AlreadyExists`][crate::error::FileError::AlreadyExists].
+///
+/// ## Symbolic links
+/// If the `source_file_path` is a symbolic link to a file, the contents of the file that the link points to
+/// will be copied to the `target_file_path` and the original `source_file_path` symbolic link will be removed
+/// (i.e. the link destination will be untouched, but we won't preserve the link).
 ///
 /// ## Internals
 /// This function will first attempt to move the file with [`std::fs::rename`].
@@ -42,7 +59,10 @@ where
     let source_file_path = source_file_path.as_ref();
     let target_file_path = target_file_path.as_ref();
 
-    validate_source_file_path(source_file_path)?;
+    let ValidatedSourceFilePath {
+        source_file_path: validated_source_file_path,
+        original_was_symlink_to_file,
+    } = validate_source_file_path(source_file_path)?;
 
     // Ensure the target file path doesn't exist yet
     // (unless `overwrite_existing` is `true`)
@@ -51,7 +71,7 @@ where
         Ok(exists) => {
             if exists {
                 // Ensure we don't try to copy the file into itself.
-                let canonicalized_source_path = source_file_path
+                let canonicalized_source_path = validated_source_file_path
                     .canonicalize()
                     .map_err(|error| FileError::UnableToAccessSourceFile { error })?;
                 let canonicalized_target_path = target_file_path
@@ -75,7 +95,11 @@ where
     //   (as indicated by std::fs::rename succeeding) that's nice (and fast),
     // - otherwise we need to copy to target and remove source.
 
-    if std::fs::rename(source_file_path, target_file_path).is_ok() {
+    // Note that we *must not* go for the renaming shortcut if the user-provided path was actually a symbolic link to a file.
+    // In that case, we need to copy the file behind the symbolic link, then remove the symbolic link.
+    if !original_was_symlink_to_file
+        && std::fs::rename(&validated_source_file_path, target_file_path).is_ok()
+    {
         // Get size of file that we just renamed.
         let target_file_path_metadata = target_file_path
             .metadata()
@@ -84,10 +108,16 @@ where
         Ok(target_file_path_metadata.len())
     } else {
         // Copy, then delete original.
-        let num_bytes_copied = std::fs::copy(source_file_path, target_file_path)
+        let num_bytes_copied = std::fs::copy(&validated_source_file_path, target_file_path)
             .map_err(|error| FileError::OtherIoError { error })?;
 
-        super::remove_file(source_file_path).map_err(|error| match error {
+        let file_path_to_remove = if original_was_symlink_to_file {
+            source_file_path
+        } else {
+            validated_source_file_path.as_path()
+        };
+
+        super::remove_file(file_path_to_remove).map_err(|error| match error {
             FileRemoveError::NotFound => FileError::NotFound,
             FileRemoveError::NotAFile => FileError::NotAFile,
             FileRemoveError::UnableToAccessFile { error } => {
@@ -152,6 +182,11 @@ impl Default for FileMoveWithProgressOptions {
 /// and the target file exists, this function will return `Err`
 /// with [`FileError::AlreadyExists`][crate::error::FileError::AlreadyExists].
 ///
+/// ## Symbolic links
+/// If the `source_file_path` is a symbolic link to a file, the contents of the file that the link points to
+/// will be copied to the `target_file_path` and the original `source_file_path` symbolic link will be removed
+/// (i.e. the link destination will be untouched, but we won't preserve the link).
+///
 /// ## Internals
 /// This function will first attempt to move the file with [`std::fs::rename`].
 /// If that fails (you can't rename files across filesystems), a copy-and-delete will be performed.
@@ -169,7 +204,10 @@ where
     let source_file_path = source_file_path.as_ref();
     let target_file_path = target_file_path.as_ref();
 
-    validate_source_file_path(source_file_path)?;
+    let ValidatedSourceFilePath {
+        source_file_path: validated_source_file_path,
+        original_was_symlink_to_file,
+    } = validate_source_file_path(source_file_path)?;
 
     // Ensure the target file path doesn't exist yet
     // (unless `overwrite_existing` is `true`)
@@ -178,7 +216,7 @@ where
         Ok(exists) => {
             if exists {
                 // Ensure we don't try to copy the file into itself.
-                let canonicalized_source_path = source_file_path
+                let canonicalized_source_path = validated_source_file_path
                     .canonicalize()
                     .map_err(|error| FileError::UnableToAccessSourceFile { error })?;
                 let canonicalized_target_path = target_file_path
@@ -203,7 +241,9 @@ where
     //   that's nice and fast (we mustn't forget to do at least one progress report),
     // - otherwise we need to copy to target and remove source.
 
-    if std::fs::rename(source_file_path, target_file_path).is_ok() {
+    if !original_was_symlink_to_file
+        && std::fs::rename(&validated_source_file_path, target_file_path).is_ok()
+    {
         // Get size of file that we just renamed.
         let target_file_path_size_bytes = target_file_path
             .metadata()
@@ -219,7 +259,7 @@ where
     } else {
         // It's impossible to rename the file, so we need to copy and delete the original.
         let bytes_written = copy_file_with_progress_unchecked(
-            source_file_path,
+            &validated_source_file_path,
             target_file_path,
             FileCopyWithProgressOptions {
                 overwrite_existing: options.overwrite_existing,
@@ -230,7 +270,13 @@ where
             progress_handler,
         )?;
 
-        super::remove_file(source_file_path).map_err(|error| match error {
+        let file_path_to_remove = if original_was_symlink_to_file {
+            source_file_path
+        } else {
+            validated_source_file_path.as_path()
+        };
+
+        super::remove_file(file_path_to_remove).map_err(|error| match error {
             FileRemoveError::NotFound => FileError::NotFound,
             FileRemoveError::NotAFile => FileError::NotAFile,
             FileRemoveError::UnableToAccessFile { error } => {
