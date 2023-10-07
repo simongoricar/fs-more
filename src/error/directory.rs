@@ -108,3 +108,15 @@ pub enum DirectorySizeScanError {
     #[error("other std::io::Error: {error}")]
     OtherIoError { error: std::io::Error },
 }
+
+#[derive(Error, Debug)]
+pub enum DirectoryIsEmptyError {
+    #[error("given path does not exist")]
+    NotFound,
+
+    #[error("given path does not lead to a directory")]
+    NotADirectory,
+
+    #[error("unable to read contents of directory due to an std::io::Error: {error}")]
+    UnableToReadDirectory { error: std::io::Error },
+}

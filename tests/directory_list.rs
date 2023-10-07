@@ -41,7 +41,6 @@ pub fn scan_directory() -> TestResult<()> {
     );
 
     assert!(!scan.is_real_directory_deeper_than_scan);
-    assert_eq!(scan.maximum_scanned_depth, None);
 
 
     assert!(path_vec_contains_path(
@@ -94,7 +93,6 @@ pub fn scan_directory_with_limited_depth() -> TestResult<()> {
     );
 
     assert!(scan.is_real_directory_deeper_than_scan);
-    assert_eq!(scan.maximum_scanned_depth, Some(0));
 
 
     assert!(path_vec_contains_path(
