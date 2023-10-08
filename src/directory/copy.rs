@@ -438,6 +438,7 @@ where
                 let underlying_path = fs::canonicalize(&directory_item_source_path)
                     .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
 
+                // TODO Migrate remaining std::fs calls like this: Path/PathBuf::metadata to fs::metadata (to allow for fs-err).
                 let underlying_item_metadata = underlying_path
                     .metadata()
                     .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
