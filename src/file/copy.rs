@@ -1,8 +1,12 @@
+#[cfg(not(feature = "fs-err"))]
+use std::fs;
 use std::{
-    fs::OpenOptions,
     io::{BufReader, BufWriter, Write},
     path::Path,
 };
+
+#[cfg(feature = "fs-err")]
+use fs_err as fs;
 
 use super::{
     progress::{FileProgress, ProgressWriter},
@@ -103,7 +107,7 @@ where
     }
 
     // All checks have passed, pass the copying onto Rust's standard library.
-    let num_bytes_copied = std::fs::copy(source_file_path, target_file_path)
+    let num_bytes_copied = fs::copy(source_file_path, target_file_path)
         .map_err(|error| FileError::OtherIoError { error })?;
 
     Ok(num_bytes_copied)
@@ -171,7 +175,7 @@ where
 
     // Open a file for reading and a file for writing,
     // wrap them in buffers and progress monitors, then copy the file.
-    let input_file = OpenOptions::new()
+    let input_file = fs::OpenOptions::new()
         .read(true)
         .open(source_file_path)
         .map_err(|error| FileError::OtherIoError { error })?;
@@ -179,7 +183,7 @@ where
     let mut input_file_buffered = BufReader::with_capacity(options.buffer_size, input_file);
 
 
-    let output_file = OpenOptions::new()
+    let output_file = fs::OpenOptions::new()
         .create(true)
         .write(true)
         .truncate(true)

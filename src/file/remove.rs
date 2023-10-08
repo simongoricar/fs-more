@@ -1,4 +1,9 @@
+#[cfg(not(feature = "fs-err"))]
+use std::fs;
 use std::path::Path;
+
+#[cfg(feature = "fs-err")]
+use fs_err as fs;
 
 use crate::error::FileRemoveError;
 
@@ -31,7 +36,7 @@ where
     }
 
     // All checks have passed, remove the file.
-    std::fs::remove_file(file_path).map_err(|error| FileRemoveError::OtherIoError { error })?;
+    fs::remove_file(file_path).map_err(|error| FileRemoveError::OtherIoError { error })?;
 
     Ok(())
 }

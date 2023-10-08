@@ -1,4 +1,9 @@
+#[cfg(not(feature = "fs-err"))]
+use std::fs;
 use std::path::Path;
+
+#[cfg(feature = "fs-err")]
+use fs_err as fs;
 
 use super::{copy::TargetDirectoryRule, copy_directory_unchecked, DirectoryScan};
 use crate::{
@@ -149,7 +154,7 @@ where
         {
             // If the target directory exists, but is empty, we can (on Unix only)
             // directly rename the source directory to the target (this might still fail due to different mount points).
-            if std::fs::rename(&source_directory_path, &target_directory_path).is_ok() {
+            if fs::rename(&source_directory_path, &target_directory_path).is_ok() {
                 return Ok(FinishedDirectoryMove {
                     total_bytes_moved: source_details.total_bytes,
                     num_files_moved: source_details.total_files,
@@ -162,7 +167,7 @@ where
         {
             // On Windows, `rename`'s target directory must not exist.
             if !validated_target_path.target_directory_exists
-                && std::fs::rename(&source_directory_path, &target_directory_path).is_ok()
+                && fs::rename(&source_directory_path, &target_directory_path).is_ok()
             {
                 return Ok(FinishedDirectoryMove {
                     total_bytes_moved: source_details.total_bytes,
@@ -174,7 +179,7 @@ where
             // Otherwise, we can rename the *contents* of the directory instead.
             // Note that this is not a recursive scan, we're simply moving (by renaming)
             // the files and directories directly inside the source directory into the target directory.
-            let source_directory_contents = std::fs::read_dir(&source_directory_path)
+            let source_directory_contents = fs::read_dir(&source_directory_path)
                 .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
 
             for source_entry in source_directory_contents {
@@ -188,12 +193,12 @@ where
                     &validated_target_path.target_directory_path,
                 )?;
 
-                std::fs::rename(source_path, target_path)
+                fs::rename(source_path, target_path)
                     .map_err(|error| DirectoryError::OtherIoError { error })?;
             }
 
             // Finally, we need to remove the, now empty, source directory path.
-            std::fs::remove_dir(&source_directory_path)
+            fs::remove_dir(&source_directory_path)
                 .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
 
             return Ok(FinishedDirectoryMove {
@@ -216,7 +221,7 @@ where
     // We need to copy and delete instead.
 
     if !validated_target_path.target_directory_exists {
-        std::fs::create_dir_all(&source_directory_path)
+        fs::create_dir_all(&source_directory_path)
             .map_err(|error| DirectoryError::UnableToAccessTarget { error })?;
     }
 
@@ -229,7 +234,7 @@ where
         },
     )?;
 
-    std::fs::remove_dir_all(source_directory_path)
+    fs::remove_dir_all(source_directory_path)
         .map_err(|error| DirectoryError::OtherIoError { error })?;
 
     // TODO Test this entire method.

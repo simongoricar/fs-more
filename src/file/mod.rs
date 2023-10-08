@@ -1,6 +1,11 @@
 //! File sizing, copying, moving and removal operations. Includes progress monitoring variants.
 
+#[cfg(not(feature = "fs-err"))]
+use std::fs;
 use std::path::{Path, PathBuf};
+
+#[cfg(feature = "fs-err")]
+use fs_err as fs;
 
 mod copy;
 mod r#move;
@@ -48,7 +53,7 @@ fn validate_source_file_path(
             }
 
             if source_file_path.is_symlink() {
-                let canonicalized_path = std::fs::canonicalize(source_file_path)
+                let canonicalized_path = fs::canonicalize(source_file_path)
                     .map_err(|error| FileError::UnableToAccessSourceFile { error })?;
 
                 return Ok(ValidatedSourceFilePath {

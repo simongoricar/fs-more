@@ -1,7 +1,9 @@
-use std::{
-    fs::read_dir,
-    path::{Path, PathBuf},
-};
+#[cfg(not(feature = "fs-err"))]
+use std::fs;
+use std::path::{Path, PathBuf};
+
+#[cfg(feature = "fs-err")]
+use fs_err as fs;
 
 use crate::{
     error::{DirectoryIsEmptyError, DirectoryScanError, DirectorySizeScanError, FileSizeError},
@@ -122,7 +124,7 @@ impl DirectoryScan {
         ));
 
         while let Some(next_directory) = directory_scan_queue.pop() {
-            let directory_iterator = std::fs::read_dir(&next_directory.path)
+            let directory_iterator = fs::read_dir(&next_directory.path)
                 .map_err(|error| DirectoryScanError::UnableToReadDirectory { error })?;
 
             for item in directory_iterator {
@@ -162,7 +164,7 @@ impl DirectoryScan {
                     // If an item is a symbolic link, we ignore it, unless `follow_symbolic_links` is enabled.
                     // If enabled, we follow it to its destination and append that *destination* path
                     // to the file or directory list.
-                    let real_path = std::fs::read_link(item.path())
+                    let real_path = fs::read_link(item.path())
                         .map_err(|error| DirectoryScanError::UnableToReadDirectoryItem { error })?;
 
                     if !real_path.exists() {
@@ -270,7 +272,7 @@ impl DirectoryScan {
 /// Does not check whether the path exists, meaning the error return type is
 /// a very uninformative [`std::io::Error`].
 pub(crate) fn is_directory_empty_unchecked(directory_path: &Path) -> std::io::Result<bool> {
-    let mut directory_read = read_dir(directory_path)?;
+    let mut directory_read = fs::read_dir(directory_path)?;
     Ok(directory_read.next().is_none())
 }
 
@@ -289,7 +291,7 @@ where
     }
 
 
-    let mut directory_read = read_dir(directory_path)
+    let mut directory_read = fs::read_dir(directory_path)
         .map_err(|error| DirectoryIsEmptyError::UnableToReadDirectory { error })?;
 
     Ok(directory_read.next().is_some())

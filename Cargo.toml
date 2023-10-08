@@ -37,8 +37,13 @@ members = [
     "test-harness-macros"
 ]
 
+[features]
+fs-err = []
+
+
 [dependencies]
 dunce = "1.0.4"
+fs-err = "2.9.0"
 path-clean = "1.0.1"
 thiserror = "1.0.48"
 

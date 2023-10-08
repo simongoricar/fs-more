@@ -1,4 +1,9 @@
+#[cfg(not(feature = "fs-err"))]
+use std::fs;
 use std::path::Path;
+
+#[cfg(feature = "fs-err")]
+use fs_err as fs;
 
 use super::{
     copy::copy_file_with_progress_unchecked,
@@ -98,7 +103,7 @@ where
     // Note that we *must not* go for the renaming shortcut if the user-provided path was actually a symbolic link to a file.
     // In that case, we need to copy the file behind the symbolic link, then remove the symbolic link.
     if !original_was_symlink_to_file
-        && std::fs::rename(&validated_source_file_path, target_file_path).is_ok()
+        && fs::rename(&validated_source_file_path, target_file_path).is_ok()
     {
         // Get size of file that we just renamed.
         let target_file_path_metadata = target_file_path
@@ -108,7 +113,7 @@ where
         Ok(target_file_path_metadata.len())
     } else {
         // Copy, then delete original.
-        let num_bytes_copied = std::fs::copy(&validated_source_file_path, target_file_path)
+        let num_bytes_copied = fs::copy(&validated_source_file_path, target_file_path)
             .map_err(|error| FileError::OtherIoError { error })?;
 
         let file_path_to_remove = if original_was_symlink_to_file {
@@ -242,7 +247,7 @@ where
     // - otherwise we need to copy to target and remove source.
 
     if !original_was_symlink_to_file
-        && std::fs::rename(&validated_source_file_path, target_file_path).is_ok()
+        && fs::rename(&validated_source_file_path, target_file_path).is_ok()
     {
         // Get size of file that we just renamed.
         let target_file_path_size_bytes = target_file_path

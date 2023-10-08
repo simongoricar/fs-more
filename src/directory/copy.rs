@@ -1,4 +1,9 @@
+#[cfg(not(feature = "fs-err"))]
+use std::fs;
 use std::path::{Path, PathBuf};
+
+#[cfg(feature = "fs-err")]
+use fs_err as fs;
 
 use super::scan::is_directory_empty_unchecked;
 use crate::{
@@ -39,7 +44,7 @@ pub(super) fn validate_source_directory_path(
         return Err(DirectoryError::SourceDirectoryIsNotADirectory);
     }
 
-    let canonicalized_path = std::fs::canonicalize(source_directory_path)
+    let canonicalized_path = fs::canonicalize(source_directory_path)
         .map_err(|error| DirectoryError::OtherIoError { error })?;
 
     Ok(dunce::simplified(&canonicalized_path).to_path_buf())
@@ -367,7 +372,7 @@ where
     while let Some(next_directory) = directory_scan_queue.pop() {
         // Scan the directory for its files and directories.
         // Files are queued for copying, directories are queued for creation.
-        let directory_iterator = std::fs::read_dir(&next_directory.source_directory_path)
+        let directory_iterator = fs::read_dir(&next_directory.source_directory_path)
             .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
 
         for directory_item in directory_iterator {
@@ -430,7 +435,7 @@ where
 
                 // Now we should retrieve the metadata of the target of the symbolic link
                 // (unlike DirEntry::metadata, this metadata call *does* follow symolic links).
-                let underlying_path = std::fs::canonicalize(&directory_item_source_path)
+                let underlying_path = fs::canonicalize(&directory_item_source_path)
                     .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
 
                 let underlying_item_metadata = underlying_path
@@ -577,7 +582,7 @@ where
 
     // Create root target directory if needed.
     if !target_directory_exists {
-        std::fs::create_dir_all(target_directory_path)
+        fs::create_dir_all(target_directory_path)
             .map_err(|error| DirectoryError::UnableToAccessTarget { error })?;
 
         num_directories_created += 1;
@@ -654,7 +659,7 @@ where
                     continue;
                 }
 
-                std::fs::create_dir(target_directory_path)
+                fs::create_dir(target_directory_path)
                     .map_err(|error| DirectoryError::UnableToAccessTarget { error })?;
 
                 num_directories_created += 1;
@@ -1007,7 +1012,7 @@ where
         progress_handler,
     );
 
-    std::fs::create_dir(target_directory_path)
+    fs::create_dir(target_directory_path)
         .map_err(|error| DirectoryError::UnableToAccessTarget { error })?;
 
     progress.directories_created += 1;
@@ -1156,7 +1161,7 @@ where
 
         progress_handler(&progress);
 
-        std::fs::create_dir_all(target_directory_path)
+        fs::create_dir_all(target_directory_path)
             .map_err(|error| DirectoryError::UnableToAccessTarget { error })?;
 
         progress.directories_created += 1;
