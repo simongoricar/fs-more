@@ -237,7 +237,6 @@ where
     fs::remove_dir_all(source_directory_path)
         .map_err(|error| DirectoryError::OtherIoError { error })?;
 
-    // TODO Test this entire method.
     Ok(FinishedDirectoryMove {
         total_bytes_moved: source_details.total_bytes,
         num_files_moved: source_details.total_files,

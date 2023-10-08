@@ -253,8 +253,7 @@ impl DirectoryScan {
         }
 
         for directory_path in &self.directories {
-            let directory_size_bytes = directory_path
-                .metadata()
+            let directory_size_bytes = fs::metadata(directory_path)
                 .map_err(|_| DirectorySizeScanError::EntryNoLongerExists {
                     path: directory_path.to_path_buf(),
                 })?
@@ -282,9 +281,8 @@ where
     P: AsRef<Path>,
 {
     let directory_path: &Path = directory_path.as_ref();
-    let directory_metadata = directory_path
-        .metadata()
-        .map_err(|_| DirectoryIsEmptyError::NotFound)?;
+    let directory_metadata =
+        fs::metadata(directory_path).map_err(|_| DirectoryIsEmptyError::NotFound)?;
 
     if !directory_metadata.is_dir() {
         return Err(DirectoryIsEmptyError::NotADirectory);

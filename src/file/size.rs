@@ -1,4 +1,9 @@
+#[cfg(not(feature = "fs-err"))]
+use std::fs;
 use std::path::Path;
+
+#[cfg(feature = "fs-err")]
+use fs_err as fs;
 
 use crate::error::FileSizeError;
 
@@ -33,9 +38,8 @@ where
 
     // This follows symbolic links, but we must recheck that
     // what it leads to is also a file.
-    let file_metadata = file_path
-        .metadata()
-        .map_err(|error| FileSizeError::OtherIoError { error })?;
+    let file_metadata =
+        fs::metadata(file_path).map_err(|error| FileSizeError::OtherIoError { error })?;
 
     if !file_metadata.is_file() {
         return Err(FileSizeError::NotAFile);

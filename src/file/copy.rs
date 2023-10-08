@@ -168,8 +168,7 @@ pub(crate) fn copy_file_with_progress_unchecked<F>(
 where
     F: FnMut(&FileProgress),
 {
-    let bytes_total = source_file_path
-        .metadata()
+    let bytes_total = fs::metadata(source_file_path)
         .map_err(|error| FileError::OtherIoError { error })?
         .len();
 

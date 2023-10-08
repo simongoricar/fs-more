@@ -106,9 +106,8 @@ where
         && fs::rename(&validated_source_file_path, target_file_path).is_ok()
     {
         // Get size of file that we just renamed.
-        let target_file_path_metadata = target_file_path
-            .metadata()
-            .map_err(|error| FileError::OtherIoError { error })?;
+        let target_file_path_metadata =
+            fs::metadata(target_file_path).map_err(|error| FileError::OtherIoError { error })?;
 
         Ok(target_file_path_metadata.len())
     } else {
@@ -250,8 +249,7 @@ where
         && fs::rename(&validated_source_file_path, target_file_path).is_ok()
     {
         // Get size of file that we just renamed.
-        let target_file_path_size_bytes = target_file_path
-            .metadata()
+        let target_file_path_size_bytes = fs::metadata(target_file_path)
             .map_err(|error| FileError::OtherIoError { error })?
             .len();
 

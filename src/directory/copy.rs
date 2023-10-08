@@ -438,9 +438,7 @@ where
                 let underlying_path = fs::canonicalize(&directory_item_source_path)
                     .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
 
-                // TODO Migrate remaining std::fs calls like this: Path/PathBuf::metadata to fs::metadata (to allow for fs-err).
-                let underlying_item_metadata = underlying_path
-                    .metadata()
+                let underlying_item_metadata = fs::metadata(&underlying_path)
                     .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
 
                 if underlying_item_metadata.is_file() {
@@ -578,8 +576,6 @@ where
     let mut total_bytes_copied = 0;
     let mut num_files_copied = 0;
     let mut num_directories_created = 0;
-
-    // TODO feature flag to use fs-err?
 
     // Create root target directory if needed.
     if !target_directory_exists {
@@ -1083,7 +1079,6 @@ where
     T: AsRef<Path>,
     F: FnMut(&DirectoryCopyProgress),
 {
-    // TODO Test how this and copy_directory handle symbolic links to directories.
     let allows_existing_target_directory = options
         .target_directory_rule
         .allows_existing_target_directory();
