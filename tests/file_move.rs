@@ -335,3 +335,5 @@ pub fn move_file_with_progress_symlink_behaviour() -> TestResult<()> {
     harness.destroy()?;
     Ok(())
 }
+
+// TODO Add a test for behaviour when moving "symlink to file A" to "A".

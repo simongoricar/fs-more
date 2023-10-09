@@ -290,8 +290,6 @@ pub fn forbid_non_trivial_copy_into_self() -> Result<(), FixtureError> {
     Ok(())
 }
 
-// TODO Add a test for symlinks (including how we behave when copying into a symlink to self).
-
 #[test]
 pub fn allow_copy_overwriting_file_with_flag() -> TestResult<()> {
     let harness = SimpleFileHarness::new()?;
@@ -538,3 +536,5 @@ pub fn copy_file_with_progress_symlink_behaviour() -> TestResult<()> {
     harness.destroy()?;
     Ok(())
 }
+
+// TODO Add a test for behaviour when copying "symlink to file A" to "A".

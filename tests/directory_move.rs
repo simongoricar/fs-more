@@ -44,3 +44,5 @@ pub fn move_directory() -> TestResult<()> {
     // No need to destroy `harness` as the directory no longer exists due to being moved.
     Ok(())
 }
+
+// TODO Add a test for behaviour when moving "symlink to directory A" to "A".
