@@ -564,8 +564,6 @@ where
     // It's still possible that due to a race condition we don't catch a collision here yet,
     // but that should be very rare and is essentially unsolvable (unless there was
     // a robust rollback mechanism, which is out of scope for this project).
-
-    // TODO Add a test for this (test when the error is returned).
     check_operation_queue_for_collisions(&operation_queue, &options.target_directory_rule)?;
 
     // So we've built the entire queue of operations and made sure there are no collisions we should worry about.
@@ -1106,7 +1104,6 @@ where
         options.maximum_copy_depth,
     )?;
 
-    // TODO Add a test for this (test when the error is returned).
     check_operation_queue_for_collisions(&operation_queue, &options.target_directory_rule)?;
 
     let bytes_total = operation_queue

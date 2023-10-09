@@ -1047,5 +1047,176 @@ pub fn copy_directory_preemptively_check_for_file_collisions() -> TestResult<()>
 }
 
 
+#[test]
+pub fn copy_directory_with_progress_preemptively_check_for_directory_collisions() -> TestResult<()>
+{
+    let harness = DeepTreeHarness::new()?;
+    let empty_harness = EmptyTreeHarness::new()?;
+    empty_harness.root.assert_is_empty();
+
+    // Target directory preparation.
+    let existing_target_file = AssertableFilePath::from_path(
+        empty_harness.root.path().join(
+            harness
+                .file_d
+                .path()
+                .strip_prefix(harness.root.path())
+                .unwrap(),
+        ),
+    );
+
+    let non_existing_target_file = AssertableFilePath::from_path(
+        empty_harness.root.path().join(
+            harness
+                .file_a
+                .path()
+                .strip_prefix(harness.root.path())
+                .unwrap(),
+        ),
+    );
+
+    std::fs::create_dir_all(existing_target_file.path().parent().unwrap()).unwrap();
+    std::fs::copy(harness.file_d.path(), existing_target_file.path()).unwrap();
+
+    existing_target_file.assert_content_matches_file(harness.file_d.path());
+    non_existing_target_file.assert_not_exists();
+
+    empty_harness.root.assert_is_not_empty();
+    // END of preparation
+
+    let mut last_progress: Option<DirectoryCopyProgress> = None;
+
+    let copy_result = fs_more::directory::copy_directory_with_progress(
+        harness.root.path(),
+        empty_harness.root.path(),
+        DirectoryCopyWithProgressOptions {
+            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
+                overwrite_existing_subdirectories: false,
+                overwrite_existing_files: false,
+            },
+            ..Default::default()
+        },
+        |progress| {
+            last_progress = Some(progress.clone());
+        },
+    );
+
+    let copy_err = copy_result.unwrap_err();
+
+    assert!(
+        last_progress.is_none(),
+        "copy_directory_with_progress did not check for directory collisions before starting copy"
+    );
+
+    match copy_err {
+        DirectoryError::TargetItemAlreadyExists { path } => {
+            assert_eq!(
+                path.as_path(),
+                empty_harness.root.path()
+                    .join(
+                        harness.dir_foo.path()
+                            .strip_prefix(harness.root.path())
+                            .unwrap()
+                    ),
+                "copy_directory did not return the proper directory collision in the target directory"
+            );
+        }
+        _ => panic!("Unexpected Err: {}", copy_err),
+    }
+
+    empty_harness.root.assert_is_not_empty();
+
+    non_existing_target_file.assert_not_exists();
+    existing_target_file.assert_content_matches_file(harness.file_d.path());
+
+
+    harness.destroy()?;
+    empty_harness.destroy()?;
+    Ok(())
+}
+
+#[test]
+pub fn copy_directory_with_progress_preemptively_check_for_file_collisions() -> TestResult<()> {
+    let harness = DeepTreeHarness::new()?;
+    let empty_harness = EmptyTreeHarness::new()?;
+    empty_harness.root.assert_is_empty();
+
+    // Target directory preparation.
+    let existing_target_file = AssertableFilePath::from_path(
+        empty_harness.root.path().join(
+            harness
+                .file_d
+                .path()
+                .strip_prefix(harness.root.path())
+                .unwrap(),
+        ),
+    );
+
+    let non_existing_target_file = AssertableFilePath::from_path(
+        empty_harness.root.path().join(
+            harness
+                .file_a
+                .path()
+                .strip_prefix(harness.root.path())
+                .unwrap(),
+        ),
+    );
+
+    std::fs::create_dir_all(existing_target_file.path().parent().unwrap()).unwrap();
+    std::fs::copy(harness.file_d.path(), existing_target_file.path()).unwrap();
+
+    existing_target_file.assert_content_matches_file(harness.file_d.path());
+    non_existing_target_file.assert_not_exists();
+
+    empty_harness.root.assert_is_not_empty();
+    // END of preparation
+
+    let mut last_progress: Option<DirectoryCopyProgress> = None;
+
+    let copy_result = fs_more::directory::copy_directory_with_progress(
+        harness.root.path(),
+        empty_harness.root.path(),
+        DirectoryCopyWithProgressOptions {
+            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
+                overwrite_existing_subdirectories: true,
+                overwrite_existing_files: false,
+            },
+            ..Default::default()
+        },
+        |progress| {
+            last_progress = Some(progress.clone());
+        },
+    );
+
+    let copy_err = copy_result.unwrap_err();
+
+    assert!(
+        last_progress.is_none(),
+        "copy_directory_with_progress did not check for directory collisions before starting copy"
+    );
+
+    match copy_err {
+        DirectoryError::TargetItemAlreadyExists { path } => {
+            assert_eq!(
+                path.as_path(),
+                existing_target_file.path(),
+                "copy_directory did not return the proper file collision in the target directory"
+            );
+        }
+        _ => panic!("Unexpected Err: {}", copy_err),
+    }
+
+    empty_harness.root.assert_is_not_empty();
+
+    non_existing_target_file.assert_not_exists();
+    existing_target_file.assert_content_matches_file(harness.file_d.path());
+
+
+    harness.destroy()?;
+    empty_harness.destroy()?;
+    Ok(())
+}
+
+
 
 // TODO Add a test for behaviour when copying "symlink to directory A" to "A".
