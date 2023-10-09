@@ -50,10 +50,9 @@ pub enum DirectoryError {
     #[error("target directory or file already exists: {}", .path.display())]
     TargetItemAlreadyExists { path: PathBuf },
 
-    // TODO Revisit how this works.
-    /// A scanned subdirectory's path is not inside the root directory.
-    #[error("a scanned subdirectory's path is not inside the root directory")]
-    SubdirectoryEscapesRoot,
+    /// Some other unrecoverable error with some `reason`.
+    #[error("an unrecoverable error has been encountered: {reason}")]
+    OtherReason { reason: String },
 
     /// Some other [`std::io::Error`] was encountered.
     #[error("other std::io::Error: {error}")]

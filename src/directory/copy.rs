@@ -259,8 +259,7 @@ impl Default for DirectoryCopyOptions {
 /// and repplies that relative path back onto the `target_root_path`.
 ///
 /// Returns a [`DirectoryError::SubdirectoryEscapesRoot`] if the `source_path_to_rejoin`
-/// is not a subpath of `source_root_path`. This function will not return any other error from
-/// the [`DirectoryError`] struct.
+/// is not a subpath of `source_root_path`.
 ///
 /// ## Example
 /// ```ignore
@@ -292,7 +291,9 @@ pub(crate) fn rejoin_source_subpath_onto_target(
     } else {
         source_path_to_rejoin
             .strip_prefix(source_root_path)
-            .map_err(|_| DirectoryError::SubdirectoryEscapesRoot)?
+            .map_err(|_| DirectoryError::OtherReason {
+                reason: String::from("provided source path escapes its source root"),
+            })?
     };
 
     Ok(target_root_path.join(source_relative_subdirectory_path))
@@ -1206,8 +1207,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use assert_matches::assert_matches;
-
     use super::*;
 
     #[test]
@@ -1239,11 +1238,17 @@ mod tests {
 
         let rejoin_err = rejoin_result.unwrap_err();
 
-        assert_matches!(
-            rejoin_err,
-            DirectoryError::SubdirectoryEscapesRoot,
-            "rejoin_source_subpath_onto_target did not return Err with SubdirectoryEscapesRoot, but {}",
-            rejoin_err
-        );
+        match rejoin_err {
+            DirectoryError::OtherReason { reason } => {
+                if reason != "provided source path escapes its source root" {
+                    panic!(
+                        "rejoin_source_subpath_onto_target returned DirectoryError::OtherReason \
+                        with the following reason: {}",
+                        reason
+                    );
+                }
+            }
+            _ => panic!("Unexpected error: {}", rejoin_err),
+        }
     }
 }
