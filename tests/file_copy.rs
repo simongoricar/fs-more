@@ -4,7 +4,7 @@ use assert_fs::fixture::FixtureError;
 use assert_matches::assert_matches;
 use fs_more::{
     error::FileError,
-    file::{FileCopyOptions, FileCopyWithProgressOptions},
+    file::{FileCopyOptions, FileCopyWithProgressOptions, FileProgress},
 };
 use fs_more_test_harness::{
     assertable::AssertableFilePath,
@@ -537,4 +537,92 @@ pub fn copy_file_with_progress_symlink_behaviour() -> TestResult<()> {
     Ok(())
 }
 
-// TODO Add a test for behaviour when copying "symlink to file A" to "A".
+
+#[test]
+pub fn forbid_copy_file_when_source_is_symlink_to_target() -> TestResult<()> {
+    // Tests behaviour when copying "symlink to file A" to "A".
+    // This should fail.
+
+    let harness = SimpleFileHarness::new()?;
+
+
+    let test_symlink =
+        AssertableFilePath::from_path(harness.root.child_path("symlink-test-file.txt"));
+    test_symlink.assert_not_exists();
+    test_symlink
+        .symlink_to_file(harness.test_file.path())
+        .unwrap();
+    test_symlink.assert_is_symlink_to_file();
+
+    let copy_result: Result<u64, FileError> = fs_more::file::copy_file(
+        test_symlink.path(),
+        harness.test_file.path(),
+        FileCopyOptions {
+            overwrite_existing: true,
+            skip_existing: false,
+        },
+    );
+
+    let copy_err = copy_result.unwrap_err();
+
+    match &copy_err {
+        FileError::SourceAndTargetAreTheSameFile => {
+            // This is the expected behaviour in this case.
+        }
+        _ => panic!("Unexpected Err: {}", copy_err),
+    }
+
+
+    harness.destroy()?;
+
+    Ok(())
+}
+
+
+#[test]
+pub fn forbid_copy_file_with_progress_when_source_is_symlink_to_target() -> TestResult<()> {
+    // Tests behaviour when copying "symlink to file A" to "A".
+    // This should fail.
+
+    let harness = SimpleFileHarness::new()?;
+
+    let test_symlink =
+        AssertableFilePath::from_path(harness.root.child_path("symlink-test-file.txt"));
+    test_symlink.assert_not_exists();
+    test_symlink
+        .symlink_to_file(harness.test_file.path())
+        .unwrap();
+    test_symlink.assert_is_symlink_to_file();
+
+
+    let mut last_progress: Option<FileProgress> = None;
+
+    let copy_result: Result<u64, FileError> = fs_more::file::copy_file_with_progress(
+        test_symlink.path(),
+        harness.test_file.path(),
+        FileCopyWithProgressOptions {
+            overwrite_existing: true,
+            skip_existing: false,
+            ..Default::default()
+        },
+        |progress| {
+            last_progress = Some(progress.clone());
+        },
+    );
+
+    assert!(last_progress.is_none());
+
+    let copy_err = copy_result.unwrap_err();
+
+    match &copy_err {
+        FileError::SourceAndTargetAreTheSameFile => {
+            // This is the expected behaviour in this case.
+        }
+        _ => panic!("Unexpected Err: {}", copy_err),
+    }
+
+
+    harness.destroy()?;
+
+    Ok(())
+}

@@ -1,7 +1,7 @@
 use assert_matches::assert_matches;
 use fs_more::{
     error::FileError,
-    file::{FileMoveOptions, FileMoveWithProgressOptions},
+    file::{FileMoveOptions, FileMoveWithProgressOptions, FileProgress},
 };
 use fs_more_test_harness::{
     assertable::AssertableFilePath,
@@ -27,6 +27,56 @@ pub fn move_file() -> TestResult<()> {
     assert!(
         file_copy_result.is_ok(),
         "failed to execute move_file: {}",
+        file_copy_result.unwrap_err()
+    );
+
+    harness.test_file.assert_not_exists();
+
+    target_file.assert_exists();
+    target_file.assert_content_matches_expected_value_of_assertable(&harness.test_file);
+
+
+    harness.destroy()?;
+    Ok(())
+}
+
+#[test]
+pub fn move_file_with_progress() -> TestResult<()> {
+    let harness = SimpleFileHarness::new()?;
+
+    let source_file_size_bytes = harness.test_file.path().metadata().unwrap().len();
+    let target_file =
+        AssertableFilePath::from_path(harness.test_file.path().with_file_name("test_file2.txt"));
+
+    let mut last_progress: Option<FileProgress> = None;
+
+    let file_copy_result: Result<u64, FileError> = fs_more::file::move_file_with_progress(
+        harness.test_file.path(),
+        target_file.path(),
+        FileMoveWithProgressOptions {
+            overwrite_existing: false,
+            ..Default::default()
+        },
+        |progress| {
+            if let Some(previous_progress) = last_progress.as_ref() {
+                assert!(progress.bytes_finished >= previous_progress.bytes_finished);
+            }
+
+            last_progress = Some(progress.clone());
+        },
+    );
+
+    let last_progress = last_progress.unwrap();
+
+    assert_eq!(
+        last_progress.bytes_finished,
+        source_file_size_bytes
+    );
+    assert_eq!(last_progress.bytes_total, source_file_size_bytes);
+
+    assert!(
+        file_copy_result.is_ok(),
+        "failed to execute move_file_with_progress: {}",
         file_copy_result.unwrap_err()
     );
 
@@ -336,4 +386,85 @@ pub fn move_file_with_progress_symlink_behaviour() -> TestResult<()> {
     Ok(())
 }
 
-// TODO Add a test for behaviour when moving "symlink to file A" to "A".
+#[test]
+pub fn forbid_move_file_when_source_is_symlink_to_target() -> TestResult<()> {
+    let harness = SimpleFileHarness::new()?;
+
+    let test_symlink =
+        AssertableFilePath::from_path(harness.root.child_path("symlink-test-file.txt"));
+    test_symlink.assert_not_exists();
+    test_symlink
+        .symlink_to_file(harness.test_file.path())
+        .unwrap();
+    test_symlink.assert_is_symlink_to_file();
+
+    let copy_result: Result<u64, FileError> = fs_more::file::move_file(
+        test_symlink.path(),
+        harness.test_file.path(),
+        FileMoveOptions {
+            overwrite_existing: true,
+        },
+    );
+
+    let copy_err = copy_result.unwrap_err();
+
+    match &copy_err {
+        FileError::SourceAndTargetAreTheSameFile => {
+            // This is the expected error.
+        }
+        _ => panic!("Unexpected Err: {}", copy_err),
+    }
+
+
+    test_symlink.assert_is_symlink_to_file();
+    harness.test_file.assert_is_file();
+
+    harness.destroy()?;
+    Ok(())
+}
+
+
+#[test]
+pub fn forbid_move_file_with_progress_when_source_is_symlink_to_target() -> TestResult<()> {
+    let harness = SimpleFileHarness::new()?;
+
+    let test_symlink =
+        AssertableFilePath::from_path(harness.root.child_path("symlink-test-file.txt"));
+    test_symlink.assert_not_exists();
+    test_symlink
+        .symlink_to_file(harness.test_file.path())
+        .unwrap();
+    test_symlink.assert_is_symlink_to_file();
+
+    let mut last_progress: Option<FileProgress> = None;
+
+    let copy_result: Result<u64, FileError> = fs_more::file::move_file_with_progress(
+        test_symlink.path(),
+        harness.test_file.path(),
+        FileMoveWithProgressOptions {
+            overwrite_existing: true,
+            ..Default::default()
+        },
+        |progress| {
+            last_progress = Some(progress.clone());
+        },
+    );
+
+    assert!(last_progress.is_none());
+
+    let copy_err = copy_result.unwrap_err();
+
+    match &copy_err {
+        FileError::SourceAndTargetAreTheSameFile => {
+            // This is the expected error.
+        }
+        _ => panic!("Unexpected Err: {}", copy_err),
+    }
+
+
+    test_symlink.assert_is_symlink_to_file();
+    harness.test_file.assert_is_file();
+
+    harness.destroy()?;
+    Ok(())
+}

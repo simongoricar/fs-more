@@ -1218,5 +1218,116 @@ pub fn copy_directory_with_progress_preemptively_check_for_file_collisions() -> 
 }
 
 
+#[test]
+pub fn disallow_copy_directory_when_source_is_symlink_to_target() -> TestResult<()> {
+    // Tests behaviour when copying "symlink to directory A" to "A".
+    // This should fail.
 
-// TODO Add a test for behaviour when copying "symlink to directory A" to "A".
+    let harness_for_comparison = DeepTreeHarness::new()?;
+    let harness = DeepTreeHarness::new()?;
+    let intermediate_harness = EmptyTreeHarness::new()?;
+
+    // Directory symlink preparation
+    let symlink_to_directory = AssertableDirectoryPath::from_path(
+        intermediate_harness.root.child_path("symlinked-directory"),
+    );
+
+    symlink_to_directory.assert_not_exists();
+    symlink_to_directory
+        .symlink_to_directory(harness.root.path())
+        .unwrap();
+    // END of preparation
+
+    let copy_result = fs_more::directory::copy_directory(
+        symlink_to_directory.path(),
+        harness.root.path(),
+        DirectoryCopyOptions {
+            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
+                overwrite_existing_subdirectories: true,
+                overwrite_existing_files: true,
+            },
+            ..Default::default()
+        },
+    );
+
+    let copy_err = copy_result.unwrap_err();
+
+    match &copy_err {
+        DirectoryError::InvalidTargetDirectoryPath => {
+            // This is the expected error value.
+        }
+        _ => panic!("Unexpected Err: {}", copy_err),
+    }
+
+    harness
+        .root
+        .assert_directory_contents_match_directory(harness_for_comparison.root.path());
+
+
+    harness_for_comparison.destroy()?;
+    harness.destroy()?;
+    intermediate_harness.destroy()?;
+
+    Ok(())
+}
+
+
+#[test]
+pub fn disallow_copy_directory_with_progress_when_source_is_symlink_to_target() -> TestResult<()> {
+    // Tests behaviour when copying "symlink to directory A" to "A".
+    // This should fail.
+
+    let harness_for_comparison = DeepTreeHarness::new()?;
+    let harness = DeepTreeHarness::new()?;
+    let intermediate_harness = EmptyTreeHarness::new()?;
+
+    // Directory symlink preparation
+    let symlink_to_directory = AssertableDirectoryPath::from_path(
+        intermediate_harness.root.child_path("symlinked-directory"),
+    );
+
+    symlink_to_directory.assert_not_exists();
+    symlink_to_directory
+        .symlink_to_directory(harness.root.path())
+        .unwrap();
+    // END of preparation
+
+    let mut last_progress: Option<DirectoryCopyProgress> = None;
+
+    let copy_result = fs_more::directory::copy_directory_with_progress(
+        symlink_to_directory.path(),
+        harness.root.path(),
+        DirectoryCopyWithProgressOptions {
+            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
+                overwrite_existing_subdirectories: true,
+                overwrite_existing_files: true,
+            },
+            ..Default::default()
+        },
+        |progress| {
+            last_progress = Some(progress.clone());
+        },
+    );
+
+    assert!(last_progress.is_none());
+
+    let copy_err = copy_result.unwrap_err();
+
+    match &copy_err {
+        DirectoryError::InvalidTargetDirectoryPath => {
+            // This is the expected error value.
+        }
+        _ => panic!("Unexpected Err: {}", copy_err),
+    }
+
+    harness
+        .root
+        .assert_directory_contents_match_directory(harness_for_comparison.root.path());
+
+
+    harness_for_comparison.destroy()?;
+    harness.destroy()?;
+    intermediate_harness.destroy()?;
+
+    Ok(())
+}
