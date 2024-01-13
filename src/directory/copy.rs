@@ -51,6 +51,7 @@ pub(super) fn validate_source_directory_path(
 }
 
 /// Information about a validated target path (used in copying and moving directories).
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub(crate) struct ValidatedTargetPath {
     pub(crate) target_directory_path: PathBuf,
     pub(crate) target_directory_exists: bool,
@@ -168,6 +169,16 @@ pub enum TargetDirectoryRule {
     AllowEmpty,
 
     /// Indicates that an existing non-empty target directory should not cause an error.
+    /// **Do not use this as a default if you're not sure what rule to choose.**
+    ///
+    /// This can, if the target directory already has some content, end up in a target directory
+    /// with *merged* source and target directory contents. Unless you know you want this,
+    /// you probably want to avoid this option.
+    ///
+    /// If the `overwrite_*` options are `false`, this essentially behaves
+    /// like a merge that will not touch existing target files.
+    /// If they are `true`, it behaves like a merge that will
+    /// overwrite any existing files and create any missing directories.
     AllowNonEmpty {
         /// If enabled, the associated function will return
         /// `Err(`[`DirectoryError::TargetItemAlreadyExists`][crate::error::DirectoryError::TargetItemAlreadyExists]`)`
@@ -528,6 +539,8 @@ fn check_operation_queue_for_collisions(
 
 /// Perform a copy from `source_directory_path` to `validated_target_path`.
 ///
+/// This `*_unchecked` function does not validate the source and target paths (i.e. expects them to be already validated).
+///
 /// For more details, see [`copy_directory`].
 pub(crate) fn copy_directory_unchecked<S>(
     source_directory_path: S,
@@ -828,7 +841,7 @@ pub struct DirectoryCopyWithProgressOptions {
     /// - `Some(1)` includes the root directory's contents and one level of its subdirectories.
     pub maximum_copy_depth: Option<usize>,
 
-    /// Internal buffer size (for both reading and writing) when copying filea,
+    /// Internal buffer size (for both reading and writing) when copying files,
     /// defaults to 64 KiB.
     pub buffer_size: usize,
 
@@ -1018,7 +1031,217 @@ where
 }
 
 
-/// Copy an entire directory from `source_directory_path` to `target_directory_path`.
+pub(crate) struct PreparedDirectoryCopyWithProgress {
+    pub(crate) validated_source_directory_path: PathBuf,
+    pub(crate) validated_target: ValidatedTargetPath,
+
+    pub(crate) required_operations: Vec<QueuedOperation>,
+
+    pub(crate) bytes_total: u64,
+}
+
+impl PreparedDirectoryCopyWithProgress {
+    pub fn prepare(
+        source_directory_path: &Path,
+        target_directory_path: &Path,
+        options: &DirectoryCopyWithProgressOptions,
+    ) -> Result<Self, DirectoryError> {
+        let (source_directory_path, validated_target) = Self::validate_source_and_target_path_pair(
+            source_directory_path,
+            target_directory_path,
+            &options.target_directory_rule,
+        )?;
+
+        Self::prepare_with_validated(source_directory_path, validated_target, options)
+    }
+
+    pub fn prepare_with_validated(
+        validated_source_directory_path: PathBuf,
+        validated_target: ValidatedTargetPath,
+        options: &DirectoryCopyWithProgressOptions,
+    ) -> Result<Self, DirectoryError> {
+        let operations = Self::prepare_directory_operations(
+            validated_source_directory_path.clone(),
+            validated_target.target_directory_path.clone(),
+            options.maximum_copy_depth,
+            &options.target_directory_rule,
+        )?;
+
+        let bytes_total = Self::calculate_total_bytes_to_be_copied(&operations);
+
+
+        Ok(Self {
+            validated_source_directory_path,
+            validated_target,
+            required_operations: operations,
+            bytes_total,
+        })
+    }
+
+    fn calculate_total_bytes_to_be_copied(queued_operations: &[QueuedOperation]) -> u64 {
+        queued_operations
+            .iter()
+            .map(|item| match item {
+                QueuedOperation::CopyFile {
+                    source_size_bytes, ..
+                } => *source_size_bytes,
+                QueuedOperation::CreateDirectory {
+                    source_size_bytes, ..
+                } => *source_size_bytes,
+            })
+            .sum::<u64>()
+    }
+
+    fn validate_source_and_target_path_pair(
+        source_directory_path: &Path,
+        target_directory_path: &Path,
+        target_directory_rule: &TargetDirectoryRule,
+    ) -> Result<(PathBuf, ValidatedTargetPath), DirectoryError> {
+        let source_directory_path = validate_source_directory_path(source_directory_path.as_ref())?;
+        let validated_target = validate_target_directory_path(
+            target_directory_path.as_ref(),
+            target_directory_rule,
+        )?;
+
+        validate_source_target_directory_pair(
+            &source_directory_path,
+            &validated_target.target_directory_path,
+        )?;
+
+        Ok((source_directory_path, validated_target))
+    }
+
+    fn prepare_directory_operations(
+        source_directory_path: PathBuf,
+        target_directory_path: PathBuf,
+        maximum_copy_depth: Option<usize>,
+        target_directory_rule: &TargetDirectoryRule,
+    ) -> Result<Vec<QueuedOperation>, DirectoryError> {
+        // Initialize a queue of file copy or directory create operations.
+        let copy_queue = build_directory_copy_queue(
+            source_directory_path,
+            target_directory_path,
+            maximum_copy_depth,
+        )?;
+
+        check_operation_queue_for_collisions(&copy_queue, &target_directory_rule)?;
+
+        Ok(copy_queue)
+    }
+}
+
+
+
+/// Perform a with-progress copy from `source_directory_path` to `validated_target`.
+///
+/// This `*_unchecked` function does not validate the source and target paths (i.e. expects them to be already validated).
+///
+/// For more details, see [`copy_directory_with_progress`].
+pub(crate) fn perform_prepared_copy_directory_with_progress<F>(
+    prepared_copy: PreparedDirectoryCopyWithProgress,
+    options: DirectoryCopyWithProgressOptions,
+    mut progress_handler: F,
+) -> Result<FinishedDirectoryCopy, DirectoryError>
+where
+    F: FnMut(&DirectoryCopyProgress),
+{
+    let allows_existing_target_directory = options
+        .target_directory_rule
+        .allows_existing_target_directory();
+    let should_overwrite_directories = options
+        .target_directory_rule
+        .should_overwrite_existing_directories();
+
+
+    let target = &prepared_copy.validated_target;
+
+    // Create root target directory if needed.
+    let mut progress = if target.target_directory_exists {
+        if !allows_existing_target_directory && !should_overwrite_directories {
+            return Err(DirectoryError::TargetItemAlreadyExists {
+                path: target.target_directory_path.clone(),
+            });
+        }
+
+        DirectoryCopyProgress {
+            bytes_total: prepared_copy.bytes_total,
+            bytes_finished: 0,
+            files_copied: 0,
+            directories_created: 0,
+            // This is an invisible operation - we don't emit this progress struct at all,
+            // but we do need something here before the next operation starts.
+            current_operation: DirectoryCopyOperation::CreatingDirectory {
+                target_path: PathBuf::new(),
+            },
+            current_operation_index: -1,
+            total_operations: prepared_copy.required_operations.len() as isize,
+        }
+    } else {
+        // This time we actually emit this root directory creation progress.
+        let mut progress = DirectoryCopyProgress {
+            bytes_total: prepared_copy.bytes_total,
+            bytes_finished: 0,
+            files_copied: 0,
+            directories_created: 0,
+            current_operation: DirectoryCopyOperation::CreatingDirectory {
+                target_path: target.target_directory_path.clone(),
+            },
+            current_operation_index: 0,
+            total_operations: prepared_copy.required_operations.len() as isize + 1,
+        };
+
+        progress_handler(&progress);
+
+        fs::create_dir_all(&target.target_directory_path)
+            .map_err(|error| DirectoryError::UnableToAccessTarget { error })?;
+
+        progress.directories_created += 1;
+
+        progress
+    };
+
+
+    // Execute queued directory copy operations.
+    for operation in prepared_copy.required_operations {
+        match operation {
+            QueuedOperation::CopyFile {
+                source_file_path: source_path,
+                source_size_bytes,
+                target_file_path: target_path,
+            } => execute_copy_file_operation_with_progress(
+                source_path,
+                source_size_bytes,
+                target_path,
+                &options,
+                &mut progress,
+                &mut progress_handler,
+            )?,
+            QueuedOperation::CreateDirectory {
+                source_size_bytes,
+                target_directory_path,
+            } => execute_create_directory_operation_with_progress(
+                target_directory_path,
+                source_size_bytes,
+                should_overwrite_directories,
+                &mut progress,
+                &mut progress_handler,
+            )?,
+        }
+    }
+
+    // One last progress update - everything should be done at this point.
+    progress_handler(&progress);
+
+    Ok(FinishedDirectoryCopy {
+        total_bytes_copied: progress.bytes_finished,
+        num_files_copied: progress.files_copied,
+        num_directories_created: progress.directories_created,
+    })
+}
+
+
+/// Copy an entire directory from `source_directory_path` to `target_directory_path`
+/// (including progress reporting).
 ///
 /// - `source_directory_path` must point to an existing directory path.
 /// - `target_directory_path` represents a path to the directory that will contain `source_directory_path`'s contents.
@@ -1071,134 +1294,21 @@ pub fn copy_directory_with_progress<S, T, F>(
     source_directory_path: S,
     target_directory_path: T,
     options: DirectoryCopyWithProgressOptions,
-    mut progress_handler: F,
+    progress_handler: F,
 ) -> Result<FinishedDirectoryCopy, DirectoryError>
 where
     S: AsRef<Path>,
     T: AsRef<Path>,
     F: FnMut(&DirectoryCopyProgress),
 {
-    let allows_existing_target_directory = options
-        .target_directory_rule
-        .allows_existing_target_directory();
-    let should_overwrite_directories = options
-        .target_directory_rule
-        .should_overwrite_existing_directories();
-
-    let source_directory_path = validate_source_directory_path(source_directory_path.as_ref())?;
-    let ValidatedTargetPath {
-        target_directory_path,
-        target_directory_exists,
-        ..
-    } = validate_target_directory_path(
+    let prepared_copy = PreparedDirectoryCopyWithProgress::prepare(
+        source_directory_path.as_ref(),
         target_directory_path.as_ref(),
-        &options.target_directory_rule,
+        &options,
     )?;
 
-    validate_source_target_directory_pair(&source_directory_path, &target_directory_path)?;
 
-    // Initialize a queue of file copy or directory create operations.
-    let operation_queue = build_directory_copy_queue(
-        &source_directory_path,
-        &target_directory_path,
-        options.maximum_copy_depth,
-    )?;
-
-    check_operation_queue_for_collisions(&operation_queue, &options.target_directory_rule)?;
-
-    let bytes_total = operation_queue
-        .iter()
-        .map(|item| match item {
-            QueuedOperation::CopyFile {
-                source_size_bytes, ..
-            } => *source_size_bytes,
-            QueuedOperation::CreateDirectory {
-                source_size_bytes, ..
-            } => *source_size_bytes,
-        })
-        .sum::<u64>();
-
-    // Create root target directory if needed.
-    let mut progress = if target_directory_exists {
-        if !allows_existing_target_directory && !should_overwrite_directories {
-            return Err(DirectoryError::TargetItemAlreadyExists {
-                path: target_directory_path.to_path_buf(),
-            });
-        }
-
-        DirectoryCopyProgress {
-            bytes_total,
-            bytes_finished: 0,
-            files_copied: 0,
-            directories_created: 0,
-            // This is a bogus operation - we don't emit this progress,
-            // but we need something here before the next operation starts.
-            current_operation: DirectoryCopyOperation::CreatingDirectory {
-                target_path: PathBuf::new(),
-            },
-            current_operation_index: -1,
-            total_operations: operation_queue.len() as isize,
-        }
-    } else {
-        // This time we actually emit this root directory creation progress.
-        let mut progress = DirectoryCopyProgress {
-            bytes_total,
-            bytes_finished: 0,
-            files_copied: 0,
-            directories_created: 0,
-            current_operation: DirectoryCopyOperation::CreatingDirectory {
-                target_path: target_directory_path.to_path_buf(),
-            },
-            current_operation_index: 0,
-            total_operations: operation_queue.len() as isize + 1,
-        };
-
-        progress_handler(&progress);
-
-        fs::create_dir_all(target_directory_path)
-            .map_err(|error| DirectoryError::UnableToAccessTarget { error })?;
-
-        progress.directories_created += 1;
-
-        progress
-    };
-
-
-    for operation in operation_queue {
-        match operation {
-            QueuedOperation::CopyFile {
-                source_file_path: source_path,
-                source_size_bytes,
-                target_file_path: target_path,
-            } => execute_copy_file_operation_with_progress(
-                source_path,
-                source_size_bytes,
-                target_path,
-                &options,
-                &mut progress,
-                &mut progress_handler,
-            )?,
-            QueuedOperation::CreateDirectory {
-                source_size_bytes,
-                target_directory_path,
-            } => execute_create_directory_operation_with_progress(
-                target_directory_path,
-                source_size_bytes,
-                should_overwrite_directories,
-                &mut progress,
-                &mut progress_handler,
-            )?,
-        }
-    }
-
-    // One last progress update - everything should be done at this point.
-    progress_handler(&progress);
-
-    Ok(FinishedDirectoryCopy {
-        total_bytes_copied: progress.bytes_finished,
-        num_files_copied: progress.files_copied,
-        num_directories_created: progress.directories_created,
-    })
+    perform_prepared_copy_directory_with_progress(prepared_copy, options, progress_handler)
 }
 
 

@@ -254,7 +254,7 @@ impl AssertableRootDirectory {
         }
     }
 
-    /// Returns this assertable root directory's filesystem path as a [`Path`][std::path::Path] reference.
+    /// Returns this assertable root directory's filesystem path as a [`Path`] reference.
     pub fn path(&self) -> &Path {
         &self.directory_path
     }
@@ -355,7 +355,7 @@ impl AssertableDirectoryPath {
         }
     }
 
-    /// Returns this assertable directory's filesystem path as a [`Path`][std::path::Path] reference.
+    /// Returns this assertable directory's filesystem path as a [`Path`] reference.
     ///
     /// ### Example
     /// ```rust
@@ -578,7 +578,7 @@ impl AssertableFilePath {
         }
     }
 
-    /// Returns this assertable file's filesystem path as a [`Path`][std::path::Path] reference.
+    /// Returns this assertable file's filesystem path as a [`Path`] reference.
     pub fn path(&self) -> &Path {
         &self.file_path
     }

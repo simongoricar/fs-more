@@ -229,7 +229,7 @@ impl DirectoryScan {
     /// that is smaller than the actual depth of the directory tree you're scanning,
     /// the value returned by this function will be smaller than
     /// the entire contents of the directory. For more information, see the
-    /// [`is_deeper_than_scan_allows`][Self::is_deeper_than_scan_allows] field.
+    /// [`is_real_directory_deeper_than_scan`][Self::is_real_directory_deeper_than_scan] field.
     pub fn total_size_in_bytes(&self) -> Result<u64, DirectorySizeScanError> {
         let mut total_bytes = 0;
 
