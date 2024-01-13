@@ -22,7 +22,6 @@ use super::{
     TargetDirectoryRule,
 };
 use crate::{
-    directory::rejoin_source_subpath_onto_target,
     error::{DirectoryError, DirectoryScanError, DirectorySizeScanError},
     file::FileProgress,
 };
@@ -175,13 +174,13 @@ fn collect_source_directory_details(
 fn attempt_directory_move_by_rename(
     source_directory_path: &Path,
     source_directory_details: &DirectoryContentDetails,
-    validated_target_path: &ValidatedTargetPath,
+    validated_target: &ValidatedTargetPath,
 ) -> Result<Option<FinishedDirectoryMove>, DirectoryError> {
     // We can attempt to simply rename the directory. This is much faster,
     // but will fail if the source and target paths aren't on the same mount point or filesystem
     // or, if on Windows, the target directory already exists.
 
-    if !validated_target_path.is_empty_directory.unwrap_or(true) {
+    if !validated_target.is_empty_directory.unwrap_or(true) {
         // Indicates that we can't rename (target directory is not empty).
         return Ok(None);
     }
@@ -193,26 +192,30 @@ fn attempt_directory_move_by_rename(
         // directly rename the source directory to the target (this might still fail due to different mount points).
         if fs::rename(
             &source_directory_path,
-            &validated_target_path.target_directory_path,
+            &validated_target.directory_path,
         )
         .is_ok()
         {
-            return Ok(FinishedDirectoryMove {
-                total_bytes_moved: source_details.total_bytes,
-                num_files_moved: source_details.total_files,
-                num_directories_moved: source_details.total_directories,
+            return Ok(Some(FinishedDirectoryMove {
+                total_bytes_moved: source_directory_details.total_bytes,
+                num_files_moved: source_directory_details.total_files,
+                num_directories_moved: source_directory_details.total_directories,
                 used_strategy: DirectoryMoveStrategy::RenameSourceDirectory,
-            });
+            }));
         }
+
+        Ok(None)
     }
 
     #[cfg(windows)]
     {
+        use super::rejoin_source_subpath_onto_target;
+
         // On Windows, `rename`'s target directory must not exist.
-        if !validated_target_path.exists
+        if !validated_target.exists
             && fs::rename(
                 source_directory_path,
-                &validated_target_path.directory_path,
+                &validated_target.directory_path,
             )
             .is_ok()
         {
@@ -230,7 +233,7 @@ fn attempt_directory_move_by_rename(
         let source_directory_contents = fs::read_dir(source_directory_path)
             .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
 
-        for source_entry in source_directory_contents {
+        for (entry_index, source_entry) in source_directory_contents.into_iter().enumerate() {
             let source_entry =
                 source_entry.map_err(|error| DirectoryError::UnableToAccessSource { error })?;
 
@@ -238,11 +241,24 @@ fn attempt_directory_move_by_rename(
             let target_path = rejoin_source_subpath_onto_target(
                 source_directory_path,
                 &source_path,
-                &validated_target_path.directory_path,
+                &validated_target.directory_path,
             )?;
 
-            fs::rename(source_path, target_path)
-                .map_err(|error| DirectoryError::OtherIoError { error })?;
+            let rename_result = fs::rename(source_path, target_path);
+
+            // If we try to rename the first entry and it fails, there is a high likelihood
+            // that it is due to source and target paths being on different mount points / drives
+            // and that we should retry with a copy-and-delete.
+            // But if the first rename succeeds and others don't, that's a clear signal
+            // something else went wrong.
+
+            if entry_index == 0 {
+                if rename_result.is_err() {
+                    return Ok(None);
+                }
+            } else {
+                rename_result.map_err(|error| DirectoryError::OtherIoError { error })?;
+            }
         }
 
         // Finally, we need to remove the (now empty) source directory path.
