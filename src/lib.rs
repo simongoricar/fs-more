@@ -20,6 +20,69 @@
 //!
 //! <br>
 //!
+//! ## Examples
+//!
+//! Copying a file with a progress handler:
+//! ```no_run
+//! # use std::path::Path;
+//! # use fs_more::error::FileError;
+//! # use fs_more::file::FileCopyWithProgressOptions;
+//! # fn main() -> Result<(), FileError> {
+//! let source_path = Path::new("./source-file.txt");
+//! let target_path = Path::new("./target-file.txt");
+//!
+//! let copy_result = fs_more::file::copy_file_with_progress(
+//!     source_path,
+//!     target_path,
+//!     FileCopyWithProgressOptions::default(),
+//!     |progress| {
+//!         let percent_copied =
+//!             (progress.bytes_finished as f64) / (progress.bytes_total as f64)
+//!             * 100.0;
+//!
+//!         println!("Copied {:.2}% of the file!", percent_copied);
+//!     }
+//! )?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! Moving a directory with a progress handler:
+//! ```no_run
+//! # use std::path::Path;
+//! # use fs_more::error::DirectoryError;
+//! # use fs_more::directory::DirectoryMoveWithProgressOptions;
+//! # use fs_more::directory::TargetDirectoryRule;
+//! # fn main() -> Result<(), DirectoryError> {
+//! let source_path = Path::new("./source-directory");
+//! let target_path = Path::new("./target-directory");
+//!
+//! let move_result = fs_more::directory::move_directory_with_progress(
+//!     source_path,
+//!     target_path,
+//!     DirectoryMoveWithProgressOptions {
+//!         target_directory_rule: TargetDirectoryRule::AllowEmpty,
+//!         ..Default::default()
+//!     },
+//!     |progress| {
+//!         let percent_moved =
+//!             (progress.bytes_finished as f64) / (progress.bytes_total as f64)
+//!             * 100.0;
+//!
+//!         println!(
+//!             "Moved {:.2}% of the directory ({} files and {} directories so far).",
+//!             percent_moved,
+//!             progress.files_moved,
+//!             progress.directories_created
+//!         );
+//!     }
+//! )?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! <br>
+//!
 //! ## Attribution
 //!
 //! <details>
