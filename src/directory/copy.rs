@@ -192,15 +192,17 @@ pub(crate) fn copy_directory_unchecked(
 
 /// Copy a directory from `source_directory_path` to `target_directory_path`.
 ///
+/// Things to consider:
 /// - `source_directory_path` must point to an existing directory path.
 /// - `target_directory_path` represents a path to the directory that will contain `source_directory_path`'s contents.
+///   If needed, `target_directory_path` will be created.
 ///
 /// ### Target directory
 /// Depending on the [`options.target_directory_rule`][DirectoryCopyOptions::target_directory_rule] option,
 /// the `target_directory_path` must:
-/// - [`DisallowExisting`][TargetDirectoryRule::DisallowExisting]: not exist,
-/// - [`AllowEmpty`][TargetDirectoryRule::AllowEmpty]: either not exist or be empty, or,
-/// - [`AllowNonEmpty`][TargetDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
+/// - with [`DisallowExisting`][TargetDirectoryRule::DisallowExisting]: not exist,
+/// - with [`AllowEmpty`][TargetDirectoryRule::AllowEmpty]: either not exist or be empty, or,
+/// - with [`AllowNonEmpty`][TargetDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
 ///   the specified overwriting rules are respected (see fields).
 ///
 /// If the specified target directory rule does not hold,
@@ -210,7 +212,7 @@ pub(crate) fn copy_directory_unchecked(
 /// ### Copy depth
 /// Depending on the [`DirectoryCopyOptions::maximum_copy_depth`] option, calling this function means copying:
 /// - `Some(0)` -- a single directory and its direct descendants (files and direct directories, but *not their contents*, i.e. just empty directories),
-/// - `Some(1+)` -- files and subdirectories (and their files and directories, etc.) up to a certain depth limit (e.g. `Some(1)` copies direct descendants as well as one layer deeper),
+/// - `Some(>=1)` -- files and subdirectories (and their files and directories, etc.) up to a certain depth limit (e.g. `Some(1)` copies direct descendants as well as one layer deeper),
 /// - `None` -- the entire subtree. **This is probably what you want most of the time**.
 ///
 /// ## Symbolic links
@@ -280,7 +282,7 @@ pub struct DirectoryCopyProgress {
     /// The current operation being performed.
     pub current_operation: DirectoryCopyOperation,
 
-    /// The index of the current operation (starts at `0`, goes to `total_operations - 1`).
+    /// The index of the current operation (starts at `0`, goes up to (including) `total_operations - 1`).
     pub current_operation_index: isize,
 
     /// The total amount of operations that need to be performed to copy the requested directory.
@@ -640,20 +642,24 @@ where
 /// Copy an entire directory from `source_directory_path` to `target_directory_path`
 /// (including progress reporting).
 ///
+/// Things to consider:
 /// - `source_directory_path` must point to an existing directory path.
 /// - `target_directory_path` represents a path to the directory that will contain `source_directory_path`'s contents.
+///   If needed, `target_directory_path` will be created.
+///
 ///
 /// ### Target directory
 /// Depending on the [`options.target_directory_rules`][DirectoryCopyOptions::target_directory_rule] option,
 /// the `target_directory_path` must:
-/// - [`DisallowExisting`][TargetDirectoryRule::DisallowExisting]: not exist,
-/// - [`AllowEmpty`][TargetDirectoryRule::AllowEmpty]: either not exist or be empty, or,
-/// - [`AllowNonEmpty`][TargetDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
+/// - with [`DisallowExisting`][TargetDirectoryRule::DisallowExisting]: not exist,
+/// - with [`AllowEmpty`][TargetDirectoryRule::AllowEmpty]: either not exist or be empty, or,
+/// - with [`AllowNonEmpty`][TargetDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
 ///   the specified overwriting rules are respected (see variant's fields).
 ///
 /// If the specified target directory rule does not hold,
 /// `Err(`[`DirectoryError::InvalidTargetDirectoryPath`]`)` or
 /// `Err(`[`DirectoryError::TargetDirectoryIsNotEmpty`]`)` is returned (depending on the rule).
+///
 ///
 /// ## Progress reporting
 /// You must also provide a progress handler closure that will receive
@@ -667,14 +673,13 @@ where
 /// It does, however, guarantee *at least one progress report per file copy operation and per directory creation operation*.
 /// It also guarantees one final progress report, when the state indicates copy completion.
 ///
-/// For more information about update frequency of specifically file copy updates, refer to the `Progress reporting` section
-/// of the [`copy_file_with_progress`][crate::file::copy_file_with_progress] function.
 ///
 /// ## Copy depth
 /// Depending on the [`options.maximum_copy_depth`] option, calling this function means copying:
 /// - `Some(0)` -- a single directory and its direct descendants (files and direct directories, but *not their contents*, i.e. just empty directories),
-/// - `Some(1+)` -- files and subdirectories (and their files and directories, etc.) up to a certain depth limit (e.g. `Some(1)` copies direct descendants as well as one layer deeper),
+/// - `Some(>=1)` -- files and subdirectories (and their files and directories, etc.) up to a certain depth limit (e.g. `Some(1)` copies direct descendants as well as one layer deeper),
 /// - `None` -- the entire subtree. **This is probably what you want most of the time**.
+///
 ///
 /// ## Symbolic links
 /// - If the `source_directory_path` directory contains a symbolic link to a file,
@@ -683,6 +688,7 @@ where
 /// (same behaviour as `cp` without `-P` on Unix, i.e. link is followed, but not preserved).
 /// - If the `source_directory_path` directory contains a symbolic link to a directory,
 /// the directory and its contents will be copied as normal - the links will be followed, but not preserved.
+///
 ///
 /// ## Return value
 /// Upon success, the function returns information about the files and directories that were copied or created

@@ -46,16 +46,17 @@ impl Default for FileCopyOptions {
 /// The target path must be the actual target file path and cannot be a directory.
 /// Returns the number of bytes moved (i.e. the file size).
 ///
-/// ## Options
-/// If `options.overwrite_existing` is `true`, an existing target file will be overwritten if it happens to exist.
 ///
-/// If `options.overwrite_existing` is `false` and the target file exists, this function will
-/// return `Err` with [`FileError::AlreadyExists`][crate::error::FileError::AlreadyExists],
-/// unless `options.skip_existing` is `true`, in which case `Ok(0)` is returned.
+/// ## Special return value cases
+/// If copying is skipped due to and existing file and
+/// [`options.skip_existing`][FileCopyOptions::skip_existing],
+/// the return value will be `Ok(0)`.
+///
 ///
 /// ## Symbolic links
 /// If `source_file_path` is a symbolic link to a file, the contents of the file it points to will be copied to `target_file_path`
 /// (same behaviour as `cp` without `-P` on Unix).
+///
 ///
 /// ## Internals
 /// This function internally delegates copying to [`std::fs::copy`] from the standard library
@@ -231,10 +232,11 @@ where
 
 
 
-/// Copy a single file from the `source_file_path` to the `target_file_path`.
+/// Copy a single file from the `source_file_path` to the `target_file_path` with progress reporting.
 ///
 /// The target path must be the actual target file path and cannot be a directory.
 /// Returns the number of bytes moved (i.e. the file size).
+///
 ///
 /// ## Progress reporting
 /// You must also provide a progress handler that receives a
@@ -246,15 +248,12 @@ where
 /// As such this function does not guarantee a specific amount of progress reports per file size.
 /// It does, however, guarantee at least one progress report: the final one, which happens when the file is completely copied.
 ///
-/// ## Options
-/// If [`options.overwrite_existing`][FileCopyWithProgressOptions::overwrite_existing] is `true`,
-/// an existing target file will be overwritten (if it happens to exist, otherwise the flag is ignored).
 ///
-/// If [`options.overwrite_existing`][FileCopyWithProgressOptions::overwrite_existing] is `false`
-/// and the target file exists, this function will return `Err`
-/// with [`FileError::AlreadyExists`][crate::error::FileError::AlreadyExists],
-/// unless [`options.skip_existing`][FileCopyWithProgressOptions::skip_existing] is `true`,
-/// in which case `Ok(0)` is returned.
+/// ## Special return value cases
+/// If copying is skipped due to and existing file and
+/// [`options.skip_existing`][FileCopyOptions::skip_existing],
+/// the return value will be `Ok(0)`.
+///
 ///
 /// ## Symbolic links
 /// If `source_file_path` is a symbolic link to a file, the contents of the file it points to will be copied to `target_file_path`
@@ -263,7 +262,7 @@ where
 ///
 /// ## Internals
 /// This function handles copying itself by opening handles of both files itself
-/// and buffering reads and writes (see the [`option.buffer_size`][FileCopyWithProgressOptions::buffer_size] option).
+/// and buffering reads and writes (see also the [`option.buffer_size`][FileCopyWithProgressOptions::buffer_size] option).
 pub fn copy_file_with_progress<P, T, F>(
     source_file_path: P,
     target_file_path: T,

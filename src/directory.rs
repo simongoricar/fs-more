@@ -1,4 +1,5 @@
-//! Directory scanning, sizing, copying and moving operations. Includes progress monitoring variants.
+//! Directory scanning, sizing, copying and moving operations.
+//! *Includes progress monitoring variants.*
 
 mod common;
 mod copy;

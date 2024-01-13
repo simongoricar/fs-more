@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-/// Represents an error when copying or moving a file.
+/// An error that can occur when copying or moving a file.
 #[derive(Error, Debug)]
 pub enum FileError {
     /// The source file cannot be found.
@@ -41,7 +41,7 @@ pub enum FileError {
 }
 
 
-/// Represents an error when removing a file.
+/// An error that can occur when removing a file.
 #[derive(Error, Debug)]
 pub enum FileRemoveError {
     /// The source file cannot be found.
@@ -63,7 +63,7 @@ pub enum FileRemoveError {
     OtherIoError { error: std::io::Error },
 }
 
-/// Represents an error when querying the size of a file.
+/// An error that can occur when querying the size of a file.
 #[derive(Error, Debug)]
 pub enum FileSizeError {
     /// The source file cannot be found.

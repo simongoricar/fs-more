@@ -51,7 +51,7 @@ impl Default for FileMoveOptions {
 ///
 /// ## Internals
 /// This function will first attempt to move the file with [`std::fs::rename`].
-/// If that fails (you can't rename files across filesystems), a copy-and-delete will be performed.
+/// If that fails (e.g. if paths are on different mount points / drives), a copy-and-delete will be attempted.
 pub fn move_file<P, T>(
     source_file_path: P,
     target_file_path: T,
@@ -165,7 +165,7 @@ impl Default for FileMoveWithProgressOptions {
 }
 
 
-/// Moves a single file from the `source_file_path` to the `target_file_path`.
+/// Moves a single file from the `source_file_path` to the `target_file_path` with progress reporting.
 ///
 /// The target path must be the actual target file path and cannot be a directory.
 /// Returns the number of bytes moved (i.e. the file size).
@@ -178,6 +178,7 @@ impl Default for FileMoveWithProgressOptions {
 /// a specific amount of progress reports per file size.
 /// We do, however, guarantee at least one progress report (the final one).
 ///
+///
 /// ## Options
 /// If [`options.overwrite_existing`][FileMoveWithProgressOptions::overwrite_existing] is `true`,
 /// an existing target file will be overwritten.
@@ -186,14 +187,16 @@ impl Default for FileMoveWithProgressOptions {
 /// and the target file exists, this function will return `Err`
 /// with [`FileError::AlreadyExists`][crate::error::FileError::AlreadyExists].
 ///
+///
 /// ## Symbolic links
 /// If the `source_file_path` is a symbolic link to a file, the contents of the file that the link points to
 /// will be copied to the `target_file_path` and the original `source_file_path` symbolic link will be removed
 /// (i.e. the link destination will be untouched, but we won't preserve the link on the target file).
 ///
+///
 /// ## Internals
 /// This function will first attempt to move the file with [`std::fs::rename`].
-/// If that fails (you can't rename files across filesystems), a copy-and-delete will be performed.
+/// If that fails (e.g. if paths are on different mount points / drives), a copy-and-delete will be attempted.
 pub fn move_file_with_progress<P, T, F>(
     source_file_path: P,
     target_file_path: T,

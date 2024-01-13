@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use thiserror::Error;
 
-/// Represents an error when copying or moving a directory.
+/// An error that can occur when copying or moving a directory.
 #[derive(Error, Debug)]
 pub enum DirectoryError {
     /// The root source directory (the directory you want to copy from) cannot be found.
@@ -59,7 +59,7 @@ pub enum DirectoryError {
     OtherIoError { error: std::io::Error },
 }
 
-/// Represents an error when scanning a directory.
+/// An error that can occur when scanning a directory.
 #[derive(Error, Debug)]
 pub enum DirectoryScanError {
     #[error("the root directory path doesn't exist")]
@@ -75,7 +75,7 @@ pub enum DirectoryScanError {
     UnableToReadDirectoryItem { error: std::io::Error },
 }
 
-/// Represents an error when querying size of a scanned directory.
+/// An error that can occur when querying size of a scanned directory.
 #[derive(Error, Debug)]
 pub enum DirectorySizeScanError {
     #[error("the root directory path doesn't exist")]
@@ -108,8 +108,9 @@ pub enum DirectorySizeScanError {
     OtherIoError { error: std::io::Error },
 }
 
+/// An error that can occur when checking whether a directory is empty.
 #[derive(Error, Debug)]
-pub enum DirectoryIsEmptyError {
+pub enum IsDirectoryEmptyError {
     #[error("given path does not exist")]
     NotFound,
 

@@ -6,29 +6,12 @@ use std::path::{Path, PathBuf};
 use fs_err as fs;
 
 use crate::{
-    error::{DirectoryIsEmptyError, DirectoryScanError, DirectorySizeScanError, FileSizeError},
+    error::{DirectoryScanError, DirectorySizeScanError, FileSizeError, IsDirectoryEmptyError},
     file::file_size_in_bytes,
 };
 
 
-/// A directory scanner abstraction.
-///
-/// ### Scan depth
-/// Maximum scanning depth can be configured by setting
-/// the `maximum_scan_depth` parameter in the [`DirectoryScan::scan_with_options`] initializer to:
-/// - `Some(0)` -- scans direct contents of the directory (a single layer of files and directories),
-/// - `Some(1+)` -- scans up to a certain subdirectory limit, or,
-/// - `None` -- scans the entire subtree, as deep as required.
-///
-/// ### Symbolic links
-/// **Careful!** This scanner follows symbolic links.
-///
-/// This means that if you set the `follow_symbolic_links` option to `true` (see [`Self::scan_with_options`]),
-/// the resulting `files` and `directories` included in the scan results
-/// *might not all be sub-paths of the root* `directory_path`.
-///
-/// This is because we followed symbolic links included their full target path in the results,
-/// not their original path.
+/// A directory scanner.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DirectoryScan {
     /// The directory that was scanned.
@@ -51,11 +34,13 @@ pub struct DirectoryScan {
     /// Also note that if you set `maximum_scan_depth` to `None`, *this flag can never be `true`*.
     ///
     /// ## Warning
-    /// *Be warned, however*, that if you call e.g. the [`self.total_size_in_bytes()`][Self::total_size_in_bytes] method,
-    /// you need to keep in mind that, if this flag is `true`, the number of bytes likely doesn't cover
-    /// the *entire* contents of the directory (as they weren't scanned). To get the correct size of a directory
-    /// and its contents, ideally perform a scan without a depth limit and then use the [`self.total_size_in_bytes()`][Self::total_size_in_bytes]
-    /// method as before to get the correct result.
+    /// **Be warned:** if you call e.g. the [`self.total_size_in_bytes()`][Self::total_size_in_bytes] method,
+    /// you need to keep in mind that, if this flag is `true`, the number of bytes won't cover
+    /// the *entire* contents of the directory (they weren't scanned). To get the correct size of a directory
+    /// and its contents, ideally perform a scan without a depth limit and then use the
+    /// [`self.total_size_in_bytes()`][Self::total_size_in_bytes]
+    /// method as before to get the correct result (or just use the [`directory_size_in_bytes`][super::directory_size_in_bytes]
+    /// standalone function).
     pub is_real_directory_deeper_than_scan: bool,
 
     /// Files that were found in the scan.
@@ -66,10 +51,27 @@ pub struct DirectoryScan {
 }
 
 impl DirectoryScan {
-    /// Perform a directory scan.
+    /// Perform a new directory scan.
     ///
-    /// `directory_path` must point to a directory that exists,
-    /// otherwise an `Err(`[`DirectoryScanError::NotFound`][crate::error::DirectoryScanError::NotFound]`)` is returned.
+    /// The given `directory_path` must point to a directory that exists, otherwise an
+    /// `Err(`[`DirectoryScanError::NotFound`][crate::error::DirectoryScanError::NotFound]`)` is returned.
+    ///
+    /// # Scan depth
+    /// Maximum scanning depth can be configured by setting
+    /// the `maximum_scan_depth` parameter to:
+    /// - `Some(0)` -- scans direct contents of the directory (a single layer of files and directories),
+    /// - `Some(>=1)` -- scans up to a certain subdirectory limit, or,
+    /// - `None` -- scans the entire subtree, as deep as required.
+    ///
+    /// # Symbolic links
+    /// **Careful!** This scanner can follow symbolic links.
+    ///
+    /// This means that if you set the `follow_symbolic_links` option to `true` (see [`Self::scan_with_options`]),
+    /// the resulting `files` and `directories` included in the scan results
+    /// *might not all be sub-paths of the root* `directory_path`.
+    ///
+    /// This is because when [`DirectoryScan`] follows symbolic links, it includes their full
+    /// target path in the results, not their original path.
     pub fn scan_with_options<P>(
         directory_path: P,
         maximum_scan_depth: Option<usize>,
@@ -276,21 +278,21 @@ pub(crate) fn is_directory_empty_unchecked(directory_path: &Path) -> std::io::Re
 }
 
 /// Returns a `bool` indicating whether the given directory is completely empty (no files and no subdirectories).
-pub fn is_directory_empty<P>(directory_path: P) -> Result<bool, DirectoryIsEmptyError>
+pub fn is_directory_empty<P>(directory_path: P) -> Result<bool, IsDirectoryEmptyError>
 where
     P: AsRef<Path>,
 {
     let directory_path: &Path = directory_path.as_ref();
     let directory_metadata =
-        fs::metadata(directory_path).map_err(|_| DirectoryIsEmptyError::NotFound)?;
+        fs::metadata(directory_path).map_err(|_| IsDirectoryEmptyError::NotFound)?;
 
     if !directory_metadata.is_dir() {
-        return Err(DirectoryIsEmptyError::NotADirectory);
+        return Err(IsDirectoryEmptyError::NotADirectory);
     }
 
 
     let mut directory_read = fs::read_dir(directory_path)
-        .map_err(|error| DirectoryIsEmptyError::UnableToReadDirectory { error })?;
+        .map_err(|error| IsDirectoryEmptyError::UnableToReadDirectory { error })?;
 
     Ok(directory_read.next().is_some())
 }

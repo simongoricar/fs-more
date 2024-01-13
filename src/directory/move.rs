@@ -50,7 +50,7 @@ impl Default for DirectoryMoveOptions {
 
 /// Describes strategies for moving a directory.
 ///
-/// Included in [`FinishedDirectoryMove`] to allow developers
+/// Included in [`FinishedDirectoryMove`] to allow callers
 /// to understand how the directory was moved.
 ///
 /// To clarify: *the caller can not request that a specific move strategy be used*.
@@ -285,23 +285,26 @@ fn attempt_directory_move_by_rename(
 
 /// Move a directory from `source_directory_path` to `target_directory_path`.
 ///
+/// Things to consider:
 /// - `source_directory_path` must point to an existing directory path.
 /// - `target_directory_path` represents a path to the directory that will contain `source_directory_path`'s contents.
+///   If needed, `target_directory_path` will be created.
 ///
 ///
 /// ### Warnings
 /// *This function does not follow or move symbolic links in the source directory.*
 ///
-/// It does, however, support `source_directory_path` itself being a symbolic link to a directory.
+/// It does, however, support `source_directory_path` itself being a symbolic link to a directory
+/// (it will not copy the symbolic link itself, but the contents of the link destination).
 ///
 ///
 /// ### Target directory
 /// Depending on the [`options.target_directory_rule`][DirectoryMoveOptions::target_directory_rule] option,
 /// the `target_directory_path` must:
-/// - [`DisallowExisting`][TargetDirectoryRule::DisallowExisting]: not exist,
-/// - [`AllowEmpty`][TargetDirectoryRule::AllowEmpty]: either not exist or be empty, or,
-/// - [`AllowNonEmpty`][TargetDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
-///   the specified overwriting rules are respected (see fields).
+/// - with [`DisallowExisting`][TargetDirectoryRule::DisallowExisting]: not exist,
+/// - with [`AllowEmpty`][TargetDirectoryRule::AllowEmpty]: either not exist or be empty, or,
+/// - with [`AllowNonEmpty`][TargetDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
+///   the specified overwriting rules are respected (see [variant fields][TargetDirectoryRule::AllowNonEmpty]).
 ///
 /// If the specified target directory rule is not satisfied,
 /// a [`DirectoryError`] containing the reason will be returned before any move is performed.
@@ -310,10 +313,14 @@ fn attempt_directory_move_by_rename(
 /// ### Move strategies
 /// Depending on the situation, the move can be performed one of two ways:
 /// - The source directory can be simply renamed to the target directory.
-///   This is the fastest method, but in addition to platform-specifics requires that the target directory is empty.
+///   This is the fastest method, but in addition to some platform-specifics<sup>*</sup> requires that the target directory is empty.
 /// - If the directory can't be renamed, the function will fall back to a copy-and-rename strategy.
 ///
 /// For more information, see [`DirectoryMoveStrategy`].
+///
+/// <sup>* On Windows: if the target directory already exists – even if it is empty – this function will instead
+/// attempt to rename the <i>contents</i> of the source directory, see [`std::fs::rename`].
+/// This will be reflected in the returned [`DirectoryMoveStrategy`], but should otherwise not be externally visible.</sup>
 ///
 ///
 /// ### Return value
@@ -454,6 +461,10 @@ pub struct DirectoryMoveProgress {
     pub bytes_finished: u64,
 
     /// Number of files that have been moved so far.
+    ///
+    /// If the copy-and-delete strategy is used under the hood,
+    /// this can instead mean how many files have been *copied* so far
+    /// (deletion will come at the end). For more information, see [`DirectoryMoveStrategy`].
     pub files_moved: usize,
 
     /// Number of directories that have been created so far.
@@ -478,22 +489,25 @@ pub struct DirectoryMoveProgress {
 /// Moves a directory from `source_directory_path` to `target_directory_path`
 /// (including progress reporting).
 ///
+/// Things to consider:
 /// - `source_directory_path` must point to an existing directory path.
 /// - `target_directory_path` represents a path to the directory that will contain `source_directory_path`'s contents.
+///   If needed, `target_directory_path` will be created.
 ///
 ///
 /// ### Warnings
 /// *This function does not follow or move symbolic links in the source directory.*
 ///
-/// It does, however, support `source_directory_path` itself being a symbolic link to a directory.
+/// It does, however, support `source_directory_path` itself being a symbolic link to a directory
+/// (it will not copy the symbolic link itself, but the contents of the link destination).
 ///
 ///
 /// ### Target directory
 /// Depending on the [`options.target_directory_rule`][DirectoryMoveOptions::target_directory_rule] option,
 /// the `target_directory_path` must:
-/// - [`DisallowExisting`][TargetDirectoryRule::DisallowExisting]: not exist,
-/// - [`AllowEmpty`][TargetDirectoryRule::AllowEmpty]: either not exist or be empty, or,
-/// - [`AllowNonEmpty`][TargetDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
+/// - with [`DisallowExisting`][TargetDirectoryRule::DisallowExisting]: not exist,
+/// - with [`AllowEmpty`][TargetDirectoryRule::AllowEmpty]: either not exist or be empty, or,
+/// - with [`AllowNonEmpty`][TargetDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
 ///   the specified overwriting rules are respected (see [variant fields][TargetDirectoryRule::AllowNonEmpty]).
 ///
 /// If the specified target directory rule is not satisfied,
@@ -503,10 +517,14 @@ pub struct DirectoryMoveProgress {
 /// ### Move strategies
 /// Depending on the situation, the move will be performed one of two ways:
 /// - The source directory can be simply renamed to the target directory.
-///   *This is the fastest method,* but in addition to platform-specifics requires that the target directory is empty.
+///   *This is the fastest method,* but in addition to some platform-specifics<sup>*</sup> requires that the target directory is empty.
 /// - If the directory can't be renamed, the function will fall back to a copy-and-rename strategy.
 ///
 /// For more information, see [`DirectoryMoveStrategy`].
+///
+/// <sup>* On Windows: if the target directory already exists – even if it is empty – this function will instead
+/// attempt to rename the <i>contents</i> of the source directory, see [`std::fs::rename`].
+/// This will be reflected in the returned [`DirectoryMoveStrategy`], but should otherwise not be externally visible.</sup>
 ///
 ///
 /// ### Progress reporting
