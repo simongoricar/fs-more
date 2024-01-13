@@ -17,9 +17,10 @@ This way, me and any other contributors can voice ideas and any potential concer
 
 For new features, I'd encourage you to write tests as well, so someone else doesn't have to.
 
+
 ## 3. Writing tests
-Tests covering untested code and edge cases are basically always welcome, so you're welcome to 
-submit an issue describing what isn't well tested and/or submitting a PR with a fresh batch of tests.
+Tests covering untested code and edge cases are always welcome, so you're welcome to 
+submit an issue describing what isn't well tested and/or submitting a PR with a fresh batch of tests to review.
 
 
 ---
@@ -58,6 +59,57 @@ Note: you'll need the [`rust-analyzer`](https://marketplace.visualstudio.com/ite
 for this to work.
 
 
+### 3.2 Generating up-to-date local documentation
+To build documentation for the local development version of `fs-more`, run:
+
+```bash
+cargo doc --workspace --open
+```
+
+This will build the documentation and open it in your default browser.
+
+If you're using Visual Studio Code, you can use something akin to this configuration to add a task for 
+automatic compiling of the documentation (this goes into `.vscode/tasks.json`):
+
+> Note: this configuration requires [cargo-watch](https://github.com/watchexec/cargo-watch) to be installed.
+
+```json
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build and open documentation",
+            "type": "cargo",
+            "group": "build",
+            "command": "doc",
+            "args": ["--workspace", "--open"],
+            "hide": true
+        },
+        {
+            "label": "build and watch documentation",
+            "type": "cargo",
+            "group": "build",
+            "command": "watch",
+            "args": ["-x", "doc --workspace --no-deps"],
+            "hide": true
+        },
+        {
+            "label": "documentation (build, open, then watch)",
+            "group": "build",
+            "dependsOn": [
+                "build and open documentation",
+                "build and watch documentation"
+            ],
+            "dependsOrder": "sequence",
+            "isBackground": true,            
+        }
+    ]
+}
+```
+
+Then, run the `documentation (build, open, then watch)` task. 
+This will compile the documentation, open it in your browser, and keep compiling it as you make changes.
+
 
 ## Appendix
 ### A1. Project structure
@@ -71,6 +123,7 @@ Before contributing, I'd suggest familiarizing yourself with this repository. He
 |
 |-- test-harness-derive
 |   |> Test harness's procedural macro for setting up test directories.
+|      See `test-harness/src/trees` for some usage examples.
 |
 |-- tests
 |   |> Integration tests.

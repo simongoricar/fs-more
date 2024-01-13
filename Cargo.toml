@@ -6,7 +6,7 @@ authors = [
     "Simon Goričar <simon.peter.goricar@gmail.com>"
 ]
 edition = "2021"
-description = "Convenient file and directory operations (including copy/move with progress)."
+description = "Convenient file and directory operations with progress reporting built on top of std::fs."
 readme = "README.md"
 keywords = [
     "file",
@@ -21,7 +21,7 @@ categories = [
     "filesystem"
 ]
 license-file = "LICENSE"
-repository = "https://github.com/DefaultSimon/fs-more"
+repository = "https://github.com/simongoricar/fs-more"
 include = [
     "/src",
     "/test-harness",
