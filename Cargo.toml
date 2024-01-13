@@ -9,9 +9,6 @@ edition = "2021"
 description = "Convenient file and directory operations with progress reporting built on top of std::fs."
 readme = "README.md"
 keywords = [
-    "file",
-    "directory",
-    "filesystem",
     "fs",
     "copy",
     "move",
