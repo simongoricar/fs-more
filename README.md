@@ -31,7 +31,7 @@ fs-more = "0.2.2"
 <br>
 
 ## Examples
-Copying a file with a progress handler:
+Copying a file and getting updates on the progress:
 
 ```rust
 use std::path::Path;
@@ -53,7 +53,7 @@ let copy_result = fs_more::file::copy_file_with_progress(
 )?;
 ```
 
-Moving a directory with a progress handler:
+Moving a directory and getting updates on the progress:
 ```rust
 use std::path::Path;
 use fs_more::error::DirectoryError;

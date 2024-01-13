@@ -22,7 +22,7 @@
 //!
 //! ## Examples
 //!
-//! Copying a file with a progress handler:
+//! Copying a file and getting updates on the progress:
 //! ```no_run
 //! # use std::path::Path;
 //! # use fs_more::error::FileError;
@@ -47,7 +47,7 @@
 //! # }
 //! ```
 //!
-//! Moving a directory with a progress handler:
+//! Moving a directory and getting updates on the progress:
 //! ```no_run
 //! # use std::path::Path;
 //! # use fs_more::error::DirectoryError;
