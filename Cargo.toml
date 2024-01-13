@@ -17,7 +17,7 @@ keywords = [
 categories = [
     "filesystem"
 ]
-license-file = "LICENSE"
+license = "MIT"
 repository = "https://github.com/simongoricar/fs-more"
 include = [
     "/src",
