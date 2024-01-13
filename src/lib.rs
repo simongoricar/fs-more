@@ -1,5 +1,5 @@
 //! Convenient file and directory operations built on top of [`std::fs`] with improved error handling.
-//! Includes copying / moving files and directories with progress.
+//! Includes copying / moving files and directories with progress reporting.
 //!
 //! ## Main features
 //! - copying and moving files or directories with in-depth configuration options (including IO buffering settings, copying depth, etc.)
@@ -16,7 +16,7 @@
 //! ## Feature flags
 //! The following feature flags are available:
 //! - `fs-err`: enables the optional [`fs-err`](../fs_err) support, enabling more helpful underlying IO error messages
-//!   (though `fs-more` explicitly provides many on its own).
+//!   (though `fs-more` already provides many on its own).
 //!
 //! <br>
 //!
