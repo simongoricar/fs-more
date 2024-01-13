@@ -433,12 +433,18 @@ impl Default for DirectoryMoveWithProgressOptions {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum DirectoryMoveOperation {
     /// Describes a directory creation operation.
-    CreatingDirectory { target_path: PathBuf },
+    CreatingDirectory {
+        /// Path of the directory that is being created.
+        target_path: PathBuf,
+    },
 
     /// Describes a file being copied.
     /// For more precise copying progress, see the `progress` field.
     CopyingFile {
+        /// Path of the file is being created.
         target_path: PathBuf,
+
+        /// Progress of the file operation.
         progress: FileProgress,
     },
 

@@ -71,6 +71,8 @@ pub enum TargetDirectoryRule {
 }
 
 impl Default for TargetDirectoryRule {
+    /// The default value for this struct is [`Self::AllowEmpty`],
+    /// i.e. allowing empty target directories.
     fn default() -> Self {
         Self::AllowEmpty
     }

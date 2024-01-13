@@ -15,7 +15,10 @@ pub enum FileError {
     ///
     /// The inner [`std::io::Error`] will likely describe the real cause of this error.
     #[error("unable to access source file")]
-    UnableToAccessSourceFile { error: std::io::Error },
+    UnableToAccessSourceFile {
+        /// Underlying IO error describing why the source file could not be accessed.
+        error: std::io::Error,
+    },
 
     /// The target file already exists. Some copy/move options disable this error:
     /// - [`FileCopyOptions.overwrite_existing`][crate::file::FileCopyOptions],
@@ -29,7 +32,10 @@ pub enum FileError {
     ///
     /// The inner [`std::io::Error`] will likely describe the real cause of this error.
     #[error("unable to access target file")]
-    UnableToAccessTargetFile { error: std::io::Error },
+    UnableToAccessTargetFile {
+        /// Underlying IO error describing why the target file could not be accessed.
+        error: std::io::Error,
+    },
 
     /// The source and target file paths point to the same file.
     #[error("source and target file path are the same file")]
@@ -37,7 +43,10 @@ pub enum FileError {
 
     /// Some other [`std::io::Error`] was encountered.
     #[error("other std::io::Error: {error}")]
-    OtherIoError { error: std::io::Error },
+    OtherIoError {
+        /// IO error describing the cause of the outer error.
+        error: std::io::Error,
+    },
 }
 
 
@@ -56,11 +65,17 @@ pub enum FileRemoveError {
     ///
     /// The inner [`std::io::Error`] will likely describe the real cause of this error.
     #[error("unable to access file")]
-    UnableToAccessFile { error: std::io::Error },
+    UnableToAccessFile {
+        /// Underlying IO error describing why the file could not be accessed.
+        error: std::io::Error,
+    },
 
     /// Some other [`std::io::Error`] was encountered.
     #[error("other std::io::Error: {error}")]
-    OtherIoError { error: std::io::Error },
+    OtherIoError {
+        /// IO error describing the cause of the outer error.
+        error: std::io::Error,
+    },
 }
 
 /// An error that can occur when querying the size of a file.
@@ -78,9 +93,15 @@ pub enum FileSizeError {
     ///
     /// The inner [`std::io::Error`] will likely describe the real cause of this error.
     #[error("unable to access file")]
-    UnableToAccessFile { error: std::io::Error },
+    UnableToAccessFile {
+        /// Underlying IO error describing why the file could not be accessed.
+        error: std::io::Error,
+    },
 
     /// Some other [`std::io::Error`] was encountered.
     #[error("other std::io::Error: {error}")]
-    OtherIoError { error: std::io::Error },
+    OtherIoError {
+        /// IO error describing the cause of the outer error.
+        error: std::io::Error,
+    },
 }

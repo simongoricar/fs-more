@@ -18,7 +18,10 @@ pub enum DirectoryError {
     ///
     /// The inner [`std::io::Error`] will likely describe the real cause of this error.
     #[error("unable to access source directory or file")]
-    UnableToAccessSource { error: std::io::Error },
+    UnableToAccessSource {
+        /// IO error describing why the source directory could not be accessed.
+        error: std::io::Error,
+    },
 
     /// A directory or file in the source directory
     /// has disappeared since being scanned by the same function.
@@ -43,45 +46,71 @@ pub enum DirectoryError {
     ///
     /// The inner [`std::io::Error`] will likely describe the real cause of this error.
     #[error("unable to access target directory or file")]
-    UnableToAccessTarget { error: std::io::Error },
+    UnableToAccessTarget {
+        /// IO error describing why the target directory could not be accessed.
+        error: std::io::Error,
+    },
 
     /// A target directory or file already exists.
     /// The `path` field contains the path that already existed and caused this error.
     #[error("target directory or file already exists: {}", .path.display())]
-    TargetItemAlreadyExists { path: PathBuf },
+    TargetItemAlreadyExists {
+        /// Path of the target directory or file that already exists.
+        path: PathBuf,
+    },
 
     /// Some other unrecoverable error with some `reason`.
     #[error("an unrecoverable error has been encountered: {reason}")]
-    OtherReason { reason: String },
+    OtherReason {
+        /// Error reason.
+        reason: String,
+    },
 
     /// Some other [`std::io::Error`] was encountered.
     #[error("other std::io::Error: {error}")]
-    OtherIoError { error: std::io::Error },
+    OtherIoError {
+        /// IO error describing the cause of the outer error.
+        error: std::io::Error,
+    },
 }
 
 /// An error that can occur when scanning a directory.
 #[derive(Error, Debug)]
 pub enum DirectoryScanError {
+    /// The provided directory path doesn't exist.
     #[error("the root directory path doesn't exist")]
     NotFound,
 
+    /// The provided directory path exists, but is not a directory.
     #[error("the root directory path doesn't lead to a directory")]
     NotADirectory,
 
+    /// The provided directory path is a directory,
+    /// but could not be read due to an IO error.
     #[error("unable to read directory: {error}")]
-    UnableToReadDirectory { error: std::io::Error },
+    UnableToReadDirectory {
+        /// IO error describing why the given root directory could not be read.
+        error: std::io::Error,
+    },
 
+    /// The provided directory path is a directory,
+    /// but contains an item (i.e. directory or file)
+    /// that could not be read due to an IO error.
     #[error("unable to read directory item: {error}")]
-    UnableToReadDirectoryItem { error: std::io::Error },
+    UnableToReadDirectoryItem {
+        /// IO error describing why the given file or directory could not be read.
+        error: std::io::Error,
+    },
 }
 
 /// An error that can occur when querying size of a scanned directory.
 #[derive(Error, Debug)]
 pub enum DirectorySizeScanError {
+    /// The provided directory path does not exist.
     #[error("the root directory path doesn't exist")]
     RootDirectoryNotFound,
 
-    /// The root directory path is not a directory nor a symbolic link to a file.
+    /// The root directory path exists, but is not a directory nor a symbolic link to one.
     #[error("provided directory path is not a directory nor a symbolic link to one")]
     RootIsNotADirectory,
 
@@ -89,34 +118,52 @@ pub enum DirectorySizeScanError {
     /// of [`DirectoryScan`][crate::directory::DirectoryScan]
     /// is no longer there or no longer a file.
     #[error("scanned file or directory no longer exists or isn't a file anymore: {path}")]
-    EntryNoLongerExists { path: PathBuf },
+    EntryNoLongerExists {
+        /// Path of the file or directory that no longer exists.
+        path: PathBuf,
+    },
 
     /// The file cannot be accessed (e.g. due to missing permissions).
     ///
     /// The inner [`std::io::Error`] will likely describe the real cause of this error.
     #[error("unable to access file")]
-    UnableToAccessFile { error: std::io::Error },
+    UnableToAccessFile {
+        /// Underlying IO error describing why the file could not be accessed.
+        error: std::io::Error,
+    },
 
     /// The directory cannot be accessed (e.g. due to missing permissions).
     ///
     /// The inner [`std::io::Error`] will likely describe the real cause of this error.
     #[error("unable to access file")]
-    UnableToAccessDirectory { error: std::io::Error },
+    UnableToAccessDirectory {
+        /// Underlying IO error describing why the directory could not be accessed.
+        error: std::io::Error,
+    },
 
     /// Some other [`std::io::Error`] was encountered.
     #[error("other std::io::Error: {error}")]
-    OtherIoError { error: std::io::Error },
+    OtherIoError {
+        /// IO error describing the cause of the outer error.
+        error: std::io::Error,
+    },
 }
 
 /// An error that can occur when checking whether a directory is empty.
 #[derive(Error, Debug)]
 pub enum IsDirectoryEmptyError {
+    /// The provided path doesn't exist.
     #[error("given path does not exist")]
     NotFound,
 
+    /// The provided path exists, but is not a directory.
     #[error("given path does not lead to a directory")]
     NotADirectory,
 
-    #[error("unable to read contents of directory due to an std::io::Error: {error}")]
-    UnableToReadDirectory { error: std::io::Error },
+    /// Could not read the contents of some directory.
+    #[error("unable to read contents of directory due to an IO error: {error}")]
+    UnableToReadDirectory {
+        /// Underlying IO error describing why the directory could not be read.
+        error: std::io::Error,
+    },
 }

@@ -181,7 +181,7 @@ fn assert_directory_contents_match_other_directory<P1, P2>(
                     BufReader::with_capacity(BUFFER_SIZE, file)
                 };
 
-                // FIXME This is only used for testing anyway, but maybe find a better way than byte-by-byte comparisons?
+                // TODO This is only used for testing anyway, but maybe find a better way than byte-by-byte comparisons?
                 for (byte_index, (entry_file_byte, other_file_byte)) in
                     entry_file.bytes().zip(other_file.bytes()).enumerate()
                 {
