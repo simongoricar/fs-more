@@ -31,7 +31,7 @@
 //! let source_path = Path::new("./source-file.txt");
 //! let target_path = Path::new("./target-file.txt");
 //!
-//! let copy_result = fs_more::file::copy_file_with_progress(
+//! let bytes_copied = fs_more::file::copy_file_with_progress(
 //!     source_path,
 //!     target_path,
 //!     FileCopyWithProgressOptions::default(),
@@ -43,6 +43,8 @@
 //!         println!("Copied {:.2}% of the file!", percent_copied);
 //!     }
 //! )?;
+//!
+//! println!("Copied {bytes_copied} bytes!");
 //! # Ok(())
 //! # }
 //! ```
@@ -57,7 +59,7 @@
 //! let source_path = Path::new("./source-directory");
 //! let target_path = Path::new("./target-directory");
 //!
-//! let move_result = fs_more::directory::move_directory_with_progress(
+//! let moved = fs_more::directory::move_directory_with_progress(
 //!     source_path,
 //!     target_path,
 //!     DirectoryMoveWithProgressOptions {
@@ -77,6 +79,14 @@
 //!         );
 //!     }
 //! )?;
+//!
+//! println!(
+//!     "Moved {} bytes ({} files, {} directories)! Used the {:?} strategy.",
+//!     moved.total_bytes_moved,
+//!     moved.num_files_moved,
+//!     moved.num_directories_moved,
+//!     moved.used_strategy
+//! );
 //! # Ok(())
 //! # }
 //! ```
