@@ -6,25 +6,23 @@ use std::path::{Path, PathBuf};
 use fs_err as fs;
 
 use super::{
-    copy::TargetDirectoryRule,
     copy_directory_unchecked,
+    perform_prepared_copy_directory_with_progress,
+    prepared::{
+        validate_source_directory_path,
+        validate_source_target_directory_pair,
+        validate_target_directory_path,
+        PreparedDirectoryCopy,
+        ValidatedTargetPath,
+    },
+    DirectoryCopyOperation,
+    DirectoryCopyOptions,
+    DirectoryCopyWithProgressOptions,
     DirectoryScan,
-    ValidatedTargetPath,
+    TargetDirectoryRule,
 };
 use crate::{
-    directory::{
-        copy::{
-            validate_source_directory_path,
-            validate_source_target_directory_pair,
-            validate_target_directory_path,
-        },
-        perform_prepared_copy_directory_with_progress,
-        rejoin_source_subpath_onto_target,
-        DirectoryCopyOperation,
-        DirectoryCopyOptions,
-        DirectoryCopyWithProgressOptions,
-        PreparedDirectoryCopyWithProgress,
-    },
+    directory::rejoin_source_subpath_onto_target,
     error::{DirectoryError, DirectoryScanError, DirectorySizeScanError},
     file::FileProgress,
 };
@@ -183,10 +181,7 @@ fn attempt_directory_move_by_rename(
     // but will fail if the source and target paths aren't on the same mount point or filesystem
     // or, if on Windows, the target directory already exists.
 
-    if !validated_target_path
-        .target_directory_is_empty
-        .unwrap_or(true)
-    {
+    if !validated_target_path.is_empty_directory.unwrap_or(true) {
         // Indicates that we can't rename (target directory is not empty).
         return Ok(None);
     }
@@ -214,10 +209,10 @@ fn attempt_directory_move_by_rename(
     #[cfg(windows)]
     {
         // On Windows, `rename`'s target directory must not exist.
-        if !validated_target_path.target_directory_exists
+        if !validated_target_path.exists
             && fs::rename(
                 source_directory_path,
-                &validated_target_path.target_directory_path,
+                &validated_target_path.directory_path,
             )
             .is_ok()
         {
@@ -243,7 +238,7 @@ fn attempt_directory_move_by_rename(
             let target_path = rejoin_source_subpath_onto_target(
                 source_directory_path,
                 &source_path,
-                &validated_target_path.target_directory_path,
+                &validated_target_path.directory_path,
             )?;
 
             fs::rename(source_path, target_path)
@@ -326,7 +321,7 @@ where
 
     validate_source_target_directory_pair(
         &source_directory_path,
-        &validated_target_path.target_directory_path,
+        &validated_target_path.directory_path,
     )?;
 
     let source_details = collect_source_directory_details(&source_directory_path)?;
@@ -346,14 +341,15 @@ where
     // At this point a simple rename was either impossible or failed.
     // We need to copy and delete instead.
 
-    if !validated_target_path.target_directory_exists {
-        fs::create_dir_all(&source_directory_path)
-            .map_err(|error| DirectoryError::UnableToAccessTarget { error })?;
-    }
-
-    copy_directory_unchecked(
+    let prepared_copy = PreparedDirectoryCopy::prepare_with_validated(
         source_directory_path.clone(),
         validated_target_path,
+        None,
+        &options.target_directory_rule,
+    )?;
+
+    copy_directory_unchecked(
+        prepared_copy,
         DirectoryCopyOptions {
             target_directory_rule: options.target_directory_rule,
             maximum_copy_depth: None,
@@ -541,7 +537,7 @@ where
 
     validate_source_target_directory_pair(
         &source_directory_path,
-        &validated_target_path.target_directory_path,
+        &validated_target_path.directory_path,
     )?;
 
     let source_details = collect_source_directory_details(&source_directory_path)?;
@@ -580,21 +576,18 @@ where
     // Trivial directory rename failed or was impossible - we should copy to target
     // and delete old directory at the end.
 
-    if !validated_target_path.target_directory_exists {
-        fs::create_dir_all(&source_directory_path)
-            .map_err(|error| DirectoryError::UnableToAccessTarget { error })?;
-    }
-
     let copy_options = DirectoryCopyWithProgressOptions {
         target_directory_rule: options.target_directory_rule,
         buffer_size: options.buffer_size,
         progress_update_byte_interval: options.progress_update_byte_interval,
         maximum_copy_depth: None,
     };
-    let prepared_copy = PreparedDirectoryCopyWithProgress::prepare_with_validated(
+
+    let prepared_copy = PreparedDirectoryCopy::prepare_with_validated(
         source_directory_path.clone(),
         validated_target_path,
-        &copy_options,
+        copy_options.maximum_copy_depth,
+        &copy_options.target_directory_rule,
     )?;
 
     let directory_copy_result =
