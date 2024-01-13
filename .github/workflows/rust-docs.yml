@@ -14,10 +14,7 @@ concurrency:
 
 jobs:
   build-documentation:
-    runs-on: self-hosted
-    container:
-      image: ubuntu:latest
-    
+    runs-on: self-hosted    
     steps:
     - name: Set up required tools
       run: apt-get update && apt-get install curl build-essential -y

@@ -12,8 +12,6 @@ env:
 jobs:
   build-and-test:
     runs-on: self-hosted
-    container:
-      image: ubuntu:latest
     steps:
     - name: Set up required tools
       run: apt-get update && apt-get install curl build-essential -y
