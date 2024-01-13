@@ -79,3 +79,9 @@ fabric.properties
 
 ## Rust
 /target
+
+
+.vscode/**/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
