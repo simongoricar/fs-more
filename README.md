@@ -1,7 +1,10 @@
 fs-more
 =======
+[![Crates.io Version](https://img.shields.io/crates/v/fs-more)](https://crates.io/crates/fs-more)
 ![MSRV](https://img.shields.io/badge/MSRV-1.63.0-brightgreen)
-![License](https://img.shields.io/badge/license-MIT-blue)
+[![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/simongoricar/fs-more/blob/master/LICENSE)
+[![Documentation link](https://img.shields.io/badge/docs-on%20docs.rs-green?style=flat)](https://docs.rs/fs-more)
+
 
 
 Convenient file and directory operations built on top of `std::fs` with improved error handling.
@@ -19,15 +22,9 @@ Includes copying / moving files and directories with progress reporting.
 
 
 ## Usage
-**`fs-more` isn't on [crates.io](https://crates.io/) yet.** Until then you can add it into your project with:
+To add `fs-more` into your project, specify it in your `Cargo.toml` file:
 ```toml
-fs-more = { git = "https://github.com/simongoricar/fs-more" }
-```
-
-or, preferably:
-
-```toml
-fs-more = { git = "https://github.com/simongoricar/fs-more", rev = "commit hash here" }
+fs-more = "0.2.2"
 ```
 
 
