@@ -281,6 +281,8 @@ fn attempt_directory_move_by_rename(
 /// ### Warnings
 /// *This function does not follow or move symbolic links in the source directory.*
 ///
+/// It does, however, support `source_directory_path` itself being a symbolic link to a directory.
+///
 ///
 /// ### Target directory
 /// Depending on the [`options.target_directory_rule`][DirectoryMoveOptions::target_directory_rule] option,
@@ -470,6 +472,8 @@ pub struct DirectoryMoveProgress {
 ///
 /// ### Warnings
 /// *This function does not follow or move symbolic links in the source directory.*
+///
+/// It does, however, support `source_directory_path` itself being a symbolic link to a directory.
 ///
 ///
 /// ### Target directory

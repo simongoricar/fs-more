@@ -1,15 +1,19 @@
-use fs_more::directory::{
-    DirectoryMoveOptions,
-    DirectoryMoveProgress,
-    DirectoryMoveWithProgressOptions,
-    DirectoryScan,
-    TargetDirectoryRule,
+use assert_matches::assert_matches;
+use fs_more::{
+    directory::{
+        DirectoryMoveOptions,
+        DirectoryMoveProgress,
+        DirectoryMoveWithProgressOptions,
+        DirectoryScan,
+        TargetDirectoryRule,
+    },
+    error::DirectoryError,
 };
 use fs_more_test_harness::{
+    assertable::AssertableDirectoryPath,
     error::TestResult,
     trees::{DeepTreeHarness, EmptyTreeHarness},
 };
-
 
 
 #[test]
@@ -51,7 +55,228 @@ pub fn move_directory() -> TestResult<()> {
     Ok(())
 }
 
-// TODO Add a test for behaviour when moving "symlink to directory A" to "A".
+#[test]
+pub fn error_on_move_directory_with_source_symlink_to_same_directory() -> TestResult<()> {
+    let target_harness = DeepTreeHarness::new()?;
+    let target_harness_untouched = DeepTreeHarness::new()?;
+    let source_symlink_harness = EmptyTreeHarness::new()?;
+
+    source_symlink_harness.root.assert_is_empty();
+
+    let symlink_path =
+        AssertableDirectoryPath::from_path(source_symlink_harness.root.child_path("test-symlink"));
+    symlink_path.symlink_to_directory(target_harness.root.path())?;
+
+    symlink_path.assert_is_symlink_to_directory();
+    let symlink_target = symlink_path.resolve_target_symlink_path();
+
+    assert_eq!(
+        symlink_target.as_path(),
+        target_harness.root.path()
+    );
+
+
+    // Now attempt to perform a move - it should error.
+    let move_result = fs_more::directory::move_directory(
+        symlink_path.path(),
+        target_harness.root.path(),
+        DirectoryMoveOptions {
+            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
+                overwrite_existing_subdirectories: true,
+                overwrite_existing_files: true,
+            },
+        },
+    );
+
+    assert_matches!(
+        move_result,
+        Err(DirectoryError::InvalidTargetDirectoryPath)
+    );
+
+    target_harness_untouched
+        .root
+        .assert_directory_contents_match_directory(target_harness.root.path());
+
+    source_symlink_harness.destroy()?;
+    target_harness.destroy()?;
+    target_harness_untouched.destroy()?;
+
+    Ok(())
+}
+
+#[test]
+pub fn error_on_move_directory_with_progress_with_source_symlink_to_same_directory(
+) -> TestResult<()> {
+    let target_harness = DeepTreeHarness::new()?;
+    let target_harness_untouched = DeepTreeHarness::new()?;
+    let source_symlink_harness = EmptyTreeHarness::new()?;
+
+    source_symlink_harness.root.assert_is_empty();
+
+    let symlink_path =
+        AssertableDirectoryPath::from_path(source_symlink_harness.root.child_path("test-symlink"));
+    symlink_path.symlink_to_directory(target_harness.root.path())?;
+
+    symlink_path.assert_is_symlink_to_directory();
+    let symlink_target = symlink_path.resolve_target_symlink_path();
+
+    assert_eq!(
+        symlink_target.as_path(),
+        target_harness.root.path()
+    );
+
+
+    // Now attempt to perform a move - it should error.
+    let move_result = fs_more::directory::move_directory_with_progress(
+        symlink_path.path(),
+        target_harness.root.path(),
+        DirectoryMoveWithProgressOptions {
+            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
+                overwrite_existing_subdirectories: true,
+                overwrite_existing_files: true,
+            },
+            ..Default::default()
+        },
+        |_| {},
+    );
+
+    assert_matches!(
+        move_result,
+        Err(DirectoryError::InvalidTargetDirectoryPath)
+    );
+
+    target_harness_untouched
+        .root
+        .assert_directory_contents_match_directory(target_harness.root.path());
+
+    source_symlink_harness.destroy()?;
+    target_harness.destroy()?;
+    target_harness_untouched.destroy()?;
+
+    Ok(())
+}
+
+#[test]
+pub fn move_directory_with_source_symlink_to_different_directory() -> TestResult<()> {
+    let symlink_target_harness = DeepTreeHarness::new()?;
+    let untouched_harness_copy = DeepTreeHarness::new()?;
+    let source_symlink_harness = EmptyTreeHarness::new()?;
+    let copy_target_harness = EmptyTreeHarness::new()?;
+
+    source_symlink_harness.root.assert_is_empty();
+    copy_target_harness.root.assert_is_empty();
+
+
+    let source_scan =
+        DirectoryScan::scan_with_options(symlink_target_harness.root.path(), None, false).unwrap();
+    let source_size_bytes = source_scan.total_size_in_bytes().unwrap();
+
+
+    let symlink_path =
+        AssertableDirectoryPath::from_path(source_symlink_harness.root.child_path("test-symlink"));
+    symlink_path.symlink_to_directory(symlink_target_harness.root.path())?;
+
+    symlink_path.assert_is_symlink_to_directory();
+    let symlink_target = symlink_path.resolve_target_symlink_path();
+
+    assert_eq!(
+        symlink_target.as_path(),
+        symlink_target_harness.root.path()
+    );
+
+    // Now attempt to perform a move - it should be fine.
+    let move_result = fs_more::directory::move_directory(
+        symlink_path.path(),
+        copy_target_harness.root.path(),
+        DirectoryMoveOptions {
+            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
+                overwrite_existing_subdirectories: true,
+                overwrite_existing_files: true,
+            },
+        },
+    );
+
+    let directory_move = move_result.unwrap();
+
+
+    assert_eq!(
+        source_size_bytes, directory_move.total_bytes_moved,
+        "move_directory reported incorrect amount of bytes moved"
+    );
+
+    symlink_target_harness.root.assert_not_exists();
+    untouched_harness_copy
+        .root
+        .assert_directory_contents_match_directory(copy_target_harness.root.path());
+
+
+    source_symlink_harness.destroy()?;
+    untouched_harness_copy.destroy()?;
+
+    Ok(())
+}
+
+#[test]
+pub fn move_directory_with_progress_with_source_symlink_to_different_directory() -> TestResult<()> {
+    let symlink_target_harness = DeepTreeHarness::new()?;
+    let untouched_harness_copy = DeepTreeHarness::new()?;
+    let source_symlink_harness = EmptyTreeHarness::new()?;
+    let copy_target_harness = EmptyTreeHarness::new()?;
+
+    source_symlink_harness.root.assert_is_empty();
+    copy_target_harness.root.assert_is_empty();
+
+
+    let source_scan =
+        DirectoryScan::scan_with_options(symlink_target_harness.root.path(), None, false).unwrap();
+    let source_size_bytes = source_scan.total_size_in_bytes().unwrap();
+
+
+    let symlink_path =
+        AssertableDirectoryPath::from_path(source_symlink_harness.root.child_path("test-symlink"));
+    symlink_path.symlink_to_directory(symlink_target_harness.root.path())?;
+
+    symlink_path.assert_is_symlink_to_directory();
+    let symlink_target = symlink_path.resolve_target_symlink_path();
+
+    assert_eq!(
+        symlink_target.as_path(),
+        symlink_target_harness.root.path()
+    );
+
+    // Now attempt to perform a move - it should be fine.
+    let move_result = fs_more::directory::move_directory_with_progress(
+        symlink_path.path(),
+        copy_target_harness.root.path(),
+        DirectoryMoveWithProgressOptions {
+            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
+                overwrite_existing_subdirectories: true,
+                overwrite_existing_files: true,
+            },
+            ..Default::default()
+        },
+        |_| {},
+    );
+
+    let directory_move = move_result.unwrap();
+
+
+    assert_eq!(
+        source_size_bytes, directory_move.total_bytes_moved,
+        "move_directory reported incorrect amount of bytes moved"
+    );
+
+    symlink_target_harness.root.assert_not_exists();
+    untouched_harness_copy
+        .root
+        .assert_directory_contents_match_directory(copy_target_harness.root.path());
+
+
+    source_symlink_harness.destroy()?;
+    untouched_harness_copy.destroy()?;
+
+    Ok(())
+}
 
 #[test]
 pub fn move_directory_with_progress() -> TestResult<()> {
