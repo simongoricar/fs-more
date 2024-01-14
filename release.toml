@@ -1,2 +1,4 @@
 allow-branch = ["master"]
 tag-name = "{{prefix}}v{{version}}"
+shared-version = true
+pre-release-commit-message = "Release v{{version}}"
