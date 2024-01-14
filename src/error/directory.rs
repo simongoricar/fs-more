@@ -4,6 +4,7 @@ use thiserror::Error;
 
 /// An error that can occur when copying or moving a directory.
 #[derive(Error, Debug)]
+#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum DirectoryError {
     /// The root source directory (the directory you want to copy from) cannot be found.
     #[error("provided source directory path does not exist")]
@@ -76,6 +77,7 @@ pub enum DirectoryError {
 
 /// An error that can occur when scanning a directory.
 #[derive(Error, Debug)]
+#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum DirectoryScanError {
     /// The provided directory path doesn't exist.
     #[error("the root directory path doesn't exist")]
@@ -105,6 +107,7 @@ pub enum DirectoryScanError {
 
 /// An error that can occur when querying size of a scanned directory.
 #[derive(Error, Debug)]
+#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum DirectorySizeScanError {
     /// The provided directory path does not exist.
     #[error("the root directory path doesn't exist")]
@@ -151,6 +154,7 @@ pub enum DirectorySizeScanError {
 
 /// An error that can occur when checking whether a directory is empty.
 #[derive(Error, Debug)]
+#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum IsDirectoryEmptyError {
     /// The provided path doesn't exist.
     #[error("given path does not exist")]

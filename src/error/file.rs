@@ -2,6 +2,7 @@ use thiserror::Error;
 
 /// An error that can occur when copying or moving a file.
 #[derive(Error, Debug)]
+#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum FileError {
     /// The source file cannot be found.
     #[error("source file does not exist")]
@@ -52,6 +53,7 @@ pub enum FileError {
 
 /// An error that can occur when removing a file.
 #[derive(Error, Debug)]
+#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum FileRemoveError {
     /// The source file cannot be found.
     #[error("file does not exist")]
@@ -80,6 +82,7 @@ pub enum FileRemoveError {
 
 /// An error that can occur when querying the size of a file.
 #[derive(Error, Debug)]
+#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum FileSizeError {
     /// The source file cannot be found.
     #[error("file does not exist")]

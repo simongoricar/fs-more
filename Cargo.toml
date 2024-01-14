@@ -36,11 +36,13 @@ members = [
 
 [features]
 fs-err = ["dep:fs-err"]
+miette = ["dep:miette"]
 
 
 [dependencies]
 dunce = "1.0.4"
 fs-err = { version = "2.9.0", optional = true }
+miette = { version = "5.10.0", optional = true }
 path-clean = "1.0.1"
 thiserror = "1.0.48"
 

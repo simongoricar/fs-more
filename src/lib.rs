@@ -17,6 +17,9 @@
 //! The following feature flags are available:
 //! - `fs-err`: enables the optional [`fs-err`](../fs_err) support, enabling more helpful underlying IO error messages
 //!   (though `fs-more` already provides many on its own).
+//! - `miette`: derives [`miette::Diagnostic`](../miette/derive.Diagnostic.html) on all
+//!   [error types](crate::error),
+//!   allowing users to conveniently e.g. [`wrap_err_with`](../miette/trait.Context.html#tymethod.wrap_err_with).
 //!
 //! <br>
 //!

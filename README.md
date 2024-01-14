@@ -99,8 +99,11 @@ println!(
 
 ## Feature flags
 The following feature flags are available:
-- `fs-err`: enables the optional [`fs-err`](https://docs.rs/fs-err) support, enabling more helpful underlying IO error messages
+- `fs-err`: enables [`fs-err`](https://docs.rs/fs-err) support, which means more helpful underlying IO error messages
   (though `fs-more` already provides many on its own).
+- `miette`: derives [`miette::Diagnostic`](https://docs.rs/miette/latest/miette/derive.Diagnostic.html) on all 
+  [error types](https://docs.rs/fs-more/latest/fs_more/error/index.html), 
+  allowing users to conveniently e.g. [`wrap_err_with`](https://docs.rs/miette/latest/miette/trait.Context.html#tymethod.wrap_err_with).
 
 
 ## Project status
