@@ -84,7 +84,7 @@
 //! )?;
 //!
 //! println!(
-//!     "Moved {} bytes ({} files, {} directories)! Used the {:?} strategy.",
+//!     "Moved {} bytes ({} files, {} directories)! Underlying strategy: {:?}.",
 //!     moved.total_bytes_moved,
 //!     moved.num_files_moved,
 //!     moved.num_directories_moved,

@@ -1,9 +1,9 @@
 fs-more
 =======
-[![Crates.io Version](https://img.shields.io/crates/v/fs-more)](https://crates.io/crates/fs-more)
-![MSRV](https://img.shields.io/badge/MSRV-1.63.0-brightgreen)
-[![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/simongoricar/fs-more/blob/master/LICENSE)
-[![Documentation link](https://img.shields.io/badge/docs-on%20docs.rs-green?style=flat)](https://docs.rs/fs-more)
+[![Crates.io Version](https://img.shields.io/crates/v/fs-more?style=flat-square)](https://crates.io/crates/fs-more)
+[![Minimum Supported Rust Version](https://img.shields.io/badge/MSRV-1.63.0-brightgreen?style=flat-square)](https://github.com/simongoricar/fs-more/blob/master/Cargo.toml)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](https://github.com/simongoricar/fs-more/blob/master/LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-on%20docs.rs-green?style=flat-square)](https://docs.rs/fs-more)
 
 
 
@@ -87,7 +87,7 @@ let moved = fs_more::directory::move_directory_with_progress(
 )?;
 
 println!(
-    "Moved {} bytes ({} files, {} directories)! Used the {:?} strategy.",
+    "Moved {} bytes ({} files, {} directories)! Underlying strategy: {:?}.",
     moved.total_bytes_moved,
     moved.num_files_moved,
     moved.num_directories_moved,
@@ -116,11 +116,57 @@ this hasn't gone though a lot.
 
 However, quite a few unit, doc- and integration tests have been written. 
 They cover a wide array of the base functionality, but fringe cases might not be covered yet — 
-[contributions](https://github.com/simongoricar/fs-more/blob/master/CONTRIBUTING.md) are welcome! 
+[contributions](https://github.com/simongoricar/fs-more/blob/master/CONTRIBUTING.md) are welcome. 
+
+
 
 ## Contributing and development
-Want to contribute? Awesome!
+Found a bug or just want to improve `fs-more` by developing new features or writing tests? Awesome!
 Start by going over the contribution guide: [`CONTRIBUTING.md`](https://github.com/simongoricar/fs-more/blob/master/CONTRIBUTING.md).
+
+
+### Missing features
+> Contributions are welcome!
+>
+> Some of these ideas / missing features are simpler than others.
+> However, note that even though they are stated below, they probably haven't been thought out deeply enough.
+> If you decide to contribute, it would probably be best to first open an issue so various approaches 
+> can be discussed before something is developed.
+
+- [ ] *Cross-platform: allow copying file and directory permissions.*
+
+  This partially already exists in some functions, but it inconsistent across the API. 
+  The reason is that `std::fs::copy` already copies permission bits, but we don't use that in several places,
+  since copying with progress reporting makes using `std::fs::copy` impossible. 
+  Ideally, we should expose a new option through the existing `*Options` structs and make this consistent.
+
+  I think this should be reasonably simple to do, but it might take some thinking about edge cases 
+  and implementing some platform-specifics (i.e. on Windows, we probably want to copy the hidden file flag, etc).
+
+- [ ] *On Unix: allow copying file and directory owners and groups.*
+  
+  Depending on how deep the implementation rabbit-hole goes,
+  perhaps using [`file-owner`](https://docs.rs/file-owner/latest/file_owner/) or [`nix`](https://docs.rs/nix/latest/nix/)
+  could be fine? Should we feature-gate these kinds of things so the average user doesn't need to pull in so many dependencies?
+
+- [ ] *Cross-platform: allow copying creation/access/modification time of files and directories (across the entire API). 
+  This could also include various other metadata.*
+  
+  Ideally, this should be highly configurable through the existing `*Options` structs.
+  This might take some more work though due to various platform differences 
+  (see: [Unix](https://doc.rust-lang.org/std/os/unix/fs/trait.MetadataExt.html), 
+  [Linux](https://doc.rust-lang.org/std/os/linux/fs/trait.MetadataExt.html), 
+  [Windows](https://doc.rust-lang.org/std/os/windows/fs/trait.MetadataExt.html)).
+
+  It might be more feasible to simply delegate this to some existing crate, 
+  i.e. [`filetime`](https://lib.rs/crates/filetime) (but this one covers only timestamps).
+  Perhaps we should start with just creation/access/modification timestamps and expand later?
+
+- [ ] *On Windows: allow copying the [ACL](https://learn.microsoft.com/en-us/windows/win32/secauthz/access-control-lists)
+  of files and directories.*
+
+  This seems like a hard, and consequently very long-term, goal. Maybe [`windows-acl`](https://github.com/trailofbits/windows-acl)
+  could help? If this feature is to be developed, I think we should not expose any underlying ACL API and allow purely for mirroring it when copying or moving.
 
 
 
