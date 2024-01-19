@@ -1,9 +1,25 @@
-`fs-more` contributing guide
+`fs-more` Contributing Guide
 ============================
 
-So you're thinking about contributing to `fs-more`? Awesome! Here are a few tips.
+<br>
 
----
+## Table of Contents
+- [Table of Contents](#table-of-contents)
+- [1. Bug reporting](#1-bug-reporting)
+- [2. Developing features](#2-developing-features)
+- [3. Writing tests](#3-writing-tests)
+- [4. General development guidelines](#4-general-development-guidelines)
+  - [4.1 Code linting and formatting](#41-code-linting-and-formatting)
+  - [4.2 Generating up-to-date local documentation](#42-generating-up-to-date-local-documentation)
+- [A. Appendix](#a-appendix)
+  - [A1. Project structure](#a1-project-structure)
+
+
+<br>
+<br>
+
+So you're thinking about contributing to `fs-more`? Awesome! Here are a few tips to get you started.
+
 
 ## 1. Bug reporting
 If you encounter issues with `fs-more`, you're encouraged to open an issue in this repository.
@@ -11,31 +27,43 @@ When doing so, please include as much context as you can, ideally with clear ste
 
 
 ## 2. Developing features
-Before developing new features or improving existing ones, please
-reach out first by creating a feature request issue in this repository. 
-This way, me and any other contributors can voice ideas and any potential concerns.
+Before developing new features or improving existing ones that you would like to contribute back to upstream, 
+please reach out first by creating a feature request issue in this repository. 
+This way, other contributors can voice ideas and any potential concerns.
 
-For new features, I'd encourage you to write tests as well, so someone else doesn't have to.
+For new feature PRs, you're encouraged to write tests as well (so someone else doesn't have to).
 
 
 ## 3. Writing tests
-Tests covering untested code and edge cases are always welcome, so you're welcome to 
-submit an issue describing what isn't well tested and/or submitting a PR with a fresh batch of tests to review.
+Tests covering untested code and edge cases are always welcome. 
+Please submit an issue describing what isn't well tested or submit a PR with a fresh batch of tests to review and merge.
 
 
 ---
 
-## 3. General development guidelines
+## 4. General development guidelines
 
-### 3.1 Code linting and formatting
-To catch more potential problems, we use [clippy](https://github.com/rust-lang/rust-clippy) instead of a normal `check`.
-As far as code formatting goes, we use nightly [rustfmt](https://github.com/rust-lang/rustfmt) with some rule overrides.
+### 4.1 Code linting and formatting
+To catch a larger set of potential problems, we use [clippy](https://github.com/rust-lang/rust-clippy) instead of a normal `cargo check`.
+As far as code formatting goes, we use nightly [rustfmt](https://github.com/rust-lang/rustfmt) with some rule overrides (see `rustfmt.toml`).
 
-Commited code should be always free of errors and warnings and formatted with `rustfmt`. If a specific clippy rule or rustfmt's output
-doesn't make sense in a certain piece of code, you can add an ignore for it (`#[allow(...)]` / `#[rustfmt::skip]`), but do so sparingly.
+Commited code should always be free of errors, ideally free of warnings, and be formatted with `rustfmt`. 
+If a specific `clippy` rule or `rustfmt`'s output doesn't make sense in a certain chunk of code, 
+you can add an ignore for it (`#[allow(...)]` / `#[rustfmt::skip]`), but do so sparingly.
 
-If you're using Visual Studio Code, you can use something akin to this configuration to enable `clippy` and `rustfmt` as described above 
-(this goes into `.vscode/settings.json`):
+
+<details>
+<summary>Setup for Visual Studio Code (with <code>rust-analyzer</code>)</summary>
+<br>
+
+> [!IMPORTANT]
+> This configuration requires [`rust-analyzer`](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer) 
+> to be installed and enabled in Visual Studio Code.
+
+If you're using Visual Studio Code, you can use something akin to the configuration below to 
+enable `clippy` and `rustfmt` as described above. Add these entries into your project-local `.vscode/settings.json`,
+creating the file if necessary:
+
 ```json
 {
     "[rust]": {
@@ -51,15 +79,68 @@ If you're using Visual Studio Code, you can use something akin to this configura
     ],
     "rust-analyzer.rustfmt.extraArgs": [
         "+nightly"
-    ]
+    ],
+    "rust-analyzer.cargo.features": "all"
 }
 ```
 
-Note: you'll need the [`rust-analyzer`](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer) extension 
-for this to work.
+Alongside `rust-analyzer` and this configuration, I'd suggest the following extensions:
+- **(highly recommended)** [EditorConfig](https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig),
+- *(good-to-have)* [Even Better TOML](https://marketplace.visualstudio.com/items?itemName=tamasfe.even-better-toml), and
+- *(optional; highlights comments)* [Better Comments](https://marketplace.visualstudio.com/items?itemName=aaron-bond.better-comments).
+
+For Better Comments, the following configuration might be of use — add this to `.vscode/settings.json` after installing the extension:
+
+```json
+{
+    // ...
+    "better-comments.tags": [
+        {
+            "tag": "todo",
+            "color": "#77BAF5",
+            "strikethrough": false,
+            "underline": false,
+            "backgroundColor": "transparent",
+            "bold": false,
+            "italic": false
+        },
+        {
+            "tag": "debugonly",
+            "color": "#c4b1e5",
+            "strikethrough": false,
+            "underline": false,
+            "backgroundColor": "transparent",
+            "bold": false,
+            "italic": false
+        },
+        {
+            "tag": "deprecated",
+            "color": "#F5A867",
+            "strikethrough": false,
+            "underline": false,
+            "backgroundColor": "transparent",
+            "bold": false,
+            "italic": false
+        },
+        {
+            "tag": "fixme",
+            "color": "#f26344",
+            "strikethrough": false,
+            "underline": false,
+            "backgroundColor": "transparent",
+            "bold": false,
+            "italic": false
+        },
+    ]
+    // ...
+}
+```
+
+</details>
 
 
-### 3.2 Generating up-to-date local documentation
+
+### 4.2 Generating up-to-date local documentation
 To build documentation for the local development version of `fs-more`, run:
 
 ```bash
@@ -68,10 +149,18 @@ cargo doc --workspace --open
 
 This will build the documentation and open it in your default browser.
 
-If you're using Visual Studio Code, you can use something akin to this configuration to add a task for 
-automatic compiling of the documentation (this goes into `.vscode/tasks.json`):
 
-> Note: this configuration requires [cargo-watch](https://github.com/watchexec/cargo-watch) to be installed.
+<details>
+<summary>Setup for Visual Studio Code (with <code>cargo-watch</code>)</summary>
+<br>
+
+> [!IMPORTANT]
+> This configuration requires [cargo-watch](https://github.com/watchexec/cargo-watch) 
+> to be installed on your system.
+
+If you're using Visual Studio Code, you can use something akin to this configuration to add a task for 
+generating documentation. This goes into `.vscode/tasks.json` (create the file if necessary):
+
 
 ```json
 {
@@ -107,11 +196,15 @@ automatic compiling of the documentation (this goes into `.vscode/tasks.json`):
 }
 ```
 
-Then, run the `documentation (build, open, then watch)` task. 
-This will compile the documentation, open it in your browser, and keep compiling it as you make changes.
+Then, run the `documentation (build, open, then watch)` task by selecting it in the `Task: Run Build Task` action 
+(*Ctrl+Shift+B* is a useful shortcut to remember). 
+This will generate the documentation, open it in your browser, and keep updating it as you make changes to the code.
+
+</details>
 
 
-## Appendix
+
+## A. Appendix
 ### A1. Project structure
 Before contributing, I'd suggest familiarizing yourself with this repository. Here is a rough outline of the contents:
 ```markdown

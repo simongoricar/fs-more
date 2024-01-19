@@ -1,8 +1,0 @@
-{
-    "recommendations": [
-        "rust-lang.rust-analyzer",
-        "EditorConfig.EditorConfig",
-        "tamasfe.even-better-toml",
-        "aaron-bond.better-comments"
-    ]
-}
