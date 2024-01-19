@@ -36,7 +36,12 @@ members = [
 ]
 
 [features]
+# Enables [`fs-err`](https://docs.rs/fs-err) support, which means more helpful underlying IO error messages.
 fs-err = ["dep:fs-err"]
+
+# Derives [`miette::Diagnostic`](https://docs.rs/miette/latest/miette/derive.Diagnostic.html) on all 
+# [error types](https://docs.rs/fs-more/latest/fs_more/error/index.html), 
+# allowing users to conveniently e.g. [`wrap_err_with`](https://docs.rs/miette/latest/miette/trait.Context.html#tymethod.wrap_err_with).
 miette = ["dep:miette"]
 
 
