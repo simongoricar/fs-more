@@ -56,7 +56,6 @@ you can add an ignore for it (`#[allow(...)]` / `#[rustfmt::skip]`), but do so s
 <summary>Setup for Visual Studio Code (with <code>rust-analyzer</code>)</summary>
 <br>
 
-> [!IMPORTANT]
 > This configuration requires [`rust-analyzer`](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer) 
 > to be installed and enabled in Visual Studio Code.
 
@@ -154,7 +153,6 @@ This will build the documentation and open it in your default browser.
 <summary>Setup for Visual Studio Code (with <code>cargo-watch</code>)</summary>
 <br>
 
-> [!IMPORTANT]
 > This configuration requires [cargo-watch](https://github.com/watchexec/cargo-watch) 
 > to be installed on your system.
 
@@ -211,13 +209,17 @@ Before contributing, I'd suggest familiarizing yourself with this repository. He
 |-- src
 |   |> The root fs-more crate.
 |
-|-- test-harness
-|   |> fs-more's test harness (using assert_fs) and reusable code for integration tests.
-|
-|-- test-harness-derive
-|   |> Test harness's procedural macro for setting up test directories.
-|      See `test-harness/src/trees` for some usage examples.
+|-- subcrates
+|   | |> Contains auxiliary crates, namely the testing harness code.
+|   |
+|   |-- test-harness
+|   |   |> fs-more's test harness (using assert_fs) and reusable code for integration tests.
+|   |
+|   |-- test-harness-derive
+|   |   |> Test harness's procedural macro for setting up test directories.
+|   |      See `test-harness/src/trees` for some usage examples.
 |
 |-- tests
-|   |> Integration tests.
+|   |> Integration tests split into `(directory|file)_*` files 
+|      (but that's not really a required structure).
 ```
