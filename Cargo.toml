@@ -17,21 +17,22 @@ keywords = [
 categories = [
     "filesystem"
 ]
+documentation = "https://docs.rs/fs-more"
 license = "MIT"
 repository = "https://github.com/simongoricar/fs-more"
 include = [
     "/src",
-    "/test-harness",
-    "/test-harness-macros",
-    "/tests"
+    "/subcrates",
+    "/tests",
+    "LICENSE"
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
 members = [
-    "test-harness",
-    "test-harness-macros"
+    "subcrates/test-harness",
+    "subcrates/test-harness-macros"
 ]
 
 [features]
@@ -49,4 +50,4 @@ thiserror = "1.0.48"
 [dev-dependencies]
 assert_fs = "1.0.13"
 assert_matches = "1.5.0"
-fs-more-test-harness = { path = "./test-harness" }
+fs-more-test-harness = { path = "./subcrates/test-harness" }
