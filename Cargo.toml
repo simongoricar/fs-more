@@ -46,13 +46,15 @@ miette = ["dep:miette"]
 
 
 [dependencies]
+thiserror = "1.0.58"
 dunce = "1.0.4"
-fs-err = { version = "2.9.0", optional = true }
-miette = { version = "5.10.0", optional = true }
 path-clean = "1.0.1"
-thiserror = "1.0.48"
+
+# Optional dependencies (see [features] section above).
+fs-err = { version = "2.11.0", optional = true }
+miette = { version = "7.2.0", optional = true }
 
 [dev-dependencies]
-assert_fs = "1.0.13"
+assert_fs = "1.1.1"
 assert_matches = "1.5.0"
 fs-more-test-harness = { path = "./subcrates/test-harness" }
