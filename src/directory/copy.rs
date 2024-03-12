@@ -80,10 +80,10 @@ pub(crate) fn copy_directory_unchecked(
 ) -> Result<FinishedDirectoryCopy, DirectoryError> {
     let should_overwrite_files = options
         .target_directory_rule
-        .should_overwrite_existing_files();
+        .allows_overwriting_existing_files();
     let should_overwrite_directories = options
         .target_directory_rule
-        .should_overwrite_existing_directories();
+        .allows_overwriting_existing_directories();
 
     // So we have the entire queue of operations and we've made sure there are no collisions we should worry about.
     // What's left is performing the copy and directory create operations *precisely in the defined order*.
@@ -390,7 +390,7 @@ where
 {
     let should_overwrite_files = options
         .target_directory_rule
-        .should_overwrite_existing_files();
+        .allows_overwriting_existing_files();
 
     if target_path.exists() {
         if !target_path.is_file() {
@@ -555,7 +555,7 @@ where
         .allows_existing_target_directory();
     let should_overwrite_directories = options
         .target_directory_rule
-        .should_overwrite_existing_directories();
+        .allows_overwriting_existing_directories();
 
 
     let target = &prepared_copy.validated_target;

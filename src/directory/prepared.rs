@@ -292,8 +292,9 @@ fn check_operation_queue_for_collisions(
     queue: &[QueuedOperation],
     target_directory_rules: &TargetDirectoryRule,
 ) -> Result<(), DirectoryError> {
-    let can_overwrite_files = target_directory_rules.should_overwrite_existing_files();
-    let can_overwrite_directories = target_directory_rules.should_overwrite_existing_directories();
+    let can_overwrite_files = target_directory_rules.allows_overwriting_existing_files();
+    let can_overwrite_directories =
+        target_directory_rules.allows_overwriting_existing_directories();
 
     if can_overwrite_files && can_overwrite_directories {
         // There is nothing to check, we can't have any collisions

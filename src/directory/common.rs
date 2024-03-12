@@ -81,13 +81,13 @@ impl Default for TargetDirectoryRule {
 impl TargetDirectoryRule {
     /// Indicates whether this rule allows the target directory
     /// to exist before performing an operation.
-    pub fn allows_existing_target_directory(&self) -> bool {
+    pub(crate) fn allows_existing_target_directory(&self) -> bool {
         !matches!(self, Self::DisallowExisting)
     }
 
     /// Indicates whether this rule allows existing files
     /// in the target directory to be overwritten with contents of the source.
-    pub fn should_overwrite_existing_files(&self) -> bool {
+    pub(crate) fn allows_overwriting_existing_files(&self) -> bool {
         match self {
             TargetDirectoryRule::DisallowExisting => false,
             TargetDirectoryRule::AllowEmpty => false,
@@ -100,7 +100,7 @@ impl TargetDirectoryRule {
 
     /// Indicates whether this rule allows existing (sub)directories
     /// in the target directory to be "overwritten" with contents of the source (sub)directory.
-    pub fn should_overwrite_existing_directories(&self) -> bool {
+    pub(crate) fn allows_overwriting_existing_directories(&self) -> bool {
         match self {
             TargetDirectoryRule::DisallowExisting => false,
             TargetDirectoryRule::AllowEmpty => false,
