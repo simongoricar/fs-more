@@ -3,7 +3,7 @@
 //!
 //! ## Main features
 //! - copying and moving files or directories with in-depth configuration options (including IO buffering settings, copying depth, etc.)
-//! - copying and moving files (or directories) **with progress reporting**,
+//! - copying and moving files or directories **with progress reporting**, if needed,
 //! - scanning directories with depth and other options, and
 //! - calculating file or directory sizes.
 //!

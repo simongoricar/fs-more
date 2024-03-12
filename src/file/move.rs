@@ -148,7 +148,7 @@ pub struct FileMoveWithProgressOptions {
     /// *Minimum* amount of bytes written between two consecutive progress reports.
     /// Defaults to 64 KiB.
     ///
-    /// *Note that the interval can be larger.*
+    /// *Note that the real reporting interval can be larger.*
     pub progress_update_byte_interval: u64,
 }
 

@@ -1,5 +1,5 @@
 # Changelog
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
@@ -8,6 +8,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
 ---
+
+## [0.4.0] - 2024-03-13
+
+### Changed
+- Upgrade outdated dependencies.
+- Improve documentation and contribution guide.
+- Refactor internal test harness subcrates.
+  
+### Removed
+- `TargetDirectoryRule` no longer publically exposes the three methods that previously returned a bool indicating its existing target directory and overwriting behaviour.
+
 
 ## [0.3.0] - 2024-01-14
 
@@ -37,7 +48,8 @@ Initial development release with the API mostly stable.
 
 
 
-[Unreleased]: https://github.com/simongoricar/fs-more/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/simongoricar/fs-more/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/simongoricar/fs-more/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/simongoricar/fs-more/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/simongoricar/fs-more/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/simongoricar/fs-more/compare/v0.2.0...v0.2.1
