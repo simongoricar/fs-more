@@ -1,5 +1,5 @@
 //! Convenient file and directory operations built on top of [`std::fs`] with improved error handling.
-//! Includes copying / moving files and directories with progress reporting.
+//! Includes copying or moving files and directories with progress reporting.
 //!
 //! ## Main features
 //! - copying and moving files or directories with in-depth configuration options (including IO buffering settings, copying depth, etc.)
@@ -7,7 +7,7 @@
 //! - scanning directories with depth and other options, and
 //! - calculating file or directory sizes.
 //!
-//! To start off, visit the [`directory`][crate::directory] and [`file`][crate::file] modules
+//! To start off, visit the [`directory`] and [`file`][mod@file] modules
 //! for more information and a list of functions.
 //!
 //!
@@ -19,7 +19,7 @@
 //!   (though `fs-more` already provides many on its own).
 //! - `miette`: derives [`miette::Diagnostic`](../miette/derive.Diagnostic.html) on all
 //!   [error types](crate::error),
-//!   allowing users to conveniently e.g. [`wrap_err_with`](../miette/trait.Context.html#tymethod.wrap_err_with).
+//!   allowing users to conveniently call e.g. [`wrap_err`](../miette/trait.Context.html#tymethod.wrap_err) on the error.
 //!
 //! <br>
 //!
@@ -96,13 +96,13 @@
 //!
 //! <br>
 //!
-//! ## Attribution
+//! ## Inspirations
 //!
 //! <details>
 //! <summary>Inspired by <code>fs_extra</code></summary>
 //!
-//! `fs-more` isn't a fork, but has been inspired by
-//! some of the functionalities of the [`fs_extra`](https://github.com/webdesus/fs_extra) library (thank you!).
+//! `fs-more` is very much not a fork, but its API surface has been partially inspired by
+//! parts of the [`fs_extra`](https://github.com/webdesus/fs_extra) library - thank you!
 //!
 //! </details>
 //!

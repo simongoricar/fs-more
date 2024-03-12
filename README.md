@@ -8,11 +8,11 @@ fs-more
 
 
 Convenient file and directory operations built on top of `std::fs` with improved error handling.
-Includes copying / moving files and directories with progress reporting.
+Includes copying or moving files and directories with progress reporting.
 
 ## Main features
-- copying and moving files or directories with in-depth configuration options (including IO buffering settings, copying depth, etc.),
-- optionally, copying and moving files or directories **with progress reporting**,
+- copying or moving files and directories with in-depth configuration options (including IO buffering settings, copying depth, etc.),
+- copying or moving files and directories **with progress reporting**, if needed,
 - scanning directories with depth and other options, and
 - calculating file or directory sizes.
 
@@ -22,13 +22,11 @@ Includes copying / moving files and directories with progress reporting.
 
 
 ## Usage
-To add `fs-more` into your project, specify it in your `Cargo.toml` file:
+To add `fs-more` into your project, specify it as a dependency in your `Cargo.toml` file:
 ```toml
 fs-more = "0.3.0"
 ```
 
-
-<br>
 
 ## Examples
 Copying a file and getting updates on the progress:
@@ -103,32 +101,35 @@ The following feature flags are available:
   (though `fs-more` already provides many on its own).
 - `miette`: derives [`miette::Diagnostic`](https://docs.rs/miette/latest/miette/derive.Diagnostic.html) on all 
   [error types](https://docs.rs/fs-more/latest/fs_more/error/index.html), 
-  allowing users to conveniently e.g. [`wrap_err_with`](https://docs.rs/miette/latest/miette/trait.Context.html#tymethod.wrap_err_with).
+  allowing users to conveniently call e.g. [`wrap_err`](https://docs.rs/miette/latest/miette/trait.Context.html#tymethod.wrap_err) on the error.
 
 
 ## Project status
-This crate lacks some more thorough battle-testing. 
-As such, use it with reasonable caution and testing.
+This crate evolved out of a general frustration with the `fs_extra` library 
+and aims to cover many of the same goals with - hopefully - better documentation and tests.
 
-Most features have been added, but it is possible some smaller ones will turn up missing.
+The majority of features needed in day-to-day use are present.
 For now, I plan on keeping the version below `1.0.0` to imply that 
 this hasn't gone though a lot.
 
-However, quite a few unit, doc- and integration tests have been written. 
+`fs-more` does lack some thorough battle-testing - as such, use it with a reasonable caution and testing.
+However, quite a number of unit, doc and integration tests have been written. 
 They cover a wide array of the base functionality, but fringe cases might not be covered yet — 
-[contributions](https://github.com/simongoricar/fs-more/blob/master/CONTRIBUTING.md) are welcome. 
+[contributions](https://github.com/simongoricar/fs-more/blob/master/CONTRIBUTING.md) are welcome. The test harness is available in `subcrates/test-harness`.
 
 
 
-## Contributing and development
+<br>
+
+## How to contribute
 Found a bug or just want to improve `fs-more` by developing new features or writing tests? Awesome!
 Start by going over the contribution guide: [`CONTRIBUTING.md`](https://github.com/simongoricar/fs-more/blob/master/CONTRIBUTING.md).
 
 
 ### Missing features
-> Contributions are welcome!
+> Contributions for the ideas below are most welcome!
 >
-> Some of these ideas / missing features are simpler than others.
+> Some of these ideas and/or missing features are simpler, some are more of a long shot.
 > However, note that even though they are stated below, they probably haven't been thought out deeply enough.
 > If you decide to contribute, it would probably be best to first open an issue so various approaches 
 > can be discussed before something is developed.
@@ -147,7 +148,7 @@ Start by going over the contribution guide: [`CONTRIBUTING.md`](https://github.c
   
   Depending on how deep the implementation rabbit-hole goes,
   perhaps using [`file-owner`](https://docs.rs/file-owner/latest/file_owner/) or [`nix`](https://docs.rs/nix/latest/nix/)
-  could be fine? Should we feature-gate these kinds of things so the average user doesn't need to pull in so many dependencies?
+  could suffice? Perhaps we should feature-gate these kinds of things so the average user doesn't need to pull in so many dependencies?
 
 - [ ] *Cross-platform: allow copying creation/access/modification time of files and directories (across the entire API). 
   This could also include various other metadata.*
@@ -165,19 +166,21 @@ Start by going over the contribution guide: [`CONTRIBUTING.md`](https://github.c
 - [ ] *On Windows: allow copying the [ACL](https://learn.microsoft.com/en-us/windows/win32/secauthz/access-control-lists)
   of files and directories.*
 
-  This seems like a hard, and consequently very long-term, goal. Maybe [`windows-acl`](https://github.com/trailofbits/windows-acl)
-  could help? If this feature is to be developed, I think we should not expose any underlying ACL API and allow purely for mirroring it when copying or moving.
+  This seems like a long shot and would need some concrete use cases before proceeding. Maybe [`windows-acl`](https://github.com/trailofbits/windows-acl)
+  could help? If this feature is to be developed, I think we should not expose any underlying ACL API and allow purely for mirroring it when copying or moving. This should almost definitely be under a feature flag.
 
 
 
+<br>
 
 ---
 
-### Attribution
+### Inspirations
+
 <details>
 <summary>Inspired by <code>fs_extra</code></summary>
 
-`fs-more` isn't a fork, but has been inspired by
-some of the functionalities of the [`fs_extra`](https://github.com/webdesus/fs_extra) library (thank you!).
+`fs-more` is very much not a fork, but its API surface has been partially 
+inspired by parts of the [`fs_extra`](https://github.com/webdesus/fs_extra) library - thank you!
 
 </details>

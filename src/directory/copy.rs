@@ -646,7 +646,7 @@ where
 
 
 /// Copy an entire directory from `source_directory_path` to `target_directory_path`
-/// (including progress reporting).
+/// (with progress reporting).
 ///
 /// Things to consider:
 /// - `source_directory_path` must point to an existing directory path.
@@ -681,7 +681,8 @@ where
 ///
 ///
 /// ## Copy depth
-/// Depending on the [`options.maximum_copy_depth`] option, calling this function means copying:
+/// Depending on the [`options.maximum_copy_depth`][DirectoryCopyWithProgressOptions::maximum_copy_depth]
+/// option, calling this function means copying:
 /// - `Some(0)` -- a single directory and its direct descendants (files and direct directories, but *not their contents*, i.e. just empty directories),
 /// - `Some(>=1)` -- files and subdirectories (and their files and directories, etc.) up to a certain depth limit (e.g. `Some(1)` copies direct descendants as well as one layer deeper),
 /// - `None` -- the entire subtree. **This is probably what you want most of the time**.

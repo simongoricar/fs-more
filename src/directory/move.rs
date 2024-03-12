@@ -493,7 +493,7 @@ pub struct DirectoryMoveProgress {
 
 
 /// Moves a directory from `source_directory_path` to `target_directory_path`
-/// (including progress reporting).
+/// (with progress reporting).
 ///
 /// Things to consider:
 /// - `source_directory_path` must point to an existing directory path.
