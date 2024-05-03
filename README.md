@@ -37,11 +37,11 @@ use fs_more::error::FileError;
 use fs_more::file::FileCopyWithProgressOptions;
 
 let source_path = Path::new("./source-file.txt");
-let target_path = Path::new("./target-file.txt");
+let destination_path = Path::new("./target-file.txt");
 
 let bytes_copied = fs_more::file::copy_file_with_progress(
     source_path,
-    target_path,
+    destination_path,
     FileCopyWithProgressOptions::default(),
     |progress| {
         let percent_copied =
@@ -59,16 +59,16 @@ Moving a directory and getting updates on the progress:
 use std::path::Path;
 use fs_more::error::DirectoryError;
 use fs_more::directory::DirectoryMoveWithProgressOptions;
-use fs_more::directory::TargetDirectoryRule;
+use fs_more::directory::DestinationDirectoryRule;
 
 let source_path = Path::new("./source-directory");
-let target_path = Path::new("./target-directory");
+let destination_path = Path::new("./target-directory");
 
 let moved = fs_more::directory::move_directory_with_progress(
     source_path,
-    target_path,
+    destination_path,
     DirectoryMoveWithProgressOptions {
-        target_directory_rule: TargetDirectoryRule::AllowEmpty,
+        destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
         ..Default::default()
     },
     |progress| {
@@ -126,7 +126,9 @@ Found a bug or just want to improve `fs-more` by developing new features or writ
 Start by going over the contribution guide: [`CONTRIBUTING.md`](https://github.com/simongoricar/fs-more/blob/master/CONTRIBUTING.md).
 
 
-### Missing features
+<details>
+<summary>Missing features</summary>
+
 > Contributions for the ideas below are most welcome!
 >
 > Some of these ideas and/or missing features are simpler, some are more of a long shot.
@@ -169,6 +171,7 @@ Start by going over the contribution guide: [`CONTRIBUTING.md`](https://github.c
   This seems like a long shot and would need some concrete use cases before proceeding. Maybe [`windows-acl`](https://github.com/trailofbits/windows-acl)
   could help? If this feature is to be developed, I think we should not expose any underlying ACL API and allow purely for mirroring it when copying or moving. This should almost definitely be under a feature flag.
 
+</details>
 
 
 <br>

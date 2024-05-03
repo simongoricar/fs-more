@@ -51,19 +51,19 @@ fn infer_field_path_type_from_field_value_type(field: &syn::Field) -> Option<Fie
 }
 
 
-/// Represents a parsed #[root]-annotated struct field.
+/// Represents a parsed `#[root]`-annotated struct field.
 struct RootField {
     field_ident: syn::Ident,
 }
 
-/// Represents a parsed #[file(...)]-annotated struct field.
+/// Represents a parsed `#[file(...)]`-annotated struct field.
 struct FileField {
     field_ident: syn::Ident,
     file_path: syn::LitStr,
     file_contents: Option<syn::Expr>,
 }
 
-/// Represents a parsed #[directory(...)]-annotated struct field.
+/// Represents a parsed `#[directory(...)]`-annotated struct field.
 struct DirectoryField {
     field_ident: syn::Ident,
     directory_path: syn::LitStr,
@@ -706,9 +706,15 @@ fn generate_impl(
 /// This attribute macro is a handy way of initializing directory trees for testing `fs-more`.
 ///
 /// ## Example
-/// ```rust
+/// ```ignore
+/// # use once_cell::sync::Lazy;
 /// use fs_more_test_harness_macros::fs_harness_tree;
-/// use fs_more_test_harness::assertable::{AssertableRootDirectory, AssertableFilePath, AssertableDirectoryPath};
+/// use fs_more_test_harness::lazy_generate_seeded_binary_data;
+/// use fs_more_test_harness::assertable::{
+///     AssertableRootDirectory,
+///     AssertableFilePath,
+///     AssertableDirectoryPath
+/// };
 ///
 /// // This generates some pseudo-random (but deterministically seeded) data that we can use to write to our file tree.
 /// static BINARY_DATA_A: Lazy<Vec<u8>> = lazy_generate_seeded_binary_data!(1024 * 32, 2903489125012);

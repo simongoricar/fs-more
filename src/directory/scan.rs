@@ -1,115 +1,220 @@
-#[cfg(not(feature = "fs-err"))]
-use std::fs;
 use std::path::{Path, PathBuf};
 
-#[cfg(feature = "fs-err")]
-use fs_err as fs;
+use_enabled_fs_module!();
 
 use crate::{
     error::{DirectoryScanError, DirectorySizeScanError, FileSizeError, IsDirectoryEmptyError},
     file::file_size_in_bytes,
+    use_enabled_fs_module,
 };
+
+
+
+/// A list of file and directory paths.
+///
+/// You can obtain this from [`DirectoryScan::into_scanned_files_and_directories`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct ScannedFilesAndDirectories {
+    /// Scanned files (their paths).
+    pub files: Vec<PathBuf>,
+
+    /// Scanned directories (their paths).
+    pub directories: Vec<PathBuf>,
+}
+
+
+
+/// The maximum directory scan depth option.
+///
+/// Used primarily in [`DirectoryScan::scan_with_options`].
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+pub enum DirectoryScanDepthLimit {
+    /// No scan depth limit.
+    Unlimited,
+
+    /// Scan depth is limited to `maximum_depth`, where the value refers to
+    /// the maximum depth of the subdirectory whose contents are still listed.
+    ///
+    ///
+    /// # Examples
+    /// `maximum_depth = 0` indicates a scan that will cover only the files and directories
+    /// directly in the source directory.
+    ///
+    /// ```md
+    /// ~/scanned-directory
+    ///  |- foo.csv
+    ///  |- foo-2.csv
+    ///  |- bar/
+    ///     (no entries listed)
+    /// ```
+    ///
+    /// Notice how *contents* of the `~/scanned-directory/bar/`
+    /// directory are not returned in the scan when using depth `0`.
+    ///
+    ///
+    /// <br>
+    ///
+    /// `maximum_depth = 1` will cover the files and directories directly in the source directory
+    /// plus one level of files and subdirectories deeper.
+    ///
+    /// ```md
+    /// ~/scanned-directory
+    ///  |- foo.csv
+    ///  |- foo-2.csv
+    ///  |- bar/
+    ///     |- hello-world.txt
+    ///     |- bar2/
+    ///        (no entries listed)
+    /// ```
+    ///
+    /// Notice how contents of `~/scanned-directory/bar` are listed,
+    /// but contents of `~/scanned-directory/bar/bar2` are not.
+    Limited {
+        /// Maximum scan depth.
+        maximum_depth: usize,
+    },
+}
+
+impl DirectoryScanDepthLimit {
+    /// Construct an unlimited directory scan depth
+    /// ([`Self::Unlimited`]).
+    #[inline]
+    pub const fn unlimited() -> Self {
+        Self::Unlimited
+    }
+
+    /// Construct a limited directory scan depth.
+    ///
+    /// See [`Self::Limited`] for more information about the meaning of `maximum_depth`.
+    #[inline]
+    pub const fn limited(maximum_depth: usize) -> Self {
+        Self::Limited { maximum_depth }
+    }
+}
+
 
 
 /// A directory scanner.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DirectoryScan {
-    /// The directory that was scanned.
-    pub(crate) root_directory_path: PathBuf,
+    /// Path of the directory that was scanned.
+    root_directory_path: PathBuf,
 
-    /// The maximum depth setting used in this scan.
+    /// The maximum depth setting used for this scan.
     ///
-    /// - `None` indicates no depth limit.
-    /// - `Some(0)` means a scan that returns only the files and directories directly
-    /// in the root directory and doesn't scan any subdirectories.
-    /// - `Some(1)` includes the root directory's contents and one level of its subdirectories.
-    pub(crate) maximum_scanned_depth: Option<usize>,
+    /// See [`DirectoryScanDepth`] for more information.
+    maximum_scanned_depth: DirectoryScanDepthLimit,
 
-    /// Indicates whether the scan that was performed wasn't deep enough to cover
-    /// all of the files and subdirectories (i.e. there are subdirectories deeper than the depth limit allowed).
+    /// A `bool` indicating whether this scan covered the entire directory tree.
     ///
-    /// In some situations this flag being `true` isn't a bad sign -- if you're intentionaly
-    /// limiting the scan depth to avoid problematic scan times or other reasons, this is likely fine.
+    /// For example, this can be `false` when the user limits the scan depth
+    /// to e.g. [`DirectoryScanDepth::Limited`]`{ maximum_depth: 1 }`,
+    /// but the actual directory structure has e.g. three layers of subdirectories and files.
     ///
-    /// Also note that if you set `maximum_scan_depth` to `None`, *this flag can never be `true`*.
-    ///
-    /// ## Warning
-    /// **Be warned:** if you call e.g. the [`self.total_size_in_bytes()`][Self::total_size_in_bytes] method,
-    /// you need to keep in mind that, if this flag is `true`, the number of bytes won't cover
-    /// the *entire* contents of the directory (they weren't scanned). To get the correct size of a directory
-    /// and its contents, ideally perform a scan without a depth limit and then use the
-    /// [`self.total_size_in_bytes()`][Self::total_size_in_bytes]
-    /// method as before to get the correct result (or just use the [`directory_size_in_bytes`][super::directory_size_in_bytes]
-    /// standalone function).
-    pub is_real_directory_deeper_than_scan: bool,
+    /// If `maximum_scan_depth` is set to
+    /// [`DirectoryScanDepth::Unlimited`][]
+    /// in the constructor for this scan, this method will always return `true`.
+    covers_entire_subtree: bool,
 
     /// Files that were found in the scan.
-    pub files: Vec<PathBuf>,
+    files: Vec<PathBuf>,
 
-    /// Directories that were found in the scan. Doesn't include the root directory.
-    pub directories: Vec<PathBuf>,
+    /// Directories that were found in the scan.
+    /// Doesn't include the root directory (`root_directory_path`).
+    directories: Vec<PathBuf>,
 }
 
 impl DirectoryScan {
-    /// Perform a new directory scan.
+    /// Perform a directory scan.
     ///
-    /// The given `directory_path` must point to a directory that exists, otherwise an
-    /// `Err(`[`DirectoryScanError::NotFound`][crate::error::DirectoryScanError::NotFound]`)` is returned.
     ///
     /// # Scan depth
     /// Maximum scanning depth can be configured by setting
-    /// the `maximum_scan_depth` parameter to:
-    /// - `Some(0)` -- scans direct contents of the directory (a single layer of files and directories),
-    /// - `Some(>=1)` -- scans up to a certain subdirectory limit, or,
-    /// - `None` -- scans the entire subtree, as deep as required.
+    /// the `maximum_scan_depth` parameter, see [`DirectoryScanDepthLimit`].
+    ///
     ///
     /// # Symbolic links
-    /// **Careful!** This scanner can follow symbolic links.
+    /// This scanner can follow symbolic links.
     ///
-    /// This means that if you set the `follow_symbolic_links` option to `true` (see [`Self::scan_with_options`]),
-    /// the resulting `files` and `directories` included in the scan results
-    /// *might not all be sub-paths of the root* `directory_path`.
     ///
-    /// This is because when [`DirectoryScan`] follows symbolic links, it includes their full
-    /// target path in the results, not their original path.
+    /// ## `follow_symbolic_links = true`
+    /// We'll follow the symbolic links, even if they lead outside the base `directory_path`.
+    /// Note that this means the files and directories included in the scan results
+    /// **might not necesarrily be sub-paths of the provided base `directory_path`**.
+    ///
+    /// If a symbolic link turns out to be broken (its destination doesn't exist), it is simply ignored
+    /// (not included in the scan results).
+    ///
+    ///
+    /// ## `follow_symbolic_links = false`
+    /// When we encounter a symbolic link, the results will include the file path of
+    /// the symbolic link itself, *not the link's destination path*.
+    ///
+    /// If an encountered symbolic link points to a directory, it will
+    /// be included in the results in a similar manner, but with one significant difference:
+    /// as we won't resolve symbolic links, the files and subdirectories of that symlinked directory
+    /// will not be scanned, even if the scan depth limit would have allowed it.
+    ///
+    /// If a symbolic link turns out to be broken (its destination doesn't exist), it is simply ignored
+    /// (not included in the scan results).
+    ///
+    ///
+    /// ## However
+    /// Regardless of the symbolic link option,
+    /// if `directory_path` is a symbolic link to a directory *itself*,
+    /// the link destination will be resolved before beginning the scan.
     pub fn scan_with_options<P>(
         directory_path: P,
-        maximum_scan_depth: Option<usize>,
+        maximum_scan_depth: DirectoryScanDepthLimit,
         follow_symbolic_links: bool,
     ) -> Result<Self, DirectoryScanError>
     where
         P: Into<PathBuf>,
     {
-        let directory_path = directory_path.into();
+        let directory_path: PathBuf = directory_path.into();
+
 
         // Ensure the directory exists. We use `try_exists`
         // instead of `exists` to catch permission and other IO errors
         // as distinct from the `DirectoryScanError::NotFound` error.
+
         match directory_path.try_exists() {
             Ok(exists) => {
                 if !exists {
-                    return Err(DirectoryScanError::NotFound);
+                    return Err(DirectoryScanError::NotFound {
+                        path: directory_path,
+                    });
                 }
             }
             Err(error) => {
-                return Err(DirectoryScanError::UnableToReadDirectory { error });
+                return Err(DirectoryScanError::UnableToReadDirectory {
+                    directory_path,
+                    error,
+                });
             }
         }
 
         if !directory_path.is_dir() {
-            return Err(DirectoryScanError::NotADirectory);
+            return Err(DirectoryScanError::NotADirectory {
+                path: directory_path,
+            });
         }
 
 
         let mut file_list = Vec::new();
         let mut directory_list = Vec::new();
-        let mut is_deeper_than_scan_allows = false;
+        let mut actual_tree_is_deeper_than_scan = false;
+
 
         // Create a FIFO (queue) of directories that need to be scanned.
-        let mut directory_scan_queue = Vec::new();
 
         struct PendingDirectoryScan {
+            /// The directory to scan.
             path: PathBuf,
+
+            /// How deep the directory is. The initial `directory_path` has a depth of `0`,
+            /// a direct directory descendant in it has `1`, and so on.
             depth: usize,
         }
 
@@ -120,80 +225,143 @@ impl DirectoryScan {
             }
         }
 
+
+        let mut directory_scan_queue = Vec::new();
+
         directory_scan_queue.push(PendingDirectoryScan::new(
             directory_path.clone(),
             0,
         ));
 
+
         while let Some(next_directory) = directory_scan_queue.pop() {
-            let directory_iterator = fs::read_dir(&next_directory.path)
-                .map_err(|error| DirectoryScanError::UnableToReadDirectory { error })?;
+            let directory_entry_iterator = fs::read_dir(&next_directory.path).map_err(|error| {
+                DirectoryScanError::UnableToReadDirectory {
+                    directory_path: next_directory.path.clone(),
+                    error,
+                }
+            })?;
 
-            for item in directory_iterator {
-                let item =
-                    item.map_err(|error| DirectoryScanError::UnableToReadDirectoryItem { error })?;
 
-                let item_file_type = item
-                    .file_type()
-                    .map_err(|error| DirectoryScanError::UnableToReadDirectoryItem { error })?;
+            for directory_entry in directory_entry_iterator {
+                let directory_entry = directory_entry.map_err(|error| {
+                    DirectoryScanError::UnableToReadDirectoryItem {
+                        directory_path: next_directory.path.clone(),
+                        error,
+                    }
+                })?;
+
+                let item_file_type = directory_entry.file_type().map_err(|error| {
+                    DirectoryScanError::UnableToReadDirectoryItem {
+                        directory_path: next_directory.path.clone(),
+                        error,
+                    }
+                })?;
+
 
                 if item_file_type.is_file() {
                     // Files are simply added to the resulting scan and no further action is needed.
-                    file_list.push(item.path());
+
+                    file_list.push(directory_entry.path());
                 } else if item_file_type.is_dir() {
-                    // Directories might in addition to being stored in the results need
-                    // to be scanned themselves, but only if the depth limit permits it.
-                    // We can do that by adding them to the scan queue.
-                    if let Some(maximum_depth) = maximum_scan_depth {
-                        if next_directory.depth < maximum_depth {
-                            directory_scan_queue.push(PendingDirectoryScan::new(
-                                item.path(),
-                                next_directory.depth + 1,
-                            ));
-                        } else {
-                            is_deeper_than_scan_allows = true;
-                        }
-                    } else {
-                        directory_scan_queue.push(PendingDirectoryScan::new(
-                            item.path(),
-                            next_directory.depth + 1,
-                        ));
-                    }
+                    // If the scan depth limit allows it, sub-directories will need to be scanned
+                    // for additional content. We can do that by adding them to the `directory_scan_queue`.
 
-
-                    directory_list.push(item.path());
-                } else if item_file_type.is_symlink() && follow_symbolic_links {
-                    // If an item is a symbolic link, we ignore it, unless `follow_symbolic_links` is enabled.
-                    // If enabled, we follow it to its destination and append that *destination* path
-                    // to the file or directory list.
-                    let real_path = fs::read_link(item.path())
-                        .map_err(|error| DirectoryScanError::UnableToReadDirectoryItem { error })?;
-
-                    if !real_path.exists() {
-                        continue;
-                    }
-
-                    if real_path.is_file() {
-                        file_list.push(real_path);
-                    } else if real_path.is_dir() {
-                        // Depth settings are respected if the destination is a directory.
-                        if let Some(maximum_depth) = maximum_scan_depth {
+                    match maximum_scan_depth {
+                        DirectoryScanDepthLimit::Limited { maximum_depth } => {
                             if next_directory.depth < maximum_depth {
                                 directory_scan_queue.push(PendingDirectoryScan::new(
-                                    real_path.clone(),
+                                    directory_entry.path(),
                                     next_directory.depth + 1,
                                 ));
                             } else {
-                                is_deeper_than_scan_allows = true;
+                                // This marks down that we weren't able to scan the
+                                // full directory tree due to scan depth limits.
+                                actual_tree_is_deeper_than_scan = true;
                             }
-                        } else {
+                        }
+                        DirectoryScanDepthLimit::Unlimited => {
                             directory_scan_queue.push(PendingDirectoryScan::new(
-                                real_path.clone(),
+                                directory_entry.path(),
                                 next_directory.depth + 1,
                             ));
                         }
+                    }
 
-                        directory_list.push(real_path);
+                    directory_list.push(directory_entry.path());
+                } else if item_file_type.is_symlink() {
+                    // If `follow_symbolic_links` is set to `true`, we follow the link to its destination
+                    // and append that *destination* path to the file or directory list,
+                    // incrementing the depth as we would for normal directories.
+
+                    // If it is set to `false`, we find whether it points to a file or a directory,
+                    // then just include the original non-resolved path in the results.
+
+                    let resolved_symlink_path =
+                        fs::read_link(directory_entry.path()).map_err(|error| {
+                            DirectoryScanError::UnableToReadDirectoryItem {
+                                directory_path: next_directory.path.clone(),
+                                error,
+                            }
+                        })?;
+
+                    match resolved_symlink_path.try_exists() {
+                        Ok(exists) => {
+                            if !exists {
+                                continue;
+                            }
+                        }
+                        Err(error) => {
+                            return Err(DirectoryScanError::UnableToReadDirectoryItem {
+                                directory_path: next_directory.path.clone(),
+                                error,
+                            });
+                        }
+                    }
+
+                    let resolved_symlink_metadata =
+                        fs::metadata(&resolved_symlink_path).map_err(|error| {
+                            DirectoryScanError::UnableToReadDirectoryItem {
+                                directory_path: next_directory.path.clone(),
+                                error,
+                            }
+                        })?;
+
+
+                    if follow_symbolic_links {
+                        if resolved_symlink_metadata.is_file() {
+                            file_list.push(resolved_symlink_path);
+                        } else if resolved_symlink_metadata.is_dir() {
+                            // Depth settings are respected if the destination is a directory.
+                            match maximum_scan_depth {
+                                DirectoryScanDepthLimit::Limited { maximum_depth } => {
+                                    if next_directory.depth < maximum_depth {
+                                        directory_scan_queue.push(PendingDirectoryScan::new(
+                                            resolved_symlink_path.clone(),
+                                            next_directory.depth + 1,
+                                        ));
+                                    } else {
+                                        actual_tree_is_deeper_than_scan = true;
+                                    }
+                                }
+                                DirectoryScanDepthLimit::Unlimited => {
+                                    directory_scan_queue.push(PendingDirectoryScan::new(
+                                        resolved_symlink_path.clone(),
+                                        next_directory.depth + 1,
+                                    ));
+                                }
+                            }
+
+                            directory_list.push(resolved_symlink_path);
+                        }
+                    } else {
+                        // TODO Test this.
+
+                        if resolved_symlink_metadata.is_file() {
+                            file_list.push(directory_entry.path());
+                        } else if resolved_symlink_metadata.is_dir() {
+                            directory_list.push(directory_entry.path());
+                        }
                     }
                 }
             }
@@ -202,49 +370,94 @@ impl DirectoryScan {
         Ok(Self {
             root_directory_path: directory_path,
             maximum_scanned_depth: maximum_scan_depth,
-            is_real_directory_deeper_than_scan: is_deeper_than_scan_allows,
+            covers_entire_subtree: !actual_tree_is_deeper_than_scan,
             files: file_list,
             directories: directory_list,
         })
     }
 
 
-    /// Returns a slice of all scanned files (items are full file paths).
+    /// Returns a slice of all scanned files (paths are absolute).
     pub fn files(&self) -> &[PathBuf] {
         &self.files
     }
 
-    /// Returns a slice of all scanned directories (items are full directory paths).
+    /// Consumes `self` and returns a [`Vec`] containing all scanned files (paths are absolute).
+    ///
+    /// If you are also interested in directories, look at [`Self::files`] + [`Self::directories`]
+    /// or [`Self::into_scanned_files_and_directories`] instead.
+    pub fn into_files(self) -> Vec<PathBuf> {
+        self.files
+    }
+
+    /// Returns a slice of all scanned directories (paths are absolute).
     pub fn directories(&self) -> &[PathBuf] {
         &self.directories
     }
 
-    /// Returns a total size of the scanned files in bytes.
+    /// Consumes `self` and returns a [`Vec`] containing all scanned directories (paths are absolute).
     ///
-    /// *Be careful:* This goes over all the scanned files and directories and queries their size.
-    /// This means you get a fully up-to-date directory size if you happen to call this multiple times
-    /// after modifying the files, but it also means that it will return an `Err` with
-    /// [`DirectorySizeScanError::EntryNoLongerExists`][crate::error::DirectorySizeScanError::EntryNoLongerExists]
-    /// if some file or directory that was previously scanned has been removed since.
+    /// If you are also interested in files, look at [`Self::files`] + [`Self::directories`]
+    /// or [`Self::into_scanned_files_and_directories`] instead.
+    pub fn into_directories(self) -> Vec<PathBuf> {
+        self.files
+    }
+
+    /// Consumes `self` and returns a small struct containing two fields: `files` and `directories`.
     ///
-    /// *Be careful:* if you initialized [`DirectoryScan`][Self] with a depth parameter
+    /// Use this method when you wish to consume the scanner and are interested in both scanned files and directories.
+    /// Alternatives that don't consume the scanner are [`Self::files`] and [`Self::directories`].
+    pub fn into_scanned_files_and_directories(self) -> ScannedFilesAndDirectories {
+        ScannedFilesAndDirectories {
+            files: self.files,
+            directories: self.directories,
+        }
+    }
+
+    /// Returns the total size in bytes of all scanned files and directories.
+    ///
+    ///
+    /// ## Potential file system race conditions
+    /// *Careful:* this method iterates over the scanned files and directories and queries their size at call time.
+    /// This means the caller will get an up-to-date directory size if they happen to call the method multiple times,
+    /// potentially after modifying the one of the scanned files.
+    ///
+    /// However, it also means that it this method *can* return, among other things,
+    /// an `Err(`[`DirectorySizeScanError::ScanEntryNoLongerExists`]`)`
+    /// if any file or directory that was scanned at initialization has been removed since.
+    /// The same applies for files changing their read permissions, with that usually resulting in
+    /// `Err(`[`DirectorySizeScanError::UnableToAccessFile`]`)`.
+    ///
+    /// This is very much the same thing as the relatively well-known file system race condition
+    /// inherent in `if file_exists(): then open_file()`
+    /// ([time-of-check, time-of-use](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use)),
+    /// just on a bigger scale.
+    ///
+    /// The impact of this is---in most cases---relatively low, but it's worth noting.
+    ///
+    ///
+    /// ## Impacts of scan depth limits
+    /// *Careful:* if you initialized [`DirectoryScan`] with a scan depth limit
     /// that is smaller than the actual depth of the directory tree you're scanning,
     /// the value returned by this function will be smaller than
-    /// the entire contents of the directory. For more information, see the
-    /// [`is_real_directory_deeper_than_scan`][Self::is_real_directory_deeper_than_scan] field.
+    /// the "real" contents of that directory.
+    ///
+    /// It is up to the user to decide whether that is desired behavior or not.
+    /// To find out whether the returned number of bytes will not reflect the full depth
+    /// of the directory structure, see [`Self::covers_entire_directory_subtree`].
     pub fn total_size_in_bytes(&self) -> Result<u64, DirectorySizeScanError> {
         let mut total_bytes = 0;
 
         for file_path in &self.files {
             let file_size_bytes = file_size_in_bytes(file_path).map_err(|error| match error {
-                FileSizeError::NotFound => DirectorySizeScanError::EntryNoLongerExists {
-                    path: file_path.clone(),
-                },
-                FileSizeError::NotAFile => DirectorySizeScanError::EntryNoLongerExists {
-                    path: file_path.clone(),
-                },
-                FileSizeError::UnableToAccessFile { error } => {
-                    DirectorySizeScanError::UnableToAccessFile { error }
+                FileSizeError::NotFound { path } => {
+                    DirectorySizeScanError::ScanEntryNoLongerExists { path }
+                }
+                FileSizeError::NotAFile { path } => {
+                    DirectorySizeScanError::ScanEntryNoLongerExists { path }
+                }
+                FileSizeError::UnableToAccessFile { file_path, error } => {
+                    DirectorySizeScanError::UnableToAccessFile { file_path, error }
                 }
                 FileSizeError::OtherIoError { error } => {
                     DirectorySizeScanError::OtherIoError { error }
@@ -256,9 +469,11 @@ impl DirectoryScan {
 
         for directory_path in &self.directories {
             let directory_size_bytes = fs::metadata(directory_path)
-                .map_err(|_| DirectorySizeScanError::EntryNoLongerExists {
-                    path: directory_path.to_path_buf(),
-                })?
+                .map_err(
+                    |_| DirectorySizeScanError::ScanEntryNoLongerExists {
+                        path: directory_path.to_path_buf(),
+                    },
+                )?
                 .len();
 
             total_bytes += directory_size_bytes;
@@ -266,9 +481,25 @@ impl DirectoryScan {
 
         Ok(total_bytes)
     }
+
+    /// Returns a `bool` indicating whether this scan covered the entire directory tree.
+    ///
+    /// For example, this can be `false` when the user limits the scan depth
+    /// to e.g. [`DirectoryScanDepthLimit::Limited`]`{ maximum_depth: 1 }`,
+    /// but the actual directory structure has e.g. three layers of subdirectories and files.
+    ///
+    /// If `maximum_scan_depth` is set to
+    /// [`DirectoryScanDepthLimit::Unlimited`][]
+    /// in the constructor for this scan, this method will always return `true`.
+    pub fn covers_entire_directory_subtree(&self) -> bool {
+        self.covers_entire_subtree
+    }
 }
 
-/// Returns `Ok(true)` if the given directory is completely empty, `Ok(false)` otherwise.
+
+
+/// Returns `Ok(true)` if the given directory is completely empty, `Ok(false)` is it is not,
+/// `Err(_)` if the read fails.
 ///
 /// Does not check whether the path exists, meaning the error return type is
 /// a very uninformative [`std::io::Error`].
@@ -277,22 +508,34 @@ pub(crate) fn is_directory_empty_unchecked(directory_path: &Path) -> std::io::Re
     Ok(directory_read.next().is_none())
 }
 
-/// Returns a `bool` indicating whether the given directory is completely empty (no files and no subdirectories).
+
+/// Returns a `bool` indicating whether the given directory is completely empty.
+///
+/// Permission and other errors will *not* be coerced into `false`, but will raise a distinct error,
+/// see [`IsDirectoryEmptyError`].
 pub fn is_directory_empty<P>(directory_path: P) -> Result<bool, IsDirectoryEmptyError>
 where
     P: AsRef<Path>,
 {
     let directory_path: &Path = directory_path.as_ref();
     let directory_metadata =
-        fs::metadata(directory_path).map_err(|_| IsDirectoryEmptyError::NotFound)?;
+        fs::metadata(directory_path).map_err(|_| IsDirectoryEmptyError::NotFound {
+            directory_path: directory_path.to_path_buf(),
+        })?;
 
     if !directory_metadata.is_dir() {
-        return Err(IsDirectoryEmptyError::NotADirectory);
+        return Err(IsDirectoryEmptyError::NotADirectory {
+            path: directory_path.to_path_buf(),
+        });
     }
 
 
-    let mut directory_read = fs::read_dir(directory_path)
-        .map_err(|error| IsDirectoryEmptyError::UnableToReadDirectory { error })?;
+    let mut directory_read = fs::read_dir(directory_path).map_err(|error| {
+        IsDirectoryEmptyError::UnableToReadDirectory {
+            directory_path: directory_path.to_path_buf(),
+            error,
+        }
+    })?;
 
     Ok(directory_read.next().is_some())
 }

@@ -7,6 +7,8 @@ pub struct FileProgress {
     pub bytes_finished: u64,
 
     /// Total number of bytes that must be copied or moved to the destination.
+    ///
+    /// Always `<= bytes_finished`.
     pub bytes_total: u64,
 }
 

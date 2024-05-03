@@ -47,7 +47,7 @@ macro_rules! assert_file_string_match {
 /// This macro reads the file at the given path *as a `Vec` of `u8` values*
 /// and uses `assert_eq` to compare the contents with the expected ones.
 ///
-/// If you need a string comparison, see [`assert_file_string_match`][crate::assert_file_string_match] instead.
+/// If you need a string comparison, see [`assert_file_string_match`] instead.
 ///
 /// ## Example
 /// ```no_run

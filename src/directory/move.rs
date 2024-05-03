@@ -1,30 +1,34 @@
-#[cfg(not(feature = "fs-err"))]
-use std::fs;
 use std::path::{Path, PathBuf};
 
-#[cfg(feature = "fs-err")]
-use fs_err as fs;
+use_enabled_fs_module!();
 
 use super::{
     copy_directory_unchecked,
-    perform_prepared_copy_directory_with_progress,
+    perform_prepared_copy_directory_with_progress_unchecked,
     prepared::{
+        validate_destination_directory_path,
+        validate_source_destination_directory_pair,
         validate_source_directory_path,
-        validate_source_target_directory_pair,
-        validate_target_directory_path,
-        PreparedDirectoryCopy,
-        ValidatedTargetPath,
+        DestinationDirectoryState,
+        DirectoryCopyPrepared,
+        ValidatedDestinationDirectory,
+        ValidatedSourceDirectory,
     },
-    DirectoryCopyOperation,
-    DirectoryCopyOptions,
-    DirectoryCopyWithProgressOptions,
+    CopyDirectoryOperation,
+    CopyDirectoryOptions,
+    CopyDirectoryWithProgressOptions,
+    DestinationDirectoryRule,
+    DirectoryCopyDepthLimit,
     DirectoryScan,
-    TargetDirectoryRule,
+    DirectoryScanDepthLimit,
 };
 use crate::{
-    error::{DirectoryError, DirectoryScanError, DirectorySizeScanError},
+    error::{MoveDirectoryError, MoveDirectoryExecutionError, MoveDirectoryPreparationError},
     file::FileProgress,
+    use_enabled_fs_module,
 };
+
+
 
 /// Options that influence the [`move_directory`] function.
 pub struct DirectoryMoveOptions {
@@ -32,20 +36,21 @@ pub struct DirectoryMoveOptions {
     /// and whether it must be empty or not.
     ///
     /// If you allow a non-empty target directory, you may also specify whether you allow
-    /// target files or subdirectories to already exist
+    /// destination files or subdirectories to already exist
     /// (and whether you allow them to be overwritten).
     ///
-    /// See [`TargetDirectoryRule`] for more details and examples.
-    pub target_directory_rule: TargetDirectoryRule,
+    /// See [`DestinationDirectoryRule`] for more details and examples.
+    pub destination_directory_rule: DestinationDirectoryRule,
 }
 
 impl Default for DirectoryMoveOptions {
     fn default() -> Self {
         Self {
-            target_directory_rule: TargetDirectoryRule::AllowEmpty,
+            destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
         }
     }
 }
+
 
 
 /// Describes strategies for moving a directory.
@@ -81,23 +86,27 @@ pub enum DirectoryMoveStrategy {
     CopyAndDelete,
 }
 
+
+
 /// Describes actions taken by the [`move_directory`] function.
 ///
 /// This is the return value of [`move_directory`] and [`move_directory_with_progress`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct FinishedDirectoryMove {
+pub struct MoveDirectoryFinished {
     /// Total amount of bytes moved.
     pub total_bytes_moved: u64,
 
     /// Number of files moved (created).
-    pub num_files_moved: usize,
+    pub files_moved: usize,
 
     /// Number of directories moved (created).
-    pub num_directories_moved: usize,
+    pub directories_moved: usize,
 
     /// How the directory was moved: was is simply renamed or was it copied and deleted.
-    pub used_strategy: DirectoryMoveStrategy,
+    pub strategy_used: DirectoryMoveStrategy,
 }
+
+
 
 /// Summarizes the contents of a directory for internal use.
 struct DirectoryContentDetails {
@@ -111,78 +120,64 @@ struct DirectoryContentDetails {
     pub(crate) total_directories: usize,
 }
 
-/// Scans the provided directory (no depth limit).
-/// 
-/// The returned struct contains information about the total number files and directories 
-/// and the total directory size.
-#[rustfmt::skip]
-fn collect_source_directory_details(
-    source_directory_path: &Path
-) -> Result<DirectoryContentDetails, DirectoryError> {
-    let scan = DirectoryScan::scan_with_options(source_directory_path, None, false)
-        .map_err(|error| match error {
-            DirectoryScanError::NotFound => 
-                DirectoryError::SourceDirectoryNotFound,
-            DirectoryScanError::NotADirectory => 
-                DirectoryError::SourceDirectoryIsNotADirectory,
-            DirectoryScanError::UnableToReadDirectory { error } => 
-                DirectoryError::UnableToAccessSource { error },
-            DirectoryScanError::UnableToReadDirectoryItem { error } => 
-                DirectoryError::UnableToAccessSource { error },
-        })?;
 
-    let total_size_in_bytes = scan.total_size_in_bytes()
-        .map_err(|error| match error {
-            DirectorySizeScanError::RootDirectoryNotFound => 
-                DirectoryError::SourceDirectoryNotFound,
-            DirectorySizeScanError::RootIsNotADirectory => 
-                DirectoryError::SourceDirectoryIsNotADirectory,
-            DirectorySizeScanError::EntryNoLongerExists { path } => 
-                DirectoryError::UnableToAccessSource {
-                    error: std::io::Error::new(
-                        std::io::ErrorKind::NotFound,
-                        format!(
-                            "Scaned entry has been removed before it could be processed: {}",
-                            path.display()
-                        ),
-                    ),
-                },
-            DirectorySizeScanError::UnableToAccessFile { error } => 
-                DirectoryError::UnableToAccessSource { error },
-            DirectorySizeScanError::UnableToAccessDirectory { error } => 
-                DirectoryError::UnableToAccessSource { error },
-            DirectorySizeScanError::OtherIoError { error } => 
-                DirectoryError::OtherIoError { error },
-        })?;
+
+/// Scans the provided directory (no depth limit) for auxiliary details,
+/// such as the total number of bytes it contains.
+fn collect_source_directory_details(
+    source_directory_path: &Path,
+) -> Result<DirectoryContentDetails, MoveDirectoryPreparationError> {
+    let scan = DirectoryScan::scan_with_options(
+        source_directory_path,
+        DirectoryScanDepthLimit::Unlimited,
+        false,
+    )
+    .map_err(MoveDirectoryPreparationError::DirectoryScanError)?;
+
+    let total_size_in_bytes = scan
+        .total_size_in_bytes()
+        .map_err(MoveDirectoryPreparationError::DirectorySizeScanError)?;
 
     Ok(DirectoryContentDetails {
         total_bytes: total_size_in_bytes,
-        total_files: scan.files.len(),
-        total_directories: scan.directories.len(),
+        total_files: scan.files().len(),
+        total_directories: scan.directories().len(),
     })
 }
 
 
+pub(crate) enum DirectoryMoveByRenameAction {
+    Renamed {
+        finished_move: MoveDirectoryFinished,
+    },
+    RenamedDirectoryContents {
+        finished_move: MoveDirectoryFinished,
+    },
+    Impossible,
+}
+
+/// TODO update documentation
+///
 /// Attempts a directory move by using the [`std::fs::rename`]
 /// (or `fs_err::rename` is using the `fs-err` feature).
 ///
 /// - If a trivial rename is performed, `Ok(Some(...))` is returned.
 /// - If a trivial rename is not possible (e.g. target directory is not empty) or fails,
-///   the function returns `Ok(None)`. This can happend when source and target are on different mount points.
+///   the function returns `Ok(None)`. This can happen when source and target are on different mount points.
 ///   This return value indicates you need to perform a copy-and-delete instead.
 /// - If an error occurs, the function returns `Err(DirectoryError)`.
 fn attempt_directory_move_by_rename(
-    source_directory_path: &Path,
+    validated_source_directory: &ValidatedSourceDirectory,
     source_directory_details: &DirectoryContentDetails,
-    validated_target: &ValidatedTargetPath,
-) -> Result<Option<FinishedDirectoryMove>, DirectoryError> {
+    validated_destination_directory: &ValidatedDestinationDirectory,
+) -> Result<DirectoryMoveByRenameAction, MoveDirectoryExecutionError> {
     // We can attempt to simply rename the directory. This is much faster,
     // but will fail if the source and target paths aren't on the same mount point or filesystem
     // or, if on Windows, the target directory already exists.
 
-    if !validated_target.is_empty_directory.unwrap_or(true) {
-        // Indicates that we can't rename (target directory is not empty).
-        return Ok(None);
+    // If the destination directory exists and is not empty, a move by rename is not possible.
+    if validated_destination_directory.state != DestinationDirectoryState::IsEmpty {
+        return Ok(DirectoryMoveByRenameAction::Impossible);
     }
 
 
@@ -191,60 +186,97 @@ fn attempt_directory_move_by_rename(
         // If the target directory exists, but is empty, we can (on Unix only)
         // directly rename the source directory to the target (this might still fail due to different mount points).
         if fs::rename(
-            &source_directory_path,
-            &validated_target.directory_path,
+            &validated_source_directory.directory_path,
+            &validated_destination_directory.directory_path,
         )
         .is_ok()
         {
-            return Ok(Some(FinishedDirectoryMove {
-                total_bytes_moved: source_directory_details.total_bytes,
-                num_files_moved: source_directory_details.total_files,
-                num_directories_moved: source_directory_details.total_directories,
-                used_strategy: DirectoryMoveStrategy::RenameSourceDirectory,
-            }));
+            return Ok(DirectoryMoveByRenameAction::Renamed {
+                finished_move: MoveDirectoryFinished {
+                    total_bytes_moved: source_directory_details.total_bytes,
+                    files_moved: source_directory_details.total_files,
+                    directories_moved: source_directory_details.total_directories,
+                    strategy_used: DirectoryMoveStrategy::RenameSourceDirectory,
+                },
+            });
         }
 
-        Ok(None)
+        Ok(DirectoryMoveByRenameAction::Impossible)
     }
 
     #[cfg(windows)]
     {
-        use super::rejoin_source_subpath_onto_target;
+        use super::join_relative_source_path_onto_destination;
 
-        // On Windows, `rename`'s target directory must not exist.
-        if !validated_target.exists
+        // On Windows, the destination directory in call to `rename` must not exist for it to work.
+        if !validated_destination_directory.state.exists()
             && fs::rename(
-                source_directory_path,
-                &validated_target.directory_path,
+                &validated_source_directory.directory_path,
+                &validated_destination_directory.directory_path,
             )
             .is_ok()
         {
-            return Ok(Some(FinishedDirectoryMove {
-                total_bytes_moved: source_directory_details.total_bytes,
-                num_files_moved: source_directory_details.total_files,
-                num_directories_moved: source_directory_details.total_directories,
-                used_strategy: DirectoryMoveStrategy::RenameSourceDirectory,
-            }));
+            return Ok(DirectoryMoveByRenameAction::Renamed {
+                finished_move: MoveDirectoryFinished {
+                    total_bytes_moved: source_directory_details.total_bytes,
+                    files_moved: source_directory_details.total_files,
+                    directories_moved: source_directory_details.total_directories,
+                    strategy_used: DirectoryMoveStrategy::RenameSourceDirectory,
+                },
+            });
         }
+
 
         // Otherwise, we can rename the *contents* of the directory instead.
         // Note that this is not a recursive scan, we're simply moving (by renaming)
         // the files and directories directly inside the source directory into the target directory.
-        let source_directory_contents = fs::read_dir(source_directory_path)
-            .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
 
-        for (entry_index, source_entry) in source_directory_contents.into_iter().enumerate() {
-            let source_entry =
-                source_entry.map_err(|error| DirectoryError::UnableToAccessSource { error })?;
-
-            let source_path = source_entry.path();
-            let target_path = rejoin_source_subpath_onto_target(
-                source_directory_path,
-                &source_path,
-                &validated_target.directory_path,
+        let source_directory_contents = fs::read_dir(&validated_source_directory.directory_path)
+            .map_err(
+                |error| MoveDirectoryExecutionError::UnableToAccessSource {
+                    path: validated_source_directory.directory_path.clone(),
+                    error,
+                },
             )?;
 
-            let rename_result = fs::rename(source_path, target_path);
+        for (entry_index, source_entry) in source_directory_contents.into_iter().enumerate() {
+            let source_entry = source_entry.map_err(|error| {
+                MoveDirectoryExecutionError::UnableToAccessSource {
+                    path: validated_source_directory.directory_path.clone(),
+                    error,
+                }
+            })?;
+
+
+            let source_entry_path = source_entry.path();
+            let mapped_destination_path = join_relative_source_path_onto_destination(
+                &validated_source_directory.directory_path,
+                &source_entry_path,
+                &validated_destination_directory.directory_path,
+            )
+            .map_err(|error| {
+                MoveDirectoryExecutionError::EntryEscapesSourceDirectory { path: error.path }
+            })?;
+
+
+            let mapped_destination_path_exists =
+                mapped_destination_path.try_exists().map_err(|error| {
+                    MoveDirectoryExecutionError::UnableToAccessSource {
+                        path: mapped_destination_path.clone(),
+                        error,
+                    }
+                })?;
+
+            if mapped_destination_path_exists {
+                return Err(
+                    MoveDirectoryExecutionError::DestinationEntryUnexpected {
+                        path: mapped_destination_path.clone(),
+                    },
+                );
+            }
+
+
+            let rename_result = fs::rename(source_entry_path, &mapped_destination_path);
 
             // If we try to rename the first entry and it fails, there is a high likelihood
             // that it is due to source and target paths being on different mount points / drives
@@ -254,31 +286,41 @@ fn attempt_directory_move_by_rename(
 
             if entry_index == 0 {
                 if rename_result.is_err() {
-                    return Ok(None);
+                    return Ok(DirectoryMoveByRenameAction::Impossible);
                 }
             } else {
-                rename_result.map_err(|error| DirectoryError::OtherIoError { error })?;
+                rename_result
+                    .map_err(|error| MoveDirectoryExecutionError::OtherIoError { error })?;
             }
         }
 
+
         // Finally, we need to remove the (now empty) source directory path.
-        fs::remove_dir(source_directory_path)
-            .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
+        fs::remove_dir(&validated_source_directory.directory_path).map_err(|error| {
+            MoveDirectoryExecutionError::UnableToAccessSource {
+                path: validated_source_directory.directory_path.clone(),
+                error,
+            }
+        })?;
 
 
-        Ok(Some(FinishedDirectoryMove {
-            total_bytes_moved: source_directory_details.total_bytes,
-            num_files_moved: source_directory_details.total_files,
-            num_directories_moved: source_directory_details.total_directories,
-            used_strategy: DirectoryMoveStrategy::RenameSourceDirectoryContents,
-        }))
+        Ok(
+            DirectoryMoveByRenameAction::RenamedDirectoryContents {
+                finished_move: MoveDirectoryFinished {
+                    total_bytes_moved: source_directory_details.total_bytes,
+                    files_moved: source_directory_details.total_files,
+                    directories_moved: source_directory_details.total_directories,
+                    strategy_used: DirectoryMoveStrategy::RenameSourceDirectoryContents,
+                },
+            },
+        )
     }
 
     #[cfg(not(any(unix, windows)))]
     {
         compile_error!(
-            "fs-more supports only the following values of target_family: \
-            unix and windows (notably, wasm is unsupported)."
+            "fs-more supports only the following values of target_family: unix and windows.\
+            WASM is unsupported."
         );
     }
 }
@@ -299,12 +341,12 @@ fn attempt_directory_move_by_rename(
 ///
 ///
 /// ### Target directory
-/// Depending on the [`options.target_directory_rule`][DirectoryMoveOptions::target_directory_rule] option,
+/// Depending on the [`options.destination_directory_rule`][DirectoryMoveOptions::destination_directory_rule] option,
 /// the `target_directory_path` must:
-/// - with [`DisallowExisting`][TargetDirectoryRule::DisallowExisting]: not exist,
-/// - with [`AllowEmpty`][TargetDirectoryRule::AllowEmpty]: either not exist or be empty, or,
-/// - with [`AllowNonEmpty`][TargetDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
-///   the specified overwriting rules are respected (see [variant fields][TargetDirectoryRule::AllowNonEmpty]).
+/// - with [`DisallowExisting`][DestinationDirectoryRule::DisallowExisting]: not exist,
+/// - with [`AllowEmpty`][DestinationDirectoryRule::AllowEmpty]: either not exist or be empty, or,
+/// - with [`AllowNonEmpty`][DestinationDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
+///   the specified overwriting rules are respected (see [variant fields][DestinationDirectoryRule::AllowNonEmpty]).
 ///
 /// If the specified target directory rule is not satisfied,
 /// a [`DirectoryError`] containing the reason will be returned before any move is performed.
@@ -331,63 +373,78 @@ pub fn move_directory<S, T>(
     source_directory_path: S,
     target_directory_path: T,
     options: DirectoryMoveOptions,
-) -> Result<FinishedDirectoryMove, DirectoryError>
+) -> Result<MoveDirectoryFinished, MoveDirectoryError>
 where
     S: AsRef<Path>,
     T: AsRef<Path>,
 {
-    let source_directory_path = validate_source_directory_path(source_directory_path.as_ref())?;
-    let validated_target_path = validate_target_directory_path(
+    let validated_source_directory = validate_source_directory_path(source_directory_path.as_ref())
+        .map_err(MoveDirectoryPreparationError::SourceDirectoryValidationError)?;
+
+    let validated_destination_directory = validate_destination_directory_path(
         target_directory_path.as_ref(),
-        &options.target_directory_rule,
-    )?;
+        options.destination_directory_rule,
+    )
+    .map_err(MoveDirectoryPreparationError::DestinationDirectoryValidationError)?;
 
-    validate_source_target_directory_pair(
-        &source_directory_path,
-        &validated_target_path.directory_path,
-    )?;
+    validate_source_destination_directory_pair(
+        &validated_source_directory.directory_path,
+        &validated_destination_directory.directory_path,
+    )
+    .map_err(MoveDirectoryPreparationError::DestinationDirectoryValidationError)?;
 
-    let source_details = collect_source_directory_details(&source_directory_path)?;
+
+    let source_details =
+        collect_source_directory_details(&validated_source_directory.directory_path)?;
 
 
-    let directory_rename_attempt = attempt_directory_move_by_rename(
-        &source_directory_path,
+    match attempt_directory_move_by_rename(
+        &validated_source_directory,
         &source_details,
-        &validated_target_path,
-    )?;
-
-    if let Some(rename_result) = directory_rename_attempt {
-        return Ok(rename_result);
-    }
+        &validated_destination_directory,
+    )? {
+        DirectoryMoveByRenameAction::Renamed { finished_move }
+        | DirectoryMoveByRenameAction::RenamedDirectoryContents { finished_move } => {
+            return Ok(finished_move);
+        }
+        DirectoryMoveByRenameAction::Impossible => {}
+    };
 
 
     // At this point a simple rename was either impossible or failed.
     // We need to copy and delete instead.
 
-    let prepared_copy = PreparedDirectoryCopy::prepare_with_validated(
-        source_directory_path.clone(),
-        validated_target_path,
-        None,
-        &options.target_directory_rule,
-    )?;
+    let prepared_copy = DirectoryCopyPrepared::prepare_with_validated(
+        validated_source_directory.clone(),
+        validated_destination_directory,
+        options.destination_directory_rule,
+        DirectoryCopyDepthLimit::Unlimited,
+    )
+    .map_err(MoveDirectoryPreparationError::CopyPlanningError)?;
 
     copy_directory_unchecked(
         prepared_copy,
-        DirectoryCopyOptions {
-            target_directory_rule: options.target_directory_rule,
-            maximum_copy_depth: None,
+        CopyDirectoryOptions {
+            destination_directory_rule: options.destination_directory_rule,
+            copy_depth_limit: DirectoryCopyDepthLimit::Unlimited,
         },
-    )?;
-
-    fs::remove_dir_all(source_directory_path)
-        .map_err(|error| DirectoryError::OtherIoError { error })?;
+    )
+    .map_err(MoveDirectoryExecutionError::CopyDirectoryError)?;
 
 
-    Ok(FinishedDirectoryMove {
+    fs::remove_dir_all(&validated_source_directory.directory_path).map_err(|error| {
+        MoveDirectoryExecutionError::UnableToAccessSource {
+            path: validated_source_directory.directory_path,
+            error,
+        }
+    })?;
+
+
+    Ok(MoveDirectoryFinished {
         total_bytes_moved: source_details.total_bytes,
-        num_files_moved: source_details.total_files,
-        num_directories_moved: source_details.total_directories,
-        used_strategy: DirectoryMoveStrategy::CopyAndDelete,
+        files_moved: source_details.total_files,
+        directories_moved: source_details.total_directories,
+        strategy_used: DirectoryMoveStrategy::CopyAndDelete,
     })
 }
 
@@ -398,14 +455,20 @@ pub struct DirectoryMoveWithProgressOptions {
     /// and whether it must be empty or not.
     ///
     /// If you allow a non-empty target directory, you may also specify whether you allow
-    /// target files or subdirectories to already exist (and be overwritten).
+    /// destination files or subdirectories to already exist (and be overwritten).
     ///
-    /// See [`TargetDirectoryRule`] for more details and examples.
-    pub target_directory_rule: TargetDirectoryRule,
+    /// See [`DestinationDirectoryRule`] for more details and examples.
+    pub destination_directory_rule: DestinationDirectoryRule,
 
-    /// Internal buffer size (for both reading and writing) when copying files,
-    /// defaults to 64 KiB.
-    pub buffer_size: usize,
+    /// Internal buffer size used for reading source files.
+    ///
+    /// Defaults to 64 KiB.
+    pub read_buffer_size: usize,
+
+    /// Internal buffer size used for writing to a destination file.
+    ///
+    /// Defaults to 64 KiB.
+    pub write_buffer_size: usize,
 
     /// *Minimum* amount of bytes written between two consecutive progress reports.
     /// Defaults to 64 KiB.
@@ -417,9 +480,11 @@ pub struct DirectoryMoveWithProgressOptions {
 impl Default for DirectoryMoveWithProgressOptions {
     fn default() -> Self {
         Self {
-            target_directory_rule: TargetDirectoryRule::AllowEmpty,
+            destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
             // 64 KiB
-            buffer_size: 1024 * 64,
+            read_buffer_size: 1024 * 64,
+            // 64 KiB
+            write_buffer_size: 1024 * 64,
             // 64 KiB
             progress_update_byte_interval: 1024 * 64,
         }
@@ -509,12 +574,12 @@ pub struct DirectoryMoveProgress {
 ///
 ///
 /// ### Target directory
-/// Depending on the [`options.target_directory_rule`][DirectoryMoveOptions::target_directory_rule] option,
+/// Depending on the [`options.destination_directory_rule`][DirectoryMoveOptions::destination_directory_rule] option,
 /// the `target_directory_path` must:
-/// - with [`DisallowExisting`][TargetDirectoryRule::DisallowExisting]: not exist,
-/// - with [`AllowEmpty`][TargetDirectoryRule::AllowEmpty]: either not exist or be empty, or,
-/// - with [`AllowNonEmpty`][TargetDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
-///   the specified overwriting rules are respected (see [variant fields][TargetDirectoryRule::AllowNonEmpty]).
+/// - with [`DisallowExisting`][DestinationDirectoryRule::DisallowExisting]: not exist,
+/// - with [`AllowEmpty`][DestinationDirectoryRule::AllowEmpty]: either not exist or be empty, or,
+/// - with [`AllowNonEmpty`][DestinationDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
+///   the specified overwriting rules are respected (see [variant fields][DestinationDirectoryRule::AllowNonEmpty]).
 ///
 /// If the specified target directory rule is not satisfied,
 /// a [`DirectoryError`] containing the reason will be returned before any move is performed.
@@ -563,81 +628,96 @@ pub fn move_directory_with_progress<S, T, F>(
     target_directory_path: T,
     options: DirectoryMoveWithProgressOptions,
     mut progress_handler: F,
-) -> Result<FinishedDirectoryMove, DirectoryError>
+) -> Result<MoveDirectoryFinished, MoveDirectoryError>
 where
     S: AsRef<Path>,
     T: AsRef<Path>,
     F: FnMut(&DirectoryMoveProgress),
 {
-    let source_directory_path = validate_source_directory_path(source_directory_path.as_ref())?;
-    let validated_target_path = validate_target_directory_path(
+    let validated_source_directory = validate_source_directory_path(source_directory_path.as_ref())
+        .map_err(MoveDirectoryPreparationError::SourceDirectoryValidationError)?;
+
+    let validated_destination_directory = validate_destination_directory_path(
         target_directory_path.as_ref(),
-        &options.target_directory_rule,
-    )?;
+        options.destination_directory_rule,
+    )
+    .map_err(MoveDirectoryPreparationError::DestinationDirectoryValidationError)?;
 
-    validate_source_target_directory_pair(
-        &source_directory_path,
-        &validated_target_path.directory_path,
-    )?;
+    validate_source_destination_directory_pair(
+        &validated_source_directory.directory_path,
+        &validated_destination_directory.directory_path,
+    )
+    .map_err(MoveDirectoryPreparationError::DestinationDirectoryValidationError)?;
 
-    let source_details = collect_source_directory_details(&source_directory_path)?;
+
+    let source_details =
+        collect_source_directory_details(&validated_source_directory.directory_path)?;
 
 
     // We'll first attempt to move the directory by renaming it.
     // If we don't succeed (e.g. source and target paths are on different drives),
     // we'll copy and delete instead.
 
-    let directory_rename_attempt = attempt_directory_move_by_rename(
-        &source_directory_path,
+
+    match attempt_directory_move_by_rename(
+        &validated_source_directory,
         &source_details,
-        &validated_target_path,
-    )?;
+        &validated_destination_directory,
+    )? {
+        DirectoryMoveByRenameAction::Renamed { finished_move }
+        | DirectoryMoveByRenameAction::RenamedDirectoryContents { finished_move } => {
+            let final_progress_report = DirectoryMoveProgress {
+                bytes_total: source_details.total_bytes,
+                bytes_finished: source_details.total_bytes,
+                files_moved: source_details.total_files,
+                directories_created: source_details.total_directories,
+                // Clarification: this is in the past tense, but in reality `attempt_directory_move_by_rename`
+                // has already removed the empty source directory if needed.
+                // Point is, all operations have finished at this point.
+                current_operation: DirectoryMoveOperation::RemovingSourceDirectory,
+                current_operation_index: 1,
+                total_operations: 2,
+            };
 
-    if let Some(rename_result) = directory_rename_attempt {
-        let final_progress_report = DirectoryMoveProgress {
-            bytes_total: source_details.total_bytes,
-            bytes_finished: source_details.total_bytes,
-            files_moved: source_details.total_files,
-            directories_created: source_details.total_directories,
-            // Clarification: this is in the past tense, but in reality `attempt_directory_move_by_rename`
-            // has already removed the empty source directory if needed.
-            // Point is, all operations have finished at this point.
-            current_operation: DirectoryMoveOperation::RemovingSourceDirectory,
-            current_operation_index: 1,
-            total_operations: 2,
-        };
-
-        progress_handler(&final_progress_report);
-
-        return Ok(rename_result);
-    }
+            progress_handler(&final_progress_report);
 
 
-    // Trivial directory rename failed or was impossible - we should copy to target
-    // and delete old directory at the end.
-
-    let copy_options = DirectoryCopyWithProgressOptions {
-        target_directory_rule: options.target_directory_rule,
-        buffer_size: options.buffer_size,
-        progress_update_byte_interval: options.progress_update_byte_interval,
-        maximum_copy_depth: None,
+            return Ok(finished_move);
+        }
+        DirectoryMoveByRenameAction::Impossible => {}
     };
 
-    let prepared_copy = PreparedDirectoryCopy::prepare_with_validated(
-        source_directory_path.clone(),
-        validated_target_path,
-        copy_options.maximum_copy_depth,
-        &copy_options.target_directory_rule,
-    )?;
 
-    let directory_copy_result =
-        perform_prepared_copy_directory_with_progress(prepared_copy, copy_options, |progress| {
+    // At this point a simple rename was either impossible or failed.
+    // We need to copy and delete instead.
+
+    let copy_options = CopyDirectoryWithProgressOptions {
+        destination_directory_rule: options.destination_directory_rule,
+        read_buffer_size: options.read_buffer_size,
+        write_buffer_size: options.write_buffer_size,
+        progress_update_byte_interval: options.progress_update_byte_interval,
+        copy_depth_limit: DirectoryCopyDepthLimit::Unlimited,
+    };
+
+    let prepared_copy = DirectoryCopyPrepared::prepare_with_validated(
+        validated_source_directory.clone(),
+        validated_destination_directory,
+        copy_options.destination_directory_rule,
+        copy_options.copy_depth_limit,
+    )
+    .map_err(MoveDirectoryPreparationError::CopyPlanningError)?;
+
+
+    let directory_copy_result = perform_prepared_copy_directory_with_progress_unchecked(
+        prepared_copy,
+        copy_options,
+        |progress| {
             let move_operation = match progress.current_operation.clone() {
-                DirectoryCopyOperation::CreatingDirectory { target_path } => {
-                    DirectoryMoveOperation::CreatingDirectory { target_path }
-                }
-                DirectoryCopyOperation::CopyingFile {
-                    target_path,
+                CopyDirectoryOperation::CreatingDirectory {
+                    destination_directory_path: target_path,
+                } => DirectoryMoveOperation::CreatingDirectory { target_path },
+                CopyDirectoryOperation::CopyingFile {
+                    destination_file_path: target_path,
                     progress,
                 } => DirectoryMoveOperation::CopyingFile {
                     target_path,
@@ -658,19 +738,25 @@ where
             };
 
             progress_handler(&move_progress)
-        })?;
+        },
+    )
+    .map_err(MoveDirectoryExecutionError::CopyDirectoryError)?;
 
 
     // Having fully copied the directory to the target, we now
     // remove the original (source) directory.
-    fs::remove_dir_all(&source_directory_path)
-        .map_err(|error| DirectoryError::OtherIoError { error })?;
+    fs::remove_dir_all(&validated_source_directory.directory_path).map_err(|error| {
+        MoveDirectoryExecutionError::UnableToAccessSource {
+            path: validated_source_directory.directory_path,
+            error,
+        }
+    })?;
 
 
-    Ok(FinishedDirectoryMove {
-        num_directories_moved: directory_copy_result.num_directories_created,
+    Ok(MoveDirectoryFinished {
+        directories_moved: directory_copy_result.directories_created,
         total_bytes_moved: directory_copy_result.total_bytes_copied,
-        num_files_moved: directory_copy_result.num_files_copied,
-        used_strategy: DirectoryMoveStrategy::CopyAndDelete,
+        files_moved: directory_copy_result.files_copied,
+        strategy_used: DirectoryMoveStrategy::CopyAndDelete,
     })
 }

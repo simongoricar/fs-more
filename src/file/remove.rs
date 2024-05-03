@@ -1,11 +1,8 @@
-#[cfg(not(feature = "fs-err"))]
-use std::fs;
 use std::path::Path;
 
-#[cfg(feature = "fs-err")]
-use fs_err as fs;
+use_enabled_fs_module!();
 
-use crate::error::FileRemoveError;
+use crate::{error::FileRemoveError, use_enabled_fs_module};
 
 /// Removes a single file.
 ///
@@ -17,22 +14,31 @@ where
 {
     let file_path = file_path.as_ref();
 
+
     // Ensure the source file path exists. We use `try_exists`
     // instead of `exists` to catch permission and other IO errors
     // as distinct from the `FileError::NotFound` error.
+
     match file_path.try_exists() {
         Ok(exists) => {
             if !exists {
-                return Err(FileRemoveError::NotFound);
+                return Err(FileRemoveError::NotFound {
+                    path: file_path.to_path_buf(),
+                });
             }
         }
         Err(error) => {
-            return Err(FileRemoveError::UnableToAccessFile { error });
+            return Err(FileRemoveError::UnableToAccessFile {
+                path: file_path.to_path_buf(),
+                error,
+            });
         }
     }
 
     if !file_path.is_file() {
-        return Err(FileRemoveError::NotAFile);
+        return Err(FileRemoveError::NotAFile {
+            path: file_path.to_path_buf(),
+        });
     }
 
     // All checks have passed, remove the file.

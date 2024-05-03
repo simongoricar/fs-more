@@ -4,7 +4,7 @@ use assert_fs::fixture::FixtureError;
 use assert_matches::assert_matches;
 use fs_more::{
     error::FileError,
-    file::{FileCopyOptions, FileCopyWithProgressOptions, FileProgress},
+    file::{CopyFileOptions, CopyFileWithProgressOptions, FileProgress},
 };
 use fs_more_test_harness::{
     assertable::AssertableFilePath,
@@ -28,7 +28,7 @@ pub fn copy_file() -> TestResult<()> {
     let file_copy_result: Result<u64, FileError> = fs_more::file::copy_file(
         harness.test_file.path(),
         target_file.path(),
-        FileCopyOptions {
+        CopyFileOptions {
             overwrite_existing: false,
             skip_existing: false,
         },
@@ -66,7 +66,7 @@ pub fn copy_binary_file() -> TestResult<()> {
     let file_copy_result = fs_more::file::copy_file(
         harness.binary_file_a.path(),
         target_file.path(),
-        FileCopyOptions {
+        CopyFileOptions {
             overwrite_existing: false,
             skip_existing: false,
         },
@@ -97,7 +97,7 @@ pub fn forbid_copy_into_self() -> TestResult<()> {
     let file_copy_result = fs_more::file::copy_file(
         harness.test_file.path(),
         harness.test_file.path(),
-        FileCopyOptions {
+        CopyFileOptions {
             overwrite_existing: false,
             skip_existing: false,
         },
@@ -111,7 +111,7 @@ pub fn forbid_copy_into_self() -> TestResult<()> {
     let file_copy_err = file_copy_result.unwrap_err();
     assert_matches!(
         file_copy_err,
-        FileError::SourceAndTargetAreTheSameFile,
+        FileError::SourceAndDestinationAreTheSame,
         "copy_file should have errored with SourceAndTargetAreTheSameFile, got {} instead",
         file_copy_err
     );
@@ -144,7 +144,7 @@ pub fn case_insensitive_copy_into_self() -> Result<(), FixtureError> {
     let file_copy_result = fs_more::file::copy_file(
         harness.test_file.path(),
         target_file.path(),
-        FileCopyOptions {
+        CopyFileOptions {
             overwrite_existing: false,
             skip_existing: false,
         },
@@ -175,7 +175,7 @@ pub fn case_insensitive_copy_into_self() -> Result<(), FixtureError> {
         let file_copy_err = file_copy_result.unwrap_err();
         assert_matches!(
             file_copy_err,
-            FileError::SourceAndTargetAreTheSameFile,
+            FileError::SourceAndDestinationAreTheSame,
             "copy_file should have errored with SourceAndTargetAreTheSameFile, got {} instead",
             file_copy_err
         );
@@ -240,7 +240,7 @@ pub fn forbid_non_trivial_copy_into_self() -> Result<(), FixtureError> {
     let file_copy_result = fs_more::file::copy_file(
         harness.binary_file_b.path(),
         target_file.path(),
-        FileCopyOptions {
+        CopyFileOptions {
             overwrite_existing: false,
             skip_existing: false,
         },
@@ -273,7 +273,7 @@ pub fn forbid_non_trivial_copy_into_self() -> Result<(), FixtureError> {
         let file_copy_err = file_copy_result.unwrap_err();
         assert_matches!(
             file_copy_err,
-            FileError::SourceAndTargetAreTheSameFile,
+            FileError::SourceAndDestinationAreTheSame,
             "copy_file should have errored with SourceAndTargetAreTheSameFile, got {} instead",
             file_copy_err
         );
@@ -297,7 +297,7 @@ pub fn allow_copy_overwriting_file_with_flag() -> TestResult<()> {
     let file_copy_result = fs_more::file::copy_file(
         harness.test_file.path(),
         harness.foo_bar.path(),
-        FileCopyOptions {
+        CopyFileOptions {
             overwrite_existing: true,
             skip_existing: false,
         },
@@ -330,7 +330,7 @@ pub fn forbid_copy_overwriting_file_without_flag() -> TestResult<()> {
     let file_copy_result = fs_more::file::copy_file(
         harness.test_file.path(),
         harness.foo_bar.path(),
-        FileCopyOptions {
+        CopyFileOptions {
             overwrite_existing: false,
             skip_existing: false,
         },
@@ -360,7 +360,7 @@ pub fn skip_existing_target_file_move_with_flag() -> TestResult<()> {
     let file_copy_result = fs_more::file::copy_file(
         harness.test_file.path(),
         harness.foo_bar.path(),
-        FileCopyOptions {
+        CopyFileOptions {
             overwrite_existing: false,
             skip_existing: true,
         },
@@ -411,7 +411,7 @@ pub fn copy_file_with_progress() -> TestResult<()> {
     let file_copy_result: Result<u64, FileError> = fs_more::file::copy_file_with_progress(
         harness.test_file.path(),
         target_file.path(),
-        FileCopyWithProgressOptions {
+        CopyFileWithProgressOptions {
             overwrite_existing: false,
             skip_existing: false,
             ..Default::default()
@@ -479,7 +479,7 @@ pub fn copy_file_symlink_behaviour() -> TestResult<()> {
     let num_copied_bytes = fs_more::file::copy_file(
         symlinked_file.path(),
         target_file.path(),
-        FileCopyOptions::default(),
+        CopyFileOptions::default(),
     )
     .unwrap();
 
@@ -518,7 +518,7 @@ pub fn copy_file_with_progress_symlink_behaviour() -> TestResult<()> {
     let num_copied_bytes = fs_more::file::copy_file_with_progress(
         symlinked_file.path(),
         target_file.path(),
-        FileCopyWithProgressOptions::default(),
+        CopyFileWithProgressOptions::default(),
         |_| {},
     )
     .unwrap();
@@ -557,7 +557,7 @@ pub fn forbid_copy_file_when_source_is_symlink_to_target() -> TestResult<()> {
     let copy_result: Result<u64, FileError> = fs_more::file::copy_file(
         test_symlink.path(),
         harness.test_file.path(),
-        FileCopyOptions {
+        CopyFileOptions {
             overwrite_existing: true,
             skip_existing: false,
         },
@@ -566,7 +566,7 @@ pub fn forbid_copy_file_when_source_is_symlink_to_target() -> TestResult<()> {
     let copy_err = copy_result.unwrap_err();
 
     match &copy_err {
-        FileError::SourceAndTargetAreTheSameFile => {
+        FileError::SourceAndDestinationAreTheSame => {
             // This is the expected behaviour in this case.
         }
         _ => panic!("Unexpected Err: {}", copy_err),
@@ -600,7 +600,7 @@ pub fn forbid_copy_file_with_progress_when_source_is_symlink_to_target() -> Test
     let copy_result: Result<u64, FileError> = fs_more::file::copy_file_with_progress(
         test_symlink.path(),
         harness.test_file.path(),
-        FileCopyWithProgressOptions {
+        CopyFileWithProgressOptions {
             overwrite_existing: true,
             skip_existing: false,
             ..Default::default()
@@ -615,7 +615,7 @@ pub fn forbid_copy_file_with_progress_when_source_is_symlink_to_target() -> Test
     let copy_err = copy_result.unwrap_err();
 
     match &copy_err {
-        FileError::SourceAndTargetAreTheSameFile => {
+        FileError::SourceAndDestinationAreTheSame => {
             // This is the expected behaviour in this case.
         }
         _ => panic!("Unexpected Err: {}", copy_err),

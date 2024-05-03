@@ -1,99 +1,194 @@
-#[cfg(not(feature = "fs-err"))]
-use std::fs;
 use std::path::Path;
 
-#[cfg(feature = "fs-err")]
-use fs_err as fs;
+use_enabled_fs_module!();
 
 use super::{
     copy::copy_file_with_progress_unchecked,
     validate_source_file_path,
-    FileCopyWithProgressOptions,
+    CopyFileWithProgressOptions,
+    ExistingFileBehaviour,
     FileProgress,
 };
 use crate::{
     error::{FileError, FileRemoveError},
     file::ValidatedSourceFilePath,
+    use_enabled_fs_module,
 };
+
 
 /// Options that influence the [`move_file`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct FileMoveOptions {
-    /// Whether to allow overwriting the target file if it already exists.
-    pub overwrite_existing: bool,
+pub struct MoveFileOptions {
+    /// How to behave for destination files that already exist.
+    pub existing_destination_file_behaviour: ExistingFileBehaviour,
 }
 
 #[allow(clippy::derivable_impls)]
-impl Default for FileMoveOptions {
+impl Default for MoveFileOptions {
     fn default() -> Self {
         Self {
-            overwrite_existing: false,
+            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
         }
     }
 }
 
 
-/// Moves a single file from the `source_file_path` to the `target_file_path`.
+
+/// Information about a successful file move operation.
 ///
-/// The target path must be the actual target file path and cannot be a directory.
-/// Returns the number of bytes moved (i.e. the file size).
+/// See also: [`move_file`].
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum MoveFileFinished {
+    /// Destination file was freshly created and the contents of the source
+    /// file were moved. `method` will describe how the move was made.
+    Created {
+        /// The number of bytes transferred in the move (i.e. the file size).
+        bytes_copied: u64,
+
+        /// How the move was accomplished.
+        method: MoveFileMethod,
+    },
+
+    /// Destination file existed, but was overwritten with the contents of
+    /// the source file.
+    Overwritten {
+        /// The number of bytes transferred in the move (i.e. the file size).
+        bytes_copied: u64,
+
+        /// How the move was accomplished.
+        method: MoveFileMethod,
+    },
+
+    /// File was not moved because the destination file already existed.
+    ///
+    /// This can be returned by [`move_file`] or [`move_file_with_progress`]
+    /// if `options.existing_destination_file_behaviour` is set to [`ExistingFileBehaviour::Skip`].
+    ///
+    /// Note that this means the source file still exists.
+    Skipped,
+}
+
+
+/// A method used for moving a file.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum MoveFileMethod {
+    /// The source file was renamed to the destination file.
+    ///
+    /// This is highly performant on most file systems.
+    Rename,
+
+    /// The source file was copied to the destination,
+    /// and the source file was deleted afterwards.
+    ///
+    /// This is used if [`Self::Rename`] is impossible, and is
+    /// as fast as writes normally are.
+    CopyAndDelete,
+}
+
+
+/// Moves a single file from the source to the destination path.
+///
+/// The destination path must be a *file* path, and must not point to a directory.
+///
+///
+/// ## Return value
+/// The function returns [`MoveFileFinished`], which indicates whether the file was created,
+/// overwritten or skipped, and includes the number of bytes moved, if relevant.
+///
 ///
 /// ## Options
-/// If `options.overwrite_existing` is `true`, an existing target file will be overwritten.
+/// See [`CopyFileOptions`].
 ///
-/// If `options.overwrite_existing` is `false` and the target file exists, this function will
-/// return `Err` with [`FileError::AlreadyExists`][crate::error::FileError::AlreadyExists].
 ///
 /// ## Symbolic links
-/// If the `source_file_path` is a symbolic link to a file, the contents of the file that the link points to
-/// will be copied to the `target_file_path` and the original `source_file_path` symbolic link will be removed
-/// (i.e. the link destination will be untouched, but we won't preserve the link on the target file).
+/// If `source_file_path` leads to a symbolic link to a file,
+/// the contents of the link destination file will be copied to `destination_file_path`.
+/// Finally, the original `source_file_path` symbolic link will be removed.
+///
+/// In short, the link target will be untouched, but the link itself will
+/// not be preserved; the destination will be a normal file - a copy of the source.
+///
 ///
 /// ## Internals
 /// This function will first attempt to move the file with [`std::fs::rename`].
 /// If that fails (e.g. if paths are on different mount points / drives), a copy-and-delete will be attempted.
-pub fn move_file<P, T>(
-    source_file_path: P,
-    target_file_path: T,
-    options: FileMoveOptions,
-) -> Result<u64, FileError>
+///
+///
+/// [`CopyFileOptions`]: [super::CopyFileOptions]
+pub fn move_file<S, D>(
+    source_file_path: S,
+    destination_file_path: D,
+    options: MoveFileOptions,
+) -> Result<MoveFileFinished, FileError>
 where
-    P: AsRef<Path>,
-    T: AsRef<Path>,
+    S: AsRef<Path>,
+    D: AsRef<Path>,
 {
     let source_file_path = source_file_path.as_ref();
-    let target_file_path = target_file_path.as_ref();
+    let destination_file_path = destination_file_path.as_ref();
 
     let ValidatedSourceFilePath {
         source_file_path: validated_source_file_path,
         original_was_symlink_to_file,
     } = validate_source_file_path(source_file_path)?;
 
-    // Ensure the target file path doesn't exist yet
-    // (unless `overwrite_existing` is `true`)
-    // and that it isn't already a directory path.
-    match target_file_path.try_exists() {
+
+    // Ensure the destination file path doesn't exist yet
+    // (unless `options.existing_destination_file_behaviour` allows it),
+    // and that it isn't a directory.
+
+    let destination_file_exists = match destination_file_path.try_exists() {
         Ok(exists) => {
             if exists {
                 // Ensure we don't try to copy the file into itself.
-                let canonicalized_source_path = validated_source_file_path
-                    .canonicalize()
-                    .map_err(|error| FileError::UnableToAccessSourceFile { error })?;
-                let canonicalized_target_path = target_file_path
-                    .canonicalize()
-                    .map_err(|error| FileError::UnableToAccessTargetFile { error })?;
+                let canonicalized_source_path =
+                    validated_source_file_path.canonicalize().map_err(|error| {
+                        FileError::UnableToAccessSourceFile {
+                            path: validated_source_file_path.clone(),
+                            error,
+                        }
+                    })?;
+
+                let canonicalized_target_path =
+                    destination_file_path.canonicalize().map_err(|error| {
+                        FileError::UnableToAccessDestinationFile {
+                            path: destination_file_path.to_path_buf(),
+                            error,
+                        }
+                    })?;
+
 
                 if canonicalized_source_path.eq(&canonicalized_target_path) {
-                    return Err(FileError::SourceAndTargetAreTheSameFile);
+                    return Err(FileError::SourceAndDestinationAreTheSame {
+                        path: canonicalized_source_path,
+                    });
                 }
             }
 
-            if exists && !options.overwrite_existing {
-                return Err(FileError::AlreadyExists);
+
+            if exists {
+                match options.existing_destination_file_behaviour {
+                    ExistingFileBehaviour::Abort => {
+                        return Err(FileError::DestinationPathAlreadyExists {
+                            path: destination_file_path.to_path_buf(),
+                        });
+                    }
+                    ExistingFileBehaviour::Skip => {
+                        return Ok(MoveFileFinished::Skipped);
+                    }
+                    ExistingFileBehaviour::Overwrite => {}
+                }
             }
+
+            exists
         }
-        Err(error) => return Err(FileError::UnableToAccessTargetFile { error }),
-    }
+        Err(error) => {
+            return Err(FileError::UnableToAccessDestinationFile {
+                path: destination_file_path.to_path_buf(),
+                error,
+            })
+        }
+    };
 
     // All checks have passed. Now we do the following:
     // - if both paths reside on the same filesystem
@@ -103,16 +198,28 @@ where
     // Note that we *must not* go for the renaming shortcut if the user-provided path was actually a symbolic link to a file.
     // In that case, we need to copy the file behind the symbolic link, then remove the symbolic link.
     if !original_was_symlink_to_file
-        && fs::rename(&validated_source_file_path, target_file_path).is_ok()
+        && fs::rename(&validated_source_file_path, destination_file_path).is_ok()
     {
         // Get size of file that we just renamed.
-        let target_file_path_metadata =
-            fs::metadata(target_file_path).map_err(|error| FileError::OtherIoError { error })?;
+        let target_file_path_metadata = fs::metadata(destination_file_path)
+            .map_err(|error| FileError::OtherIoError { error })?;
 
-        Ok(target_file_path_metadata.len())
+        match destination_file_exists {
+            true => Ok(MoveFileFinished::Overwritten {
+                bytes_copied: target_file_path_metadata.len(),
+                method: MoveFileMethod::Rename,
+            }),
+            false => Ok(MoveFileFinished::Created {
+                bytes_copied: target_file_path_metadata.len(),
+                method: MoveFileMethod::Rename,
+            }),
+        }
     } else {
-        // Copy, then delete original.
-        let num_bytes_copied = fs::copy(&validated_source_file_path, target_file_path)
+        // Copy to destination, then delete original file.
+        // Special case: if the original was a symlink to a file, we need to
+        // delete the symlink, not the file it points to.
+
+        let num_bytes_copied = fs::copy(&validated_source_file_path, destination_file_path)
             .map_err(|error| FileError::OtherIoError { error })?;
 
         let file_path_to_remove = if original_was_symlink_to_file {
@@ -122,42 +229,69 @@ where
         };
 
         super::remove_file(file_path_to_remove).map_err(|error| match error {
-            FileRemoveError::NotFound => FileError::NotFound,
-            FileRemoveError::NotAFile => FileError::NotAFile,
-            FileRemoveError::UnableToAccessFile { error } => {
-                FileError::UnableToAccessSourceFile { error }
+            FileRemoveError::NotFound { path } => FileError::SourceFileNotFound { path },
+            FileRemoveError::NotAFile { path } => FileError::SourcePathNotAFile { path },
+            FileRemoveError::UnableToAccessFile { path, error } => {
+                FileError::UnableToAccessSourceFile { path, error }
             }
             FileRemoveError::OtherIoError { error } => FileError::OtherIoError { error },
         })?;
 
-        Ok(num_bytes_copied)
+
+        match destination_file_exists {
+            true => Ok(MoveFileFinished::Overwritten {
+                bytes_copied: num_bytes_copied,
+                method: MoveFileMethod::CopyAndDelete,
+            }),
+            false => Ok(MoveFileFinished::Created {
+                bytes_copied: num_bytes_copied,
+                method: MoveFileMethod::CopyAndDelete,
+            }),
+        }
     }
 }
+
 
 
 /// Options that influence the [`move_file_with_progress`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct FileMoveWithProgressOptions {
-    /// Whether to allow overwriting the target file if it already exists.
-    pub overwrite_existing: bool,
+    /// How to behave for destination files that already exist.
+    pub existing_destination_file_behaviour: ExistingFileBehaviour,
 
-    /// Internal buffer size (for both reading and writing) when copying the file,
-    /// defaults to 64 KiB.
-    pub buffer_size: usize,
+    /// Internal buffer size used for reading the source file.
+    ///
+    /// Defaults to 64 KiB.
+    pub read_buffer_size: usize,
 
-    /// *Minimum* amount of bytes written between two consecutive progress reports.
+    /// Internal buffer size used for writing to the destination file.
+    ///
+    /// Defaults to 64 KiB.
+    pub write_buffer_size: usize,
+
+    /// The smallest amount of bytes processed between two consecutive progress reports.
+    ///
+    /// Increase this value to make progress reports less frequent, and decrease it
+    /// to make them more frequent.
+    ///
+    /// *Note that this is the minimum;* the real reporting interval can be larger.
+    /// Consult [`copy_file_with_progress`] documentation for more details.
+    ///
     /// Defaults to 64 KiB.
     ///
-    /// *Note that the real reporting interval can be larger.*
+    ///
+    /// [`copy_file_with_progress`]: [super::copy_file_with_progress]
     pub progress_update_byte_interval: u64,
 }
 
 impl Default for FileMoveWithProgressOptions {
     fn default() -> Self {
         Self {
-            overwrite_existing: false,
+            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
             // 64 KiB
-            buffer_size: 1024 * 64,
+            read_buffer_size: 1024 * 64,
+            // 64 KiB
+            write_buffer_size: 1024 * 64,
             // 64 KiB
             progress_update_byte_interval: 1024 * 64,
         }
@@ -167,9 +301,14 @@ impl Default for FileMoveWithProgressOptions {
 
 /// Moves a single file from the `source_file_path` to the `target_file_path` with progress reporting.
 ///
-/// The target path must be the actual target file path and cannot be a directory.
-/// Returns the number of bytes moved (i.e. the file size).
+/// The destination path must be a *file* path, and must not point to a directory.
 ///
+/// ## Return value
+/// The function returns [`MoveFileFinished`], which indicates whether the file was created,
+/// overwritten or skipped, and includes the number of bytes moved, if relevant.
+///
+///
+/// ## Progress handling
 /// You must also provide a progress handler that receives a
 /// [`&FileProgress`][super::FileProgress] on each progress update.
 /// You can control the progress update frequency with the
@@ -180,67 +319,92 @@ impl Default for FileMoveWithProgressOptions {
 ///
 ///
 /// ## Options
-/// If [`options.overwrite_existing`][FileMoveWithProgressOptions::overwrite_existing] is `true`,
-/// an existing target file will be overwritten.
-///
-/// If [`options.overwrite_existing`][FileMoveWithProgressOptions::overwrite_existing] is `false`
-/// and the target file exists, this function will return `Err`
-/// with [`FileError::AlreadyExists`][crate::error::FileError::AlreadyExists].
+/// See [`FileMoveWithProgressOptions`] for more details.
 ///
 ///
 /// ## Symbolic links
 /// If the `source_file_path` is a symbolic link to a file, the contents of the file that the link points to
 /// will be copied to the `target_file_path` and the original `source_file_path` symbolic link will be removed
-/// (i.e. the link destination will be untouched, but we won't preserve the link on the target file).
+/// (i.e. the link destination will be untouched, but we won't preserve the link on the destination file).
 ///
 ///
 /// ## Internals
 /// This function will first attempt to move the file with [`std::fs::rename`].
 /// If that fails (e.g. if paths are on different mount points / drives), a copy-and-delete will be attempted.
-pub fn move_file_with_progress<P, T, F>(
-    source_file_path: P,
-    target_file_path: T,
+pub fn move_file_with_progress<S, D, P>(
+    source_file_path: S,
+    destination_file_path: D,
     options: FileMoveWithProgressOptions,
-    mut progress_handler: F,
-) -> Result<u64, FileError>
+    mut progress_handler: P,
+) -> Result<MoveFileFinished, FileError>
 where
-    P: AsRef<Path>,
-    T: AsRef<Path>,
-    F: FnMut(&FileProgress),
+    S: AsRef<Path>,
+    D: AsRef<Path>,
+    P: FnMut(&FileProgress),
 {
     let source_file_path = source_file_path.as_ref();
-    let target_file_path = target_file_path.as_ref();
+    let destination_file_path = destination_file_path.as_ref();
 
     let ValidatedSourceFilePath {
         source_file_path: validated_source_file_path,
         original_was_symlink_to_file,
     } = validate_source_file_path(source_file_path)?;
 
-    // Ensure the target file path doesn't exist yet
-    // (unless `overwrite_existing` is `true`)
-    // and that it isn't already a directory path.
-    match target_file_path.try_exists() {
+
+    // Ensure the destination file path doesn't exist yet
+    // (unless `options.existing_destination_file_behaviour` allows it),
+    // and that it isn't a directory.
+
+    let destination_file_exists = match destination_file_path.try_exists() {
         Ok(exists) => {
             if exists {
                 // Ensure we don't try to copy the file into itself.
-                let canonicalized_source_path = validated_source_file_path
-                    .canonicalize()
-                    .map_err(|error| FileError::UnableToAccessSourceFile { error })?;
-                let canonicalized_target_path = target_file_path
-                    .canonicalize()
-                    .map_err(|error| FileError::UnableToAccessTargetFile { error })?;
+                let canonicalized_source_path =
+                    validated_source_file_path.canonicalize().map_err(|error| {
+                        FileError::UnableToAccessSourceFile {
+                            path: validated_source_file_path.clone(),
+                            error,
+                        }
+                    })?;
+                let canonicalized_target_path =
+                    destination_file_path.canonicalize().map_err(|error| {
+                        FileError::UnableToAccessDestinationFile {
+                            path: destination_file_path.to_path_buf(),
+                            error,
+                        }
+                    })?;
 
                 if canonicalized_source_path.eq(&canonicalized_target_path) {
-                    return Err(FileError::SourceAndTargetAreTheSameFile);
+                    return Err(FileError::SourceAndDestinationAreTheSame {
+                        path: canonicalized_source_path,
+                    });
                 }
             }
 
-            if exists && !options.overwrite_existing {
-                return Err(FileError::AlreadyExists);
+
+            if exists {
+                match options.existing_destination_file_behaviour {
+                    ExistingFileBehaviour::Abort => {
+                        return Err(FileError::DestinationPathAlreadyExists {
+                            path: destination_file_path.to_path_buf(),
+                        });
+                    }
+                    ExistingFileBehaviour::Skip => {
+                        return Ok(MoveFileFinished::Skipped);
+                    }
+                    ExistingFileBehaviour::Overwrite => {}
+                }
             }
+
+            exists
         }
-        Err(error) => return Err(FileError::UnableToAccessTargetFile { error }),
-    }
+        Err(error) => {
+            return Err(FileError::UnableToAccessDestinationFile {
+                path: destination_file_path.to_path_buf(),
+                error,
+            })
+        }
+    };
 
     // All checks have passed. Now we do the following:
     // - if both paths reside on the same filesystem
@@ -249,10 +413,11 @@ where
     // - otherwise we need to copy to target and remove source.
 
     if !original_was_symlink_to_file
-        && fs::rename(&validated_source_file_path, target_file_path).is_ok()
+        && fs::rename(&validated_source_file_path, destination_file_path).is_ok()
     {
-        // Get size of file that we just renamed.
-        let target_file_path_size_bytes = fs::metadata(target_file_path)
+        // Get size of file that we just renamed, emit one progress report, and return.
+
+        let target_file_path_size_bytes = fs::metadata(destination_file_path)
             .map_err(|error| FileError::OtherIoError { error })?
             .len();
 
@@ -261,20 +426,33 @@ where
             bytes_total: target_file_path_size_bytes,
         });
 
-        Ok(target_file_path_size_bytes)
+
+        match destination_file_exists {
+            true => Ok(MoveFileFinished::Overwritten {
+                bytes_copied: target_file_path_size_bytes,
+                method: MoveFileMethod::Rename,
+            }),
+            false => Ok(MoveFileFinished::Created {
+                bytes_copied: target_file_path_size_bytes,
+                method: MoveFileMethod::Rename,
+            }),
+        }
     } else {
-        // It's impossible to rename the file, so we need to copy and delete the original.
+        // It's impossible for us to just rename the file,
+        // so we need to copy and delete the original.
+
         let bytes_written = copy_file_with_progress_unchecked(
             &validated_source_file_path,
-            target_file_path,
-            FileCopyWithProgressOptions {
-                overwrite_existing: options.overwrite_existing,
-                skip_existing: false,
-                buffer_size: options.buffer_size,
+            destination_file_path,
+            CopyFileWithProgressOptions {
+                existing_destination_file_behaviour: options.existing_destination_file_behaviour,
+                read_buffer_size: options.read_buffer_size,
+                write_buffer_size: options.write_buffer_size,
                 progress_update_byte_interval: options.progress_update_byte_interval,
             },
             progress_handler,
         )?;
+
 
         let file_path_to_remove = if original_was_symlink_to_file {
             source_file_path
@@ -283,14 +461,24 @@ where
         };
 
         super::remove_file(file_path_to_remove).map_err(|error| match error {
-            FileRemoveError::NotFound => FileError::NotFound,
-            FileRemoveError::NotAFile => FileError::NotAFile,
-            FileRemoveError::UnableToAccessFile { error } => {
-                FileError::UnableToAccessSourceFile { error }
+            FileRemoveError::NotFound { path } => FileError::SourceFileNotFound { path },
+            FileRemoveError::NotAFile { path } => FileError::SourcePathNotAFile { path },
+            FileRemoveError::UnableToAccessFile { path, error } => {
+                FileError::UnableToAccessSourceFile { path, error }
             }
             FileRemoveError::OtherIoError { error } => FileError::OtherIoError { error },
         })?;
 
-        Ok(bytes_written)
+
+        match destination_file_exists {
+            true => Ok(MoveFileFinished::Overwritten {
+                bytes_copied: bytes_written,
+                method: MoveFileMethod::CopyAndDelete,
+            }),
+            false => Ok(MoveFileFinished::Created {
+                bytes_copied: bytes_written,
+                method: MoveFileMethod::CopyAndDelete,
+            }),
+        }
     }
 }

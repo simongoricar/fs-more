@@ -1,11 +1,11 @@
 use assert_matches::assert_matches;
 use fs_more::{
     directory::{
+        DestinationDirectoryRule,
         DirectoryMoveOptions,
         DirectoryMoveProgress,
         DirectoryMoveWithProgressOptions,
         DirectoryScan,
-        TargetDirectoryRule,
     },
     error::DirectoryError,
 };
@@ -31,7 +31,7 @@ pub fn move_directory() -> TestResult<()> {
         harness.root.path(),
         empty_harness.root.path(),
         DirectoryMoveOptions {
-            target_directory_rule: TargetDirectoryRule::AllowEmpty,
+            destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
         },
     );
 
@@ -81,8 +81,8 @@ pub fn error_on_move_directory_with_source_symlink_to_same_directory() -> TestRe
         symlink_path.path(),
         target_harness.root.path(),
         DirectoryMoveOptions {
-            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
-                overwrite_existing_subdirectories: true,
+            destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
+                create_missing_subdirectories: true,
                 overwrite_existing_files: true,
             },
         },
@@ -90,7 +90,7 @@ pub fn error_on_move_directory_with_source_symlink_to_same_directory() -> TestRe
 
     assert_matches!(
         move_result,
-        Err(DirectoryError::InvalidTargetDirectoryPath)
+        Err(DirectoryError::InvalidDestinationDirectoryPath)
     );
 
     target_harness_untouched
@@ -131,8 +131,8 @@ pub fn error_on_move_directory_with_progress_with_source_symlink_to_same_directo
         symlink_path.path(),
         target_harness.root.path(),
         DirectoryMoveWithProgressOptions {
-            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
-                overwrite_existing_subdirectories: true,
+            destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
+                create_missing_subdirectories: true,
                 overwrite_existing_files: true,
             },
             ..Default::default()
@@ -142,7 +142,7 @@ pub fn error_on_move_directory_with_progress_with_source_symlink_to_same_directo
 
     assert_matches!(
         move_result,
-        Err(DirectoryError::InvalidTargetDirectoryPath)
+        Err(DirectoryError::InvalidDestinationDirectoryPath)
     );
 
     target_harness_untouched
@@ -189,8 +189,8 @@ pub fn move_directory_with_source_symlink_to_different_directory() -> TestResult
         symlink_path.path(),
         copy_target_harness.root.path(),
         DirectoryMoveOptions {
-            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
-                overwrite_existing_subdirectories: true,
+            destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
+                create_missing_subdirectories: true,
                 overwrite_existing_files: true,
             },
         },
@@ -249,8 +249,8 @@ pub fn move_directory_with_progress_with_source_symlink_to_different_directory()
         symlink_path.path(),
         copy_target_harness.root.path(),
         DirectoryMoveWithProgressOptions {
-            target_directory_rule: TargetDirectoryRule::AllowNonEmpty {
-                overwrite_existing_subdirectories: true,
+            destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
+                create_missing_subdirectories: true,
                 overwrite_existing_files: true,
             },
             ..Default::default()
@@ -296,7 +296,7 @@ pub fn move_directory_with_progress() -> TestResult<()> {
         harness.root.path(),
         empty_harness.root.path(),
         DirectoryMoveWithProgressOptions {
-            target_directory_rule: TargetDirectoryRule::AllowEmpty,
+            destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
             ..Default::default()
         },
         |progress| {

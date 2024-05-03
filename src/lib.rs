@@ -1,7 +1,8 @@
 //! Convenient file and directory operations built on top of [`std::fs`] with improved error handling.
 //! Includes copying or moving files and directories with progress reporting.
 //!
-//! ## Main features
+//!
+//! # Main features
 //! - copying and moving files or directories with in-depth configuration options (including IO buffering settings, copying depth, etc.)
 //! - copying and moving files or directories **with progress reporting**, if needed,
 //! - scanning directories with depth and other options, and
@@ -13,17 +14,18 @@
 //!
 //! <br>
 //!
-//! ## Feature flags
-//! The following feature flags are available:
+//! # Feature flags
+//! The following feature flags enable optional functionality (none are included by default):
 //! - `fs-err`: enables the optional [`fs-err`](../fs_err) support, enabling more helpful underlying IO error messages
 //!   (though `fs-more` already provides many on its own).
 //! - `miette`: derives [`miette::Diagnostic`](../miette/derive.Diagnostic.html) on all
 //!   [error types](crate::error),
 //!   allowing users to conveniently call e.g. [`wrap_err`](../miette/trait.Context.html#tymethod.wrap_err) on the error.
 //!
+//!
 //! <br>
 //!
-//! ## Examples
+//! # Examples
 //!
 //! Copying a file and getting updates on the progress:
 //! ```no_run
@@ -32,11 +34,11 @@
 //! # use fs_more::file::FileCopyWithProgressOptions;
 //! # fn main() -> Result<(), FileError> {
 //! let source_path = Path::new("./source-file.txt");
-//! let target_path = Path::new("./target-file.txt");
+//! let destination_path = Path::new("./target-file.txt");
 //!
 //! let bytes_copied = fs_more::file::copy_file_with_progress(
 //!     source_path,
-//!     target_path,
+//!     destination_path,
 //!     FileCopyWithProgressOptions::default(),
 //!     |progress| {
 //!         let percent_copied =
@@ -57,16 +59,16 @@
 //! # use std::path::Path;
 //! # use fs_more::error::DirectoryError;
 //! # use fs_more::directory::DirectoryMoveWithProgressOptions;
-//! # use fs_more::directory::TargetDirectoryRule;
+//! # use fs_more::directory::DestinationDirectoryRule;
 //! # fn main() -> Result<(), DirectoryError> {
 //! let source_path = Path::new("./source-directory");
-//! let target_path = Path::new("./target-directory");
+//! let destination_path = Path::new("./target-directory");
 //!
 //! let moved = fs_more::directory::move_directory_with_progress(
 //!     source_path,
-//!     target_path,
+//!     destination_path,
 //!     DirectoryMoveWithProgressOptions {
-//!         target_directory_rule: TargetDirectoryRule::AllowEmpty,
+//!         destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
 //!         ..Default::default()
 //!     },
 //!     |progress| {
@@ -94,9 +96,10 @@
 //! # }
 //! ```
 //!
+//!
 //! <br>
 //!
-//! ## Inspirations
+//! # Inspirations
 //!
 //! <details>
 //! <summary>Inspired by <code>fs_extra</code></summary>
@@ -107,8 +110,9 @@
 //! </details>
 //!
 
-#![deny(missing_docs)]
+#![warn(missing_docs)]
 
 pub mod directory;
 pub mod error;
 pub mod file;
+mod macros;

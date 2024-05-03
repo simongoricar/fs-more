@@ -1,12 +1,24 @@
-#[cfg(not(feature = "fs-err"))]
-use std::fs;
 use std::path::{Path, PathBuf};
 
-#[cfg(feature = "fs-err")]
-use fs_err as fs;
+use_enabled_fs_module!();
 
-use super::{common::TargetDirectoryRule, is_directory_empty_unchecked};
-use crate::{directory::common::rejoin_source_subpath_onto_target, error::DirectoryError};
+use cfg_if::cfg_if;
+
+use super::{
+    common::DestinationDirectoryRule,
+    is_directory_empty_unchecked,
+    DirectoryCopyDepthLimit,
+};
+use crate::{
+    directory::common::join_relative_source_path_onto_destination,
+    error::{
+        CopyDirectoryPlanError,
+        CopyDirectoryPreparationError,
+        DestinationDirectoryPathValidationError,
+        SourceDirectoryPathValidationError,
+    },
+    use_enabled_fs_module,
+};
 
 /// Represents a file copy or directory creation operation.
 ///
@@ -16,152 +28,286 @@ pub(crate) enum QueuedOperation {
     CopyFile {
         source_file_path: PathBuf,
         source_size_bytes: u64,
-        target_file_path: PathBuf,
+        destination_file_path: PathBuf,
     },
     CreateDirectory {
         source_size_bytes: u64,
-        target_directory_path: PathBuf,
+        destination_directory_path: PathBuf,
     },
 }
 
+
+
+/// Information about a validated source path (used in copying and moving directories).
+#[derive(Clone, Debug)]
+pub(crate) struct ValidatedSourceDirectory {
+    pub(crate) directory_path: PathBuf,
+}
+
 /// Ensures the given source directory path is valid.
-/// This means that:
-/// - it exists,
-/// - is a directory.
 ///
-/// The returned path is a canonicalized version of the provided path.
+/// This means that it exists, and that it is a directory.
+/// Failing to find out whether it exists, or any similar read restriction,
+/// will result in an error as well.
+///
+/// The returned [`ValidatedSourceDirectory`] contains the canonical path
+/// of the provided `source_directory_path` which you should use in the future,
+/// and, most importantly, for any path comparisons.
+///
+/// This also means that if `source_directory_path` is a symbolic link to a directory,
+/// the validated version will have followed the link to its destination.
 pub(super) fn validate_source_directory_path(
     source_directory_path: &Path,
-) -> Result<PathBuf, DirectoryError> {
+) -> Result<ValidatedSourceDirectory, SourceDirectoryPathValidationError> {
     // Ensure the source directory path exists. We use `try_exists`
     // instead of `exists` to catch permission and other IO errors
     // as distinct from the `DirectoryError::NotFound` error.
     match source_directory_path.try_exists() {
         Ok(exists) => {
             if !exists {
-                return Err(DirectoryError::SourceDirectoryNotFound);
+                return Err(SourceDirectoryPathValidationError::NotFound {
+                    directory_path: source_directory_path.to_path_buf(),
+                });
             }
         }
         Err(error) => {
-            return Err(DirectoryError::UnableToAccessSource { error });
+            return Err(
+                SourceDirectoryPathValidationError::UnableToAccess {
+                    directory_path: source_directory_path.to_path_buf(),
+                    error,
+                },
+            );
         }
     }
 
     if !source_directory_path.is_dir() {
-        return Err(DirectoryError::SourceDirectoryIsNotADirectory);
+        return Err(
+            SourceDirectoryPathValidationError::NotADirectory {
+                path: source_directory_path.to_path_buf(),
+            },
+        );
     }
 
-    let canonicalized_path = fs::canonicalize(source_directory_path)
-        .map_err(|error| DirectoryError::OtherIoError { error })?;
 
-    Ok(dunce::simplified(&canonicalized_path).to_path_buf())
+    let canonical_source_directory_path =
+        fs::canonicalize(source_directory_path).map_err(|error| {
+            SourceDirectoryPathValidationError::UnableToCanonicalize {
+                directory_path: source_directory_path.to_path_buf(),
+                error,
+            }
+        })?;
+
+
+    #[cfg(feature = "dunce")]
+    {
+        let de_unced_canonical_path =
+            dunce::simplified(&canonical_source_directory_path).to_path_buf();
+
+        Ok(ValidatedSourceDirectory {
+            directory_path: de_unced_canonical_path,
+        })
+    }
+
+    #[cfg(not(feature = "dunce"))]
+    {
+        Ok(ValidatedSourceDirectory {
+            directory_path: canonical_source_directory_path,
+        })
+    }
 }
+
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum DestinationDirectoryState {
+    /// Destination directory does not exist.
+    DoesNotExist,
+
+    /// Destination directory exists, but is empty.
+    IsEmpty,
+
+    /// Destination directory exists, and is not empty.
+    IsNotEmpty,
+}
+
+impl DestinationDirectoryState {
+    pub(crate) fn exists(&self) -> bool {
+        !matches!(self, Self::DoesNotExist)
+    }
+}
+
 
 /// Information about a validated target path (used in copying and moving directories).
 ///
 /// "Valid" in this context means that it respects the user-provided `options`,
 /// see [`validate_target_directory_path`].
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub(crate) struct ValidatedTargetPath {
+#[derive(Clone, Debug)]
+pub(crate) struct ValidatedDestinationDirectory {
     pub(crate) directory_path: PathBuf,
-    pub(crate) exists: bool,
-    pub(crate) is_empty_directory: Option<bool>,
+    pub(crate) state: DestinationDirectoryState,
 }
 
-/// Ensures the given target directory path is valid:
-/// This means either that:
-/// - it exists (if `allow_existing_target_directory == true`, otherwise, this is an `Err`),
-/// - it doesn't exist.
+/// Ensures the given destination directory path is valid.
 ///
-/// The returned tuple consists of:
-/// - a `PathBuf`, which is a cleaned `target_directory_path` (with the `path_clean` library), and,
-/// - a `bool`, which indicates whether the directory needs to be created.
-pub(super) fn validate_target_directory_path(
-    target_directory_path: &Path,
-    target_directory_rules: &TargetDirectoryRule,
-) -> Result<ValidatedTargetPath, DirectoryError> {
-    let target_directory_exists = target_directory_path
-        .try_exists()
-        .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
+/// This means that it respects the provided [`DestinationDirectoryRule`].
+///
+/// The returned [`ValidatedDestinationDirectory`] contains the canonical path
+/// of the provided `destination_directory_path` which you should use in the future,
+/// and, most importantly, for any path comparisons.
+///
+/// This also means that if `destination_directory_path` exists, and is a symbolic link to a directory,
+/// the validated version will have followed the link to its target.
+pub(super) fn validate_destination_directory_path(
+    destination_directory_path: &Path,
+    destination_directory_rule: DestinationDirectoryRule,
+) -> Result<ValidatedDestinationDirectory, DestinationDirectoryPathValidationError> {
+    let destination_directory_exists =
+        destination_directory_path.try_exists().map_err(|error| {
+            DestinationDirectoryPathValidationError::UnableToAccess {
+                directory_path: destination_directory_path.to_path_buf(),
+                error,
+            }
+        })?;
 
-    // If `target_directory_path` does not point to a directory,
-    // but instead e.g. a file, we should abort.
-    if target_directory_exists && !target_directory_path.is_dir() {
-        return Err(DirectoryError::InvalidTargetDirectoryPath);
+    // If `destination_directory_path` exists, but does not point to a directory,
+    // we should abort.
+    if destination_directory_exists && !destination_directory_path.is_dir() {
+        return Err(
+            DestinationDirectoryPathValidationError::NotADirectory {
+                directory_path: destination_directory_path.to_path_buf(),
+            },
+        );
     }
 
-    let is_empty = if target_directory_exists {
-        is_directory_empty_unchecked(target_directory_path)
-            .map(Some)
-            .map_err(|error| DirectoryError::OtherIoError { error })?
-    } else {
-        None
-    };
+
+    let resolved_destination_directory_path = if destination_directory_exists {
+        let canonical_destination_directory_path = fs::canonicalize(destination_directory_path)
+            .map_err(
+                |error| DestinationDirectoryPathValidationError::UnableToCanonicalize {
+                    directory_path: destination_directory_path.to_path_buf(),
+                    error,
+                },
+            )?;
 
 
-    match target_directory_rules {
-        TargetDirectoryRule::DisallowExisting if target_directory_exists => {
-            return Err(DirectoryError::TargetItemAlreadyExists {
-                path: target_directory_path.to_path_buf(),
-            });
-        }
-        TargetDirectoryRule::AllowEmpty if target_directory_exists => {
-            if !is_empty.unwrap_or(true) {
-                return Err(DirectoryError::TargetDirectoryIsNotEmpty);
+        cfg_if! {
+            if #[cfg(feature = "dunce")] {
+                dunce::simplified(&canonical_destination_directory_path).to_path_buf()
+            } else {
+                canonical_destination_directory_path
             }
         }
-        _ => {}
+    } else {
+        destination_directory_path.to_path_buf()
     };
 
-    let clean_path = path_clean::clean(target_directory_path);
 
-    Ok(ValidatedTargetPath {
-        directory_path: clean_path,
-        exists: target_directory_exists,
-        is_empty_directory: is_empty,
+    let destination_directory_state = if destination_directory_exists {
+        let is_empty = is_directory_empty_unchecked(&resolved_destination_directory_path).map_err(
+            |error| DestinationDirectoryPathValidationError::UnableToAccess {
+                directory_path: resolved_destination_directory_path.to_path_buf(),
+                error,
+            },
+        )?;
+
+        if is_empty {
+            DestinationDirectoryState::IsEmpty
+        } else {
+            DestinationDirectoryState::IsNotEmpty
+        }
+    } else {
+        DestinationDirectoryState::DoesNotExist
+    };
+
+
+    match destination_directory_rule {
+        DestinationDirectoryRule::DisallowExisting => {
+            if !matches!(
+                destination_directory_state,
+                DestinationDirectoryState::DoesNotExist
+            ) {
+                return Err(
+                    DestinationDirectoryPathValidationError::AlreadyExists {
+                        directory_path: resolved_destination_directory_path,
+                        destination_directory_rule,
+                    },
+                );
+            }
+        }
+        DestinationDirectoryRule::AllowEmpty => {
+            if !matches!(
+                destination_directory_state,
+                DestinationDirectoryState::DoesNotExist | DestinationDirectoryState::IsEmpty
+            ) {
+                return Err(
+                    DestinationDirectoryPathValidationError::NotEmpty {
+                        directory_path: resolved_destination_directory_path,
+                        destination_directory_rule,
+                    },
+                );
+            }
+        }
+        DestinationDirectoryRule::AllowNonEmpty { .. } => {}
+    }
+
+
+    Ok(ValidatedDestinationDirectory {
+        directory_path: resolved_destination_directory_path,
+        state: destination_directory_state,
     })
 }
 
-pub(super) fn validate_source_target_directory_pair(
+
+
+/// Given a source and destination directory path, intended for copying or moving,
+/// this function ensures the provided path *pair* is valid.
+///
+/// **Both paths MUST already be their canonical versions**,
+/// for example, outputs of [`validate_source_directory_path`]
+/// and [`validate_destination_directory_path`].
+///
+/// This fails, for example, when `source_directory_path` is a sub-path
+/// of `destination_directory_path`.
+pub(super) fn validate_source_destination_directory_pair(
     source_directory_path: &Path,
-    target_directory_path: &Path,
-) -> Result<(), DirectoryError> {
-    // Ensure `target_directory_path` isn't equal or a subdirectory of `source_directory_path`˙.
-    if target_directory_path.starts_with(source_directory_path) {
-        return Err(DirectoryError::InvalidTargetDirectoryPath);
+    destination_directory_path: &Path,
+) -> Result<(), DestinationDirectoryPathValidationError> {
+    // Ensure `destination_directory_path` isn't equal,
+    // or a subdirectory of, `source_directory_path`˙.
+    if destination_directory_path.starts_with(source_directory_path) {
+        return Err(
+            DestinationDirectoryPathValidationError::DescendantOfSourceDirectory {
+                destination_directory_path: destination_directory_path.to_path_buf(),
+                source_directory_path: source_directory_path.to_path_buf(),
+            },
+        );
     }
 
     Ok(())
 }
 
 
-/// Given a source and target directory as well as, optionally, a maximum copy depth,
+/// Given a source and destination directory as well as the maximum copy depth,
 /// this function builds a list of [`QueuedOperation`]s that are needed to fully,
-/// or up to the `maximum_depth` limit, copy the source directory to the target directory.
+/// or up to the depth limit, copy the source directory to the destination directory.
 ///
 /// The order of directory creation and file copying operations is such that
-/// for any file in the list, its directory has previously been created
-/// (its creation appears before it in the queue).
+/// for any file in the list, the creation of its parent directory
+/// appears before it in the queue.
 ///
-/// Note, however, that **the queued operations do not include creation of the `target_directory_root_path`
-/// directory itself**, even if that is necessary in your case.
-fn build_directory_copy_queue<S, T>(
-    source_directory_root_path: S,
-    target_directory_root_path: T,
-    maximum_depth: Option<usize>,
-) -> Result<Vec<QueuedOperation>, DirectoryError>
-where
-    S: Into<PathBuf>,
-    T: Into<PathBuf>,
-{
-    let source_directory_root_path = source_directory_root_path.into();
-    let target_directory_root_path = target_directory_root_path.into();
-
+/// Note, however, that **the queued operations do not include creation of
+/// the `destination_directory_path` directory itself**,
+/// even if that is necessary for a copy; it is up to the consumer to create
+/// `destination_directory_path`, if need be, before executing the queue.
+fn scan_and_plan_directory_copy(
+    source_directory_path: PathBuf,
+    destination_directory_path: PathBuf,
+    copy_depth_limit: DirectoryCopyDepthLimit,
+) -> Result<Vec<QueuedOperation>, CopyDirectoryPlanError> {
     let mut operation_queue: Vec<QueuedOperation> = Vec::new();
 
 
     // Scan the source directory and queue all copy and
-    // directory create operations that need to happen.
+    // directory creation operations that need to happen.
     struct PendingDirectoryScan {
         source_directory_path: PathBuf,
         depth: usize,
@@ -169,82 +315,124 @@ where
 
     let mut directory_scan_queue = Vec::new();
     directory_scan_queue.push(PendingDirectoryScan {
-        source_directory_path: source_directory_root_path.clone(),
+        source_directory_path: source_directory_path.clone(),
         depth: 0,
     });
 
-    // Perform directory scans using a queue.
+
     while let Some(next_directory) = directory_scan_queue.pop() {
         // Scan the directory for its files and directories.
         // Files are queued for copying, directories are queued for creation.
-        let directory_iterator = fs::read_dir(&next_directory.source_directory_path)
-            .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
+        let directory_iterator =
+            fs::read_dir(&next_directory.source_directory_path).map_err(|error| {
+                CopyDirectoryPlanError::UnableToAccess {
+                    path: next_directory.source_directory_path.clone(),
+                    error,
+                }
+            })?;
 
         for directory_item in directory_iterator {
             let directory_item =
-                directory_item.map_err(|error| DirectoryError::UnableToAccessSource { error })?;
+                directory_item.map_err(|error| CopyDirectoryPlanError::UnableToAccess {
+                    path: next_directory.source_directory_path.clone(),
+                    error,
+                })?;
 
             let directory_item_source_path = directory_item.path();
-            let directory_item_target_path = rejoin_source_subpath_onto_target(
-                &source_directory_root_path,
+
+            // Remaps `directory_item_source_path` (relative to `next_directory.source_directory_path`)
+            // onto the destination directory (`destination_directory_path`), preserving directory structure.
+            let directory_item_destination_path = join_relative_source_path_onto_destination(
+                &source_directory_path,
                 &directory_item_source_path,
-                &target_directory_root_path,
+                &destination_directory_path,
+            )
+            .map_err(
+                |error| CopyDirectoryPlanError::EntryEscapesSourceDirectory { path: error.path },
             )?;
 
-            let item_type = directory_item
-                .file_type()
-                .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
+
+            let item_type = directory_item.file_type().map_err(|error| {
+                CopyDirectoryPlanError::UnableToAccess {
+                    path: directory_item_source_path.clone(),
+                    error,
+                }
+            })?;
+
 
             if item_type.is_file() {
-                let file_metadata = directory_item
-                    .metadata()
-                    .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
+                let file_metadata = directory_item.metadata().map_err(|error| {
+                    CopyDirectoryPlanError::UnableToAccess {
+                        path: directory_item_source_path.clone(),
+                        error,
+                    }
+                })?;
 
                 let file_size_in_bytes = file_metadata.len();
+
 
                 operation_queue.push(QueuedOperation::CopyFile {
                     source_file_path: directory_item_source_path,
                     source_size_bytes: file_size_in_bytes,
-                    target_file_path: directory_item_target_path,
+                    destination_file_path: directory_item_destination_path,
                 });
             } else if item_type.is_dir() {
-                let directory_metadata = directory_item
-                    .metadata()
-                    .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
+                let directory_metadata = directory_item.metadata().map_err(|error| {
+                    CopyDirectoryPlanError::UnableToAccess {
+                        path: directory_item_source_path.clone(),
+                        error,
+                    }
+                })?;
 
                 // Note that this is the size of the directory itself, not of its contents.
                 let directory_size_in_bytes = directory_metadata.len();
 
+
                 operation_queue.push(QueuedOperation::CreateDirectory {
                     source_size_bytes: directory_size_in_bytes,
-                    target_directory_path: directory_item_target_path,
+                    destination_directory_path: directory_item_destination_path,
                 });
 
-                // If we haven't reached the maximum depth yet, we queue the directory for scanning.
-                if let Some(maximum_depth) = maximum_depth {
-                    if next_directory.depth < maximum_depth {
+
+                // If we haven't reached the maximum depth yet, we queue the directory
+                // to be scanned for further files and sub-directories.
+                match copy_depth_limit {
+                    DirectoryCopyDepthLimit::Limited { maximum_depth } => {
+                        if next_directory.depth < maximum_depth {
+                            directory_scan_queue.push(PendingDirectoryScan {
+                                source_directory_path: directory_item_source_path,
+                                depth: next_directory.depth + 1,
+                            });
+                        }
+                    }
+                    DirectoryCopyDepthLimit::Unlimited => {
                         directory_scan_queue.push(PendingDirectoryScan {
                             source_directory_path: directory_item_source_path,
                             depth: next_directory.depth + 1,
                         });
                     }
-                } else {
-                    directory_scan_queue.push(PendingDirectoryScan {
-                        source_directory_path: directory_item_source_path,
-                        depth: next_directory.depth + 1,
-                    });
-                }
+                };
             } else if item_type.is_symlink() {
-                // If the path is a symbolic link, we need to follow it and queue a copy from the destination file.
-                // Can point to either a directory or a file.
+                // If the path is a symbolic link, we need to follow it and queue a copy from the underlying file.
+                // We need to keep in mind that the symlink can point to either a directory or a file.
 
                 // Now we should retrieve the metadata of the target of the symbolic link
-                // (unlike DirEntry::metadata, this metadata call *does* follow symolic links).
-                let underlying_path = fs::canonicalize(&directory_item_source_path)
-                    .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
+                // (unlike [`DirEntry::metadata`], this metadata call *does* follow symolic links).
+                let underlying_path =
+                    fs::canonicalize(&directory_item_source_path).map_err(|error| {
+                        CopyDirectoryPlanError::UnableToAccess {
+                            path: directory_item_source_path.clone(),
+                            error,
+                        }
+                    })?;
 
-                let underlying_item_metadata = fs::metadata(&underlying_path)
-                    .map_err(|error| DirectoryError::UnableToAccessSource { error })?;
+                let underlying_item_metadata = fs::metadata(&underlying_path).map_err(|error| {
+                    CopyDirectoryPlanError::UnableToAccess {
+                        path: underlying_path.clone(),
+                        error,
+                    }
+                })?;
+
 
                 if underlying_item_metadata.is_file() {
                     let underlying_file_size_in_bytes = underlying_item_metadata.len();
@@ -252,7 +440,7 @@ where
                     operation_queue.push(QueuedOperation::CopyFile {
                         source_file_path: underlying_path,
                         source_size_bytes: underlying_file_size_in_bytes,
-                        target_file_path: directory_item_target_path,
+                        destination_file_path: directory_item_destination_path,
                     });
                 } else if underlying_item_metadata.is_dir() {
                     // Note that this is the size of the directory itself, not of its contents.
@@ -260,23 +448,26 @@ where
 
                     operation_queue.push(QueuedOperation::CreateDirectory {
                         source_size_bytes: underlying_directory_size_in_bytes,
-                        target_directory_path: directory_item_target_path,
+                        destination_directory_path: directory_item_destination_path,
                     });
 
                     // If we haven't reached the maximum depth yet, we queue the directory for scanning.
-                    if let Some(maximum_depth) = maximum_depth {
-                        if next_directory.depth < maximum_depth {
+                    match copy_depth_limit {
+                        DirectoryCopyDepthLimit::Limited { maximum_depth } => {
+                            if next_directory.depth < maximum_depth {
+                                directory_scan_queue.push(PendingDirectoryScan {
+                                    source_directory_path: directory_item_source_path.clone(),
+                                    depth: next_directory.depth + 1,
+                                });
+                            }
+                        }
+                        DirectoryCopyDepthLimit::Unlimited => {
                             directory_scan_queue.push(PendingDirectoryScan {
                                 source_directory_path: directory_item_source_path,
                                 depth: next_directory.depth + 1,
                             });
                         }
-                    } else {
-                        directory_scan_queue.push(PendingDirectoryScan {
-                            source_directory_path: directory_item_source_path,
-                            depth: next_directory.depth + 1,
-                        });
-                    }
+                    };
                 }
             }
         }
@@ -285,45 +476,72 @@ where
     Ok(operation_queue)
 }
 
-/// Given a list of queued operations, this function validates that
-/// the files we'd be copying into or target directories we'd create don't exist yet
-/// (or however the [`TargetDirectoryRule`] is configured).
+/// Given a list of references to [`QueuedOperation`]s, this function validates that
+/// the files and directories this queue would process match the provided [`DestinationDirectoryRule`].
 fn check_operation_queue_for_collisions(
     queue: &[QueuedOperation],
-    target_directory_rules: &TargetDirectoryRule,
-) -> Result<(), DirectoryError> {
-    let can_overwrite_files = target_directory_rules.allows_overwriting_existing_files();
-    let can_overwrite_directories =
-        target_directory_rules.allows_overwriting_existing_directories();
+    destination_directory_rules: DestinationDirectoryRule,
+) -> Result<(), CopyDirectoryPlanError> {
+    let can_overwrite_existing_destination_files =
+        destination_directory_rules.allows_overwriting_existing_destination_files();
 
-    if can_overwrite_files && can_overwrite_directories {
-        // There is nothing to check, we can't have any collisions
+    let should_ignore_existing_destination_sub_directory =
+        destination_directory_rules.ignores_existing_destination_sub_directories();
+
+
+    if can_overwrite_existing_destination_files && should_ignore_existing_destination_sub_directory
+    {
+        // There is nothing to check, as we can have any collisions we want
         // if we allow everything to be overwritten.
         return Ok(());
     }
 
+
     for queue_item in queue {
         match queue_item {
             QueuedOperation::CopyFile {
-                target_file_path, ..
-            } if !can_overwrite_files => {
-                if target_file_path.exists() {
-                    return Err(DirectoryError::TargetItemAlreadyExists {
-                        path: target_file_path.clone(),
-                    });
+                destination_file_path,
+                ..
+            } => {
+                if !can_overwrite_existing_destination_files {
+                    let destination_file_exists =
+                        destination_file_path.try_exists().map_err(|error| {
+                            CopyDirectoryPlanError::UnableToAccess {
+                                path: destination_file_path.to_path_buf(),
+                                error,
+                            }
+                        })?;
+
+                    if destination_file_exists {
+                        return Err(
+                            CopyDirectoryPlanError::DestinationItemAlreadyExists {
+                                path: destination_file_path.clone(),
+                            },
+                        );
+                    }
                 }
             }
             QueuedOperation::CreateDirectory {
-                target_directory_path,
+                destination_directory_path,
                 ..
-            } if !can_overwrite_directories => {
-                if target_directory_path.exists() {
-                    return Err(DirectoryError::TargetItemAlreadyExists {
-                        path: target_directory_path.clone(),
-                    });
+            } => {
+                if !should_ignore_existing_destination_sub_directory {
+                    let destination_directory_exists = destination_directory_path
+                        .try_exists()
+                        .map_err(|error| CopyDirectoryPlanError::UnableToAccess {
+                            path: destination_directory_path.to_path_buf(),
+                            error,
+                        })?;
+
+                    if destination_directory_exists {
+                        return Err(
+                            CopyDirectoryPlanError::DestinationItemAlreadyExists {
+                                path: destination_directory_path.clone(),
+                            },
+                        );
+                    }
                 }
             }
-            _ => {}
         }
     }
 
@@ -332,72 +550,76 @@ fn check_operation_queue_for_collisions(
 
 
 
-/// An auxiliary struct that prepares for a directory copy (with progress).
+/// An auxiliary struct that contains a set of operation required for a directory copy.
 ///
-/// Start by calling [`Self::prepare`].
-pub(crate) struct PreparedDirectoryCopy {
-    /// What the copy target is. This is a validated path.
+/// It can be initialized by calling [`Self::prepare`] or [`Self::prepare_with_validated`].
+pub(crate) struct DirectoryCopyPrepared {
+    /// The copy destination.
     ///
-    /// "Valid" in this context means that it respects the user-provided `options`,
-    /// see [`validate_target_directory_path`].
-    pub(crate) validated_target: ValidatedTargetPath,
+    /// The destination is already validated, which in this context means that
+    /// it respects the user-provided `options`
+    /// (see [`validate_destination_directory_path`] and [`validate_source_destination_directory_pair`]).
+    pub(crate) validated_destination_directory: ValidatedDestinationDirectory,
 
-    /// An array of required file copy and directory create operations
-    /// that togeher form a full directory copy.
-    pub(crate) required_operations: Vec<QueuedOperation>,
+    /// An array of ordered file copy and directory creation operations
+    /// that togeher form a requested directory copy.
+    pub(crate) operation_queue: Vec<QueuedOperation>,
 
     /// How many bytes will need to be copied (i.e. the source directory size).
-    pub(crate) bytes_total: u64,
+    pub(crate) total_bytes: u64,
 }
 
 
-impl PreparedDirectoryCopy {
+impl DirectoryCopyPrepared {
     /// Prepare for a new directory copy.
-    /// This includes validating the source and target paths and preparing the operation queue.
+    ///
+    /// This includes validating both the source and destination directory paths
+    /// as well as preparing the operation queue.
     pub fn prepare(
         source_directory_path: &Path,
-        target_directory_path: &Path,
-        maximum_copy_depth: Option<usize>,
-        target_directory_rule: &TargetDirectoryRule,
-    ) -> Result<Self, DirectoryError> {
-        let (source_directory_path, validated_target) = Self::validate_source_and_target_path_pair(
-            source_directory_path,
-            target_directory_path,
-            target_directory_rule,
-        )?;
+        destination_directory_path: &Path,
+        destination_directory_rule: DestinationDirectoryRule,
+        copy_depth_limit: DirectoryCopyDepthLimit,
+    ) -> Result<Self, CopyDirectoryPreparationError> {
+        let (canonical_source_directory_path, validated_destination) =
+            Self::validate_source_and_destination(
+                source_directory_path,
+                destination_directory_path,
+                destination_directory_rule,
+            )?;
 
         Self::prepare_with_validated(
-            source_directory_path,
-            validated_target,
-            maximum_copy_depth,
-            target_directory_rule,
+            canonical_source_directory_path,
+            validated_destination,
+            destination_directory_rule,
+            copy_depth_limit,
         )
+        .map_err(CopyDirectoryPreparationError::CopyPlanningError)
     }
 
-    /// Prepare for a new directory copy.
-    /// This initialization variant expects the target path to already be validated.
+    /// Prepare for a new directory copy with already-validated source and destination.
     ///
     /// This preparation therefore only includes preparing the operation queue.
     pub fn prepare_with_validated(
-        validated_source_directory_path: PathBuf,
-        validated_target: ValidatedTargetPath,
-        maximum_copy_depth: Option<usize>,
-        target_directory_rule: &TargetDirectoryRule,
-    ) -> Result<Self, DirectoryError> {
+        validated_source_directory: ValidatedSourceDirectory,
+        validated_destination_directory: ValidatedDestinationDirectory,
+        destination_directory_rule: DestinationDirectoryRule,
+        copy_depth_limit: DirectoryCopyDepthLimit,
+    ) -> Result<Self, CopyDirectoryPlanError> {
         let operations = Self::prepare_directory_operations(
-            validated_source_directory_path.clone(),
-            validated_target.directory_path.clone(),
-            maximum_copy_depth,
-            target_directory_rule,
+            validated_source_directory.directory_path,
+            validated_destination_directory.directory_path.clone(),
+            destination_directory_rule,
+            copy_depth_limit,
         )?;
 
         let bytes_total = Self::calculate_total_bytes_to_be_copied(&operations);
 
 
         Ok(Self {
-            validated_target,
-            required_operations: operations,
-            bytes_total,
+            validated_destination_directory,
+            operation_queue: operations,
+            total_bytes: bytes_total,
         })
     }
 
@@ -415,44 +637,66 @@ impl PreparedDirectoryCopy {
             .sum::<u64>()
     }
 
-    fn validate_source_and_target_path_pair(
+    fn validate_source_and_destination(
         source_directory_path: &Path,
-        target_directory_path: &Path,
-        target_directory_rule: &TargetDirectoryRule,
-    ) -> Result<(PathBuf, ValidatedTargetPath), DirectoryError> {
-        let source_directory_path = validate_source_directory_path(source_directory_path)?;
-        let validated_target =
-            validate_target_directory_path(target_directory_path, target_directory_rule)?;
-
-        validate_source_target_directory_pair(
-            &source_directory_path,
-            &validated_target.directory_path,
+        destination_directory_path: &Path,
+        destination_directory_rule: DestinationDirectoryRule,
+    ) -> Result<
+        (
+            ValidatedSourceDirectory,
+            ValidatedDestinationDirectory,
+        ),
+        CopyDirectoryPreparationError,
+    > {
+        let validated_source_directory = validate_source_directory_path(source_directory_path)?;
+        let validated_target_directory = validate_destination_directory_path(
+            destination_directory_path,
+            destination_directory_rule,
         )?;
 
-        Ok((source_directory_path, validated_target))
+        validate_source_destination_directory_pair(
+            &validated_source_directory.directory_path,
+            &validated_target_directory.directory_path,
+        )?;
+
+        Ok((
+            validated_source_directory,
+            validated_target_directory,
+        ))
     }
 
+    /// Scans the source directory and prepares a plan (a set of operations)
+    /// to copy the source directory to the destination directory, as confgured.
+    ///
+    /// <br>
+    ///
+    /// We also do a destination directory collision check in the hopes of catching existing mismatches
+    /// of the provided `destination_directory_rule` early, before we actually copy any file at all.
+    /// This way the target directory stays intact if there is any collision,
+    /// instead of returning an error after having copied some files already,
+    /// which would leave the destination directory in an unpredictable state.
+    ///
+    /// It's of course still possible that the destination directory ends up in an unpredictable state,
+    /// since a [time-of-check time-of-use](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use)
+    /// race condition is still possible.
+    /// However, those cases should be very rare and are essentially unsolvable,
+    /// unless there was a robust rollback mechanism (but this would require platform-specific implementation).
+    /// For example: Windows
+    /// [cautions against using transactional NTFS](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-findfirstfiletransacteda)).
     fn prepare_directory_operations(
         source_directory_path: PathBuf,
-        target_directory_path: PathBuf,
-        maximum_copy_depth: Option<usize>,
-        target_directory_rule: &TargetDirectoryRule,
-    ) -> Result<Vec<QueuedOperation>, DirectoryError> {
+        destination_directory_path: PathBuf,
+        destination_directory_rule: DestinationDirectoryRule,
+        copy_depth_limit: DirectoryCopyDepthLimit,
+    ) -> Result<Vec<QueuedOperation>, CopyDirectoryPlanError> {
         // Initialize a queue of file copy or directory create operations.
-        let copy_queue = build_directory_copy_queue(
+        let copy_queue = scan_and_plan_directory_copy(
             source_directory_path,
-            target_directory_path,
-            maximum_copy_depth,
+            destination_directory_path,
+            copy_depth_limit,
         )?;
 
-        // We should do a reasonable target directory file/directory collision check and return a TargetItemAlreadyExists early,
-        // before we copy any file at all. This way the target directory stays intact as often as possible,
-        // instead of returning an error after having copied some files already (which would be hard to reverse).
-        // It's still possible that due to a race condition we don't catch a collision here yet,
-        // but that should be very rare and is essentially unsolvable (unless there was
-        // a robust rollback mechanism, which is out of scope for this project).
-
-        check_operation_queue_for_collisions(&copy_queue, target_directory_rule)?;
+        check_operation_queue_for_collisions(&copy_queue, destination_directory_rule)?;
 
         Ok(copy_queue)
     }

@@ -534,9 +534,9 @@ pub struct AssertableFilePath {
     /// - specific contents - indicated by `Some(byte contents)`.
     ///
     /// This is influenced by the choice of initialization method:
-    /// [`from_path_pure`][Self::from_path_pure] will set this to `None`,
+    /// [`from_path`][Self::from_path] will set this to `None`,
     /// indicating we don't know anything about content.
-    /// [`from_path_with_capture`][Self::from_path_with_capture], however, will
+    /// [`from_path_with_captured_content`][Self::from_path_with_captured_content], however, will
     /// read the file and save a snapshot of the contents.
     ///
     /// This is used by the [`assert_content_unchanged`][Self::assert_content_unchanged]
@@ -648,7 +648,7 @@ impl AssertableFilePath {
         Ok(())
     }
 
-    /// Creates a symbolic link to a target file.
+    /// Creates a symbolic link to a destination file.
     pub fn symlink_to_file<P>(&self, target_path: P) -> Result<(), AssertableFilePathError>
     where
         P: AsRef<Path>,

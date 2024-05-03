@@ -1,28 +1,47 @@
 use std::path::{Path, PathBuf};
 
-use crate::error::DirectoryError;
+use crate::{error::SourceSubPathNotUnderBaseSourceDirectory, file::ExistingFileBehaviour};
 
-/// Specifies whether you allow the target directory to exist
+
+/// Rules that dictate how existing destination sub-directories
+/// are handled when copying or moving.
+///
+/// See also: [`DestinationDirectoryRule`].
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+pub enum ExistingSubDirectoryBehaviour {
+    /// An existing destination sub-directory
+    /// will cause an error if the copy operation requires
+    /// copying into it.
+    Abort,
+
+    /// An existing destination sub-directory will have no effect.
+    Continue,
+}
+
+/// Specifies whether you allow the destination directory to exist
 /// before copying or moving files or directories into it.
 ///
 /// If you allow the target directory to exist, you can also specify whether it must be empty;
 /// if not, you may also specify whether you allow files and directories to be overwritten.
 ///
+///
 /// ## Defaults
-/// [`Default`] is implemented for this enum. The default value is [`TargetDirectoryRule::AllowEmpty`].
+/// [`Default`] is implemented for this enum. The default value is [`DestinationDirectoryRule::AllowEmpty`].
+///
 ///
 /// ## Examples
 /// If you want the associated directory copying or moving function to
-/// *return an error if the target directory already exists*, use [`TargetDirectoryRule::DisallowExisting`];
+/// *return an error if the target directory already exists*, use [`DestinationDirectoryRule::DisallowExisting`];
 ///
-/// If you want to copy into an *existing empty target directory*, you should use [`TargetDirectoryRule::AllowEmpty`]
+/// If you want to copy into an *existing empty target directory*, you should use [`DestinationDirectoryRule::AllowEmpty`]
 /// (this rule *does not require* the target directory to exist and will create one if missing).
 ///
 /// If the target directory could already exist and have some files or directories in it, you can use the following rule:
-/// ```rust
-/// # use fs_more::directory::TargetDirectoryRule;
-/// let rules = TargetDirectoryRule::AllowNonEmpty {
-///     overwrite_existing_subdirectories: false,
+///
+/// ```
+/// # use fs_more::directory::DestinationDirectoryRule;
+/// let rules = DestinationDirectoryRule::AllowNonEmpty {
+///     create_missing_subdirectories: false,
 ///     overwrite_existing_files: false,
 /// };
 /// ```
@@ -30,15 +49,16 @@ use crate::error::DirectoryError;
 /// This will still not overwrite any overlapping files (i.e. a merge without overwrites will be performed).
 ///
 /// If you want files and/or directories to be overwritten, you may set the flags for overwriting to `true`:
-/// ```rust
-/// # use fs_more::directory::TargetDirectoryRule;
-/// let rules = TargetDirectoryRule::AllowNonEmpty {
-///     overwrite_existing_subdirectories: true,
+///
+/// ```
+/// # use fs_more::directory::DestinationDirectoryRule;
+/// let rules = DestinationDirectoryRule::AllowNonEmpty {
+///     create_missing_subdirectories: true,
 ///     overwrite_existing_files: true,
 /// };
 /// ```
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum TargetDirectoryRule {
+pub enum DestinationDirectoryRule {
     /// Indicates the associated function should return an error if the target directory already exists.
     DisallowExisting,
 
@@ -54,109 +74,97 @@ pub enum TargetDirectoryRule {
     /// you probably want to avoid this option.
     ///
     /// If the `overwrite_*` options are `false`, this essentially behaves
-    /// like a merge that will not touch existing target files.
+    /// like a merge that will not touch existing destination files.
     /// If they are `true`, it behaves like a merge that will
     /// overwrite any existing files and create any missing directories.
     AllowNonEmpty {
-        /// If enabled, the associated function will return
-        /// `Err(`[`DirectoryError::TargetItemAlreadyExists`][crate::error::DirectoryError::TargetItemAlreadyExists]`)`
-        /// if a target directory or any of subdirectories that would otherwise need to be freshly created already exist.
-        overwrite_existing_subdirectories: bool,
+        /// How to behave for destination files that already exist.
+        existing_destination_file_behaviour: ExistingFileBehaviour,
 
-        /// If enabled, the associated function will return
-        /// `Err(`[`DirectoryError::TargetItemAlreadyExists`][crate::error::DirectoryError::TargetItemAlreadyExists]`)`
-        /// if a target file we would otherwise freshly create and copy into already exists.
-        overwrite_existing_files: bool,
+        /// How to behave for destination sub-directories that already exist.
+        existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour,
     },
 }
 
-impl Default for TargetDirectoryRule {
-    /// The default value for this struct is [`Self::AllowEmpty`],
-    /// i.e. allowing empty target directories.
+impl Default for DestinationDirectoryRule {
+    /// The default value for this struct is [`Self::AllowEmpty`].
     fn default() -> Self {
         Self::AllowEmpty
     }
 }
 
-impl TargetDirectoryRule {
-    /// Indicates whether this rule allows the target directory
-    /// to exist before performing an operation.
-    pub(crate) fn allows_existing_target_directory(&self) -> bool {
-        !matches!(self, Self::DisallowExisting)
+impl DestinationDirectoryRule {
+    pub(crate) fn allows_overwriting_existing_destination_files(&self) -> bool {
+        matches!(
+            self,
+            Self::AllowNonEmpty {
+                existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
+                ..
+            }
+        )
     }
 
-    /// Indicates whether this rule allows existing files
-    /// in the target directory to be overwritten with contents of the source.
-    pub(crate) fn allows_overwriting_existing_files(&self) -> bool {
-        match self {
-            TargetDirectoryRule::DisallowExisting => false,
-            TargetDirectoryRule::AllowEmpty => false,
-            TargetDirectoryRule::AllowNonEmpty {
-                overwrite_existing_files,
+    pub(crate) fn ignores_existing_destination_sub_directories(&self) -> bool {
+        matches!(
+            self,
+            Self::AllowNonEmpty {
+                existing_destination_subdirectory_behaviour:
+                    ExistingSubDirectoryBehaviour::Continue,
                 ..
-            } => *overwrite_existing_files,
-        }
-    }
-
-    /// Indicates whether this rule allows existing (sub)directories
-    /// in the target directory to be "overwritten" with contents of the source (sub)directory.
-    pub(crate) fn allows_overwriting_existing_directories(&self) -> bool {
-        match self {
-            TargetDirectoryRule::DisallowExisting => false,
-            TargetDirectoryRule::AllowEmpty => false,
-            TargetDirectoryRule::AllowNonEmpty {
-                overwrite_existing_subdirectories,
-                ..
-            } => *overwrite_existing_subdirectories,
-        }
+            }
+        )
     }
 }
 
 
 
-/// Given a source root path, a target root path and the source path to rejoin,
-/// this function takes the `source_path_to_rejoin`, removes the prefix provided by `source_root_path`
-/// and repplies that relative path back onto the `target_root_path`.
+/// Applies the same sub-path that `source_sub_path` has, relative to `source_base_directory_path`,
+/// onto `target_base_directory_path`.
 ///
-/// Returns a [`DirectoryError::SubdirectoryEscapesRoot`] if the `source_path_to_rejoin`
-/// is not a subpath of `source_root_path`.
+/// `source_base_directory_path` is the base source directory path,
+/// and `source_sub_path` *must* be a descendant of that path.
+/// `target_base_directory_path` can be an arbitrary target directory path.
 ///
-/// ## Example
+/// Returns a [`DirectoryError::SourceSubPathEscapesSourceDirectory`]
+/// if the `source_sub_path` is not a sub-path of `source_base_directory_path`.
+///
+/// # Example
 /// ```ignore
 /// # use std::path::Path;
-/// # use fs_more::directory::copy::rejoin_source_subpath_onto_target;
+/// # use fs_more::directory::copy::join_relative_source_path_onto_destination;
 ///
-/// let root_a = Path::new("/hello/there");
-/// let foo = Path::new("/hello/there/some/content");
-/// let root_b = Path::new("/different/root");
+/// let foo = Path::new("/foo");
+/// let foo_hello_world = Path::new("/foo/abc/hello-world.txt");
+/// let bar = Path::new("/bar");
 ///
 /// assert_eq!(
-///     rejoin_source_subpath_onto_target(
-///         root_a,
+///     join_relative_source_path_onto_destination(
 ///         foo,
-///         root_b
+///         foo_hello_world,
+///         bar
 ///     ).unwrap(),
-///     Path::new("/different/root/some/content")
+///     Path::new("/bar/abc/hello-world.txt")
 /// );
 /// ```
-pub(crate) fn rejoin_source_subpath_onto_target(
-    source_root_path: &Path,
-    source_path_to_rejoin: &Path,
-    target_root_path: &Path,
-) -> Result<PathBuf, DirectoryError> {
-    // Strip the source subdirectory path from the full source path
-    // and place it on top of the target directory path.
-    let source_relative_subdirectory_path = if source_root_path.eq(source_path_to_rejoin) {
-        Path::new("")
-    } else {
-        source_path_to_rejoin
-            .strip_prefix(source_root_path)
-            .map_err(|_| DirectoryError::OtherReason {
-                reason: String::from("provided source path escapes its source root"),
-            })?
-    };
+pub(crate) fn join_relative_source_path_onto_destination(
+    source_base_directory_path: &Path,
+    source_sub_path: &Path,
+    target_base_directory_path: &Path,
+) -> Result<PathBuf, SourceSubPathNotUnderBaseSourceDirectory> {
+    // Strip the base source directory path from the full source path
+    // and place it on top of the target base directory path.
 
-    Ok(target_root_path.join(source_relative_subdirectory_path))
+    if source_base_directory_path.eq(source_sub_path) {
+        return Ok(target_base_directory_path.to_path_buf());
+    }
+
+    let source_sub_path_relative_to_base = source_sub_path
+        .strip_prefix(source_base_directory_path)
+        .map_err(|_| SourceSubPathNotUnderBaseSourceDirectory {
+            path: source_base_directory_path.join(source_sub_path),
+        })?;
+
+    Ok(target_base_directory_path.join(source_sub_path_relative_to_base))
 }
 
 #[cfg(test)]
@@ -170,9 +178,18 @@ mod tests {
         let root_b = Path::new("/different/root");
 
         assert_eq!(
-            rejoin_source_subpath_onto_target(root_a, foo, root_b).unwrap(),
+            join_relative_source_path_onto_destination(root_a, foo, root_b).unwrap(),
             Path::new("/different/root/some/content"),
             "rejoin_source_subpath_onto_target did not rejoin the path properly."
+        );
+
+        let foo = Path::new("/foo");
+        let foo_hello_world = Path::new("/foo/abc/hello-world.txt");
+        let bar = Path::new("/bar");
+
+        assert_eq!(
+            join_relative_source_path_onto_destination(foo, foo_hello_world, bar).unwrap(),
+            Path::new("/bar/abc/hello-world.txt")
         );
     }
 
@@ -182,27 +199,12 @@ mod tests {
         let foo = Path::new("/completely/different/path");
         let root_b = Path::new("/different/root");
 
-        let rejoin_result = rejoin_source_subpath_onto_target(root_a, foo, root_b);
+        let rejoin_result = join_relative_source_path_onto_destination(root_a, foo, root_b);
 
         assert!(
             rejoin_result.is_err(),
             "rejoin_source_subpath_onto_target did not return Err when \
             the source path to rejoin wasn't under the source root path"
         );
-
-        let rejoin_err = rejoin_result.unwrap_err();
-
-        match rejoin_err {
-            DirectoryError::OtherReason { reason } => {
-                if reason != "provided source path escapes its source root" {
-                    panic!(
-                        "rejoin_source_subpath_onto_target returned DirectoryError::OtherReason \
-                        with the following reason: {}",
-                        reason
-                    );
-                }
-            }
-            _ => panic!("Unexpected error: {}", rejoin_err),
-        }
     }
 }

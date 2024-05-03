@@ -36,6 +36,8 @@ members = [
 ]
 
 [features]
+default = ["dunce"]
+
 # Enables [`fs-err`](https://docs.rs/fs-err) support, which means more helpful underlying IO error messages.
 fs-err = ["dep:fs-err"]
 
@@ -44,15 +46,21 @@ fs-err = ["dep:fs-err"]
 # allowing users to conveniently e.g. [`wrap_err_with`](https://docs.rs/miette/latest/miette/trait.Context.html#tymethod.wrap_err_with).
 miette = ["dep:miette"]
 
+camino = ["dep:camino"]
+
+dunce = ["dep:dunce"]
+
 
 [dependencies]
 thiserror = "1.0.58"
-dunce = "1.0.4"
-path-clean = "1.0.1"
+dunce = { version = "1.0.4", optional = true }
+cfg-if = "1.0.0"
+# path-clean = "1.0.1"
 
 # Optional dependencies (see [features] section above).
 fs-err = { version = "2.11.0", optional = true }
 miette = { version = "7.2.0", optional = true }
+camino = { version = "1.1.6", optional = true }
 
 [dev-dependencies]
 assert_fs = "1.1.1"
