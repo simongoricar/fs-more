@@ -90,10 +90,24 @@ fn validate_source_file_path(
                     }
                 })?;
 
-                return Ok(ValidatedSourceFilePath {
-                    source_file_path: canonicalized_path,
-                    original_was_symlink_to_file: true,
-                });
+                #[cfg(feature = "dunce")]
+                {
+                    let de_unced_canonicalized_path =
+                        dunce::simplified(&canonicalized_path).to_path_buf();
+
+                    return Ok(ValidatedSourceFilePath {
+                        source_file_path: de_unced_canonicalized_path,
+                        original_was_symlink_to_file: true,
+                    });
+                }
+
+                #[cfg(not(feature = "dunce"))]
+                {
+                    return Ok(ValidatedSourceFilePath {
+                        source_file_path: canonicalized_path,
+                        original_was_symlink_to_file: true,
+                    });
+                }
             }
 
             Ok(ValidatedSourceFilePath {
@@ -118,9 +132,9 @@ pub(crate) struct ValidatedDestinationFilePath {
 
 pub(crate) enum DestinationValidationAction {
     /// The validation logic concluded that no action should be taken
-    /// (the file should not be copied) since the destination file already exists,
+    /// (the file should not be copied or moved) since the destination file already exists,
     /// and `existing_destination_file_behaviour` is set to [`ExistingFileBehaviour::Skip`].
-    SkipCopy,
+    SkipCopyOrMove,
 
     /// The validation logic found no errors.
     Continue(ValidatedDestinationFilePath),
@@ -144,12 +158,25 @@ fn validate_destination_file_path(
 
 
     if destination_file_exists {
-        let canonical_destination_path = destination_file_path.canonicalize().map_err(|error| {
-            FileError::UnableToCanonicalizeDestinationFilePath {
-                path: destination_file_path.to_path_buf(),
-                error,
+        let canonical_destination_path = {
+            let canonical_destination_path =
+                destination_file_path.canonicalize().map_err(|error| {
+                    FileError::UnableToCanonicalizeDestinationFilePath {
+                        path: destination_file_path.to_path_buf(),
+                        error,
+                    }
+                })?;
+
+            #[cfg(feature = "dunce")]
+            {
+                dunce::simplified(&canonical_destination_path).to_path_buf()
             }
-        })?;
+
+            #[cfg(not(feature = "dunce"))]
+            {
+                canonical_destination_path
+            }
+        };
 
 
         // Ensure we don't try to copy the file into itself.
@@ -174,7 +201,7 @@ fn validate_destination_file_path(
                     })
                 }
                 ExistingFileBehaviour::Skip => {
-                    return Ok(DestinationValidationAction::SkipCopy);
+                    return Ok(DestinationValidationAction::SkipCopyOrMove);
                 }
                 ExistingFileBehaviour::Overwrite => {}
             };
@@ -191,7 +218,7 @@ fn validate_destination_file_path(
         Ok(DestinationValidationAction::Continue(
             ValidatedDestinationFilePath {
                 destination_file_path: destination_file_path.to_path_buf(),
-                exists: true,
+                exists: false,
             },
         ))
     }

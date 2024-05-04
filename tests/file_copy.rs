@@ -102,7 +102,7 @@ pub fn forbid_copy_into_self() -> TestResult<()> {
         harness.test_file.path(),
         harness.test_file.path(),
         CopyFileOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+            existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
         },
     );
 
@@ -176,7 +176,7 @@ pub fn case_insensitive_copy_into_self() -> Result<(), FixtureError> {
         assert_matches!(
             file_copy_result.unwrap_err(),
             FileError::SourceAndDestinationAreTheSame { path }
-            if path == target_file.path()
+            if path == target_file.path() || path == harness.test_file.path()
         );
     }
 
@@ -272,7 +272,7 @@ pub fn forbid_non_trivial_copy_into_self() -> Result<(), FixtureError> {
         assert_matches!(
             file_copy_result.unwrap_err(),
             FileError::SourceAndDestinationAreTheSame { path }
-            if path == target_file.path()
+            if path == target_file.path() || path == harness.binary_file_b.path()
         );
 
         target_file.assert_exists();

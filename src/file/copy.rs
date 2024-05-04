@@ -109,7 +109,7 @@ where
         options.existing_destination_file_behaviour,
     )? {
         DestinationValidationAction::Continue(validated_path) => validated_path,
-        DestinationValidationAction::SkipCopy => {
+        DestinationValidationAction::SkipCopyOrMove => {
             return Ok(CopyFileFinished::Skipped);
         }
     };
@@ -330,7 +330,7 @@ where
         options.existing_destination_file_behaviour,
     )? {
         DestinationValidationAction::Continue(validated_path) => validated_path,
-        DestinationValidationAction::SkipCopy => {
+        DestinationValidationAction::SkipCopyOrMove => {
             return Ok(CopyFileFinished::Skipped);
         }
     };

@@ -114,14 +114,14 @@ pub enum DestinationDirectoryPathValidationError {
     /// A destination directory or a file inside it already exists,
     /// which is against the provided [`DestinationDirectoryRule`].
     #[error(
-        "destination directory already exists, which is against \
+        "destination path already exists, which is against \
         the configured destination directory rule ({:?}): {}",
         .destination_directory_rule,
-        .directory_path.display()
+        .path.display()
     )]
     AlreadyExists {
-        /// Path to the destination directory that should not exist based on the provided rules.
-        directory_path: PathBuf,
+        /// Path to the file or directory that should not exist based on the provided rules.
+        path: PathBuf,
 
         /// Destination directory rule that made the existing destination
         /// directory invalid (see [`DestinationDirectoryRule::DisallowExisting`]).

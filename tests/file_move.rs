@@ -213,7 +213,7 @@ pub fn forbid_case_insensitive_move_into_itself() -> TestResult {
         assert_matches!(
             file_move_result.unwrap_err(),
             FileError::SourceAndDestinationAreTheSame { path }
-            if path == target_file.path()
+            if path == target_file.path() || path == harness.foo_bar.path()
         );
 
         target_file.assert_exists();

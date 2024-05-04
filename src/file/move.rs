@@ -4,8 +4,10 @@ use_enabled_fs_module!();
 
 use super::{
     copy::copy_file_with_progress_unchecked,
+    validate_destination_file_path,
     validate_source_file_path,
     CopyFileWithProgressOptions,
+    DestinationValidationAction,
     ExistingFileBehaviour,
     FileProgress,
 };
@@ -127,68 +129,25 @@ where
     let source_file_path = source_file_path.as_ref();
     let destination_file_path = destination_file_path.as_ref();
 
+
+    let validated_source_path = validate_source_file_path(source_file_path)?;
+
+    let (destination_file_path, destination_file_exists) = match validate_destination_file_path(
+        &validated_source_path,
+        destination_file_path,
+        options.existing_destination_file_behaviour,
+    )? {
+        DestinationValidationAction::SkipCopyOrMove => {
+            return Ok(MoveFileFinished::Skipped);
+        }
+        DestinationValidationAction::Continue(info) => (info.destination_file_path, info.exists),
+    };
+
     let ValidatedSourceFilePath {
         source_file_path: validated_source_file_path,
-        original_was_symlink_to_file,
-    } = validate_source_file_path(source_file_path)?;
+        original_was_symlink_to_file: source_file_was_symlink_to_file,
+    } = validated_source_path;
 
-
-    // Ensure the destination file path doesn't exist yet
-    // (unless `options.existing_destination_file_behaviour` allows it),
-    // and that it isn't a directory.
-
-    let destination_file_exists = match destination_file_path.try_exists() {
-        Ok(exists) => {
-            if exists {
-                // Ensure we don't try to copy the file into itself.
-                let canonicalized_source_path =
-                    validated_source_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToAccessSourceFile {
-                            path: validated_source_file_path.clone(),
-                            error,
-                        }
-                    })?;
-
-                let canonicalized_target_path =
-                    destination_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToAccessDestinationFile {
-                            path: destination_file_path.to_path_buf(),
-                            error,
-                        }
-                    })?;
-
-
-                if canonicalized_source_path.eq(&canonicalized_target_path) {
-                    return Err(FileError::SourceAndDestinationAreTheSame {
-                        path: canonicalized_source_path,
-                    });
-                }
-            }
-
-
-            if exists {
-                match options.existing_destination_file_behaviour {
-                    ExistingFileBehaviour::Abort => {
-                        return Err(FileError::DestinationPathAlreadyExists {
-                            path: destination_file_path.to_path_buf(),
-                        });
-                    }
-                    ExistingFileBehaviour::Skip => {
-                        return Ok(MoveFileFinished::Skipped);
-                    }
-                    ExistingFileBehaviour::Overwrite => {}
-                }
-            }
-
-            exists
-        }
-        Err(error) => {
-            return Err(FileError::UnableToAccessDestinationFile {
-                path: destination_file_path.to_path_buf(),
-                error,
-            })
-        }
-    };
 
     // All checks have passed. Now we do the following:
     // - if both paths reside on the same filesystem
@@ -197,11 +156,15 @@ where
 
     // Note that we *must not* go for the renaming shortcut if the user-provided path was actually a symbolic link to a file.
     // In that case, we need to copy the file behind the symbolic link, then remove the symbolic link.
-    if !original_was_symlink_to_file
-        && fs::rename(&validated_source_file_path, destination_file_path).is_ok()
+    if !source_file_was_symlink_to_file
+        && fs::rename(
+            &validated_source_file_path,
+            &destination_file_path,
+        )
+        .is_ok()
     {
         // Get size of file that we just renamed.
-        let target_file_path_metadata = fs::metadata(destination_file_path)
+        let target_file_path_metadata = fs::metadata(&destination_file_path)
             .map_err(|error| FileError::OtherIoError { error })?;
 
         match destination_file_exists {
@@ -222,7 +185,7 @@ where
         let num_bytes_copied = fs::copy(&validated_source_file_path, destination_file_path)
             .map_err(|error| FileError::OtherIoError { error })?;
 
-        let file_path_to_remove = if original_was_symlink_to_file {
+        let file_path_to_remove = if source_file_was_symlink_to_file {
             source_file_path
         } else {
             validated_source_file_path.as_path()
@@ -345,66 +308,28 @@ where
     let source_file_path = source_file_path.as_ref();
     let destination_file_path = destination_file_path.as_ref();
 
+
+    let validated_source_path = validate_source_file_path(source_file_path)?;
+
+    let (validated_destination_file_path, destination_file_exists) =
+        match validate_destination_file_path(
+            &validated_source_path,
+            destination_file_path,
+            options.existing_destination_file_behaviour,
+        )? {
+            DestinationValidationAction::SkipCopyOrMove => {
+                return Ok(MoveFileFinished::Skipped);
+            }
+            DestinationValidationAction::Continue(info) => {
+                (info.destination_file_path, info.exists)
+            }
+        };
+
     let ValidatedSourceFilePath {
         source_file_path: validated_source_file_path,
-        original_was_symlink_to_file,
-    } = validate_source_file_path(source_file_path)?;
+        original_was_symlink_to_file: source_file_was_symlink_to_file,
+    } = validated_source_path;
 
-
-    // Ensure the destination file path doesn't exist yet
-    // (unless `options.existing_destination_file_behaviour` allows it),
-    // and that it isn't a directory.
-
-    let destination_file_exists = match destination_file_path.try_exists() {
-        Ok(exists) => {
-            if exists {
-                // Ensure we don't try to copy the file into itself.
-                let canonicalized_source_path =
-                    validated_source_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToAccessSourceFile {
-                            path: validated_source_file_path.clone(),
-                            error,
-                        }
-                    })?;
-                let canonicalized_target_path =
-                    destination_file_path.canonicalize().map_err(|error| {
-                        FileError::UnableToAccessDestinationFile {
-                            path: destination_file_path.to_path_buf(),
-                            error,
-                        }
-                    })?;
-
-                if canonicalized_source_path.eq(&canonicalized_target_path) {
-                    return Err(FileError::SourceAndDestinationAreTheSame {
-                        path: canonicalized_source_path,
-                    });
-                }
-            }
-
-
-            if exists {
-                match options.existing_destination_file_behaviour {
-                    ExistingFileBehaviour::Abort => {
-                        return Err(FileError::DestinationPathAlreadyExists {
-                            path: destination_file_path.to_path_buf(),
-                        });
-                    }
-                    ExistingFileBehaviour::Skip => {
-                        return Ok(MoveFileFinished::Skipped);
-                    }
-                    ExistingFileBehaviour::Overwrite => {}
-                }
-            }
-
-            exists
-        }
-        Err(error) => {
-            return Err(FileError::UnableToAccessDestinationFile {
-                path: destination_file_path.to_path_buf(),
-                error,
-            })
-        }
-    };
 
     // All checks have passed. Now we do the following:
     // - if both paths reside on the same filesystem
@@ -412,12 +337,16 @@ where
     //   that's nice and fast (we mustn't forget to do at least one progress report),
     // - otherwise we need to copy to target and remove source.
 
-    if !original_was_symlink_to_file
-        && fs::rename(&validated_source_file_path, destination_file_path).is_ok()
+    if !source_file_was_symlink_to_file
+        && fs::rename(
+            &validated_source_file_path,
+            &validated_destination_file_path,
+        )
+        .is_ok()
     {
         // Get size of file that we just renamed, emit one progress report, and return.
 
-        let target_file_path_size_bytes = fs::metadata(destination_file_path)
+        let target_file_path_size_bytes = fs::metadata(&validated_destination_file_path)
             .map_err(|error| FileError::OtherIoError { error })?
             .len();
 
@@ -443,7 +372,7 @@ where
 
         let bytes_written = copy_file_with_progress_unchecked(
             &validated_source_file_path,
-            destination_file_path,
+            &validated_destination_file_path,
             CopyFileWithProgressOptions {
                 existing_destination_file_behaviour: options.existing_destination_file_behaviour,
                 read_buffer_size: options.read_buffer_size,
@@ -454,7 +383,8 @@ where
         )?;
 
 
-        let file_path_to_remove = if original_was_symlink_to_file {
+        let file_path_to_remove = if source_file_was_symlink_to_file {
+            // `source_file_path` instead of `validated_source_file_path` is intentional.
             source_file_path
         } else {
             validated_source_file_path.as_path()

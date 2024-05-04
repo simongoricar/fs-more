@@ -372,17 +372,15 @@ pub fn error_on_copy_directory_with_progress_on_existing_file_without_option() -
         "copy_directory_with_progress should have errored due to existing destination file"
     );
 
-    let copy_err = copy_result.unwrap_err();
     assert_matches!(
-        copy_err,
+        copy_result.unwrap_err(),
         CopyDirectoryError::PreparationError(
-            CopyDirectoryPreparationError::DestinationDirectoryValidationError(
-                DestinationDirectoryPathValidationError::AlreadyExists {
-                    directory_path,
-                    ..
+            CopyDirectoryPreparationError::CopyPlanningError(
+                CopyDirectoryPlanError::DestinationItemAlreadyExists {
+                    path
                 }
             )
-        ) if directory_path == empty_harness.root.path()
+        ) if path == test_file.path()
     );
 
 
@@ -399,7 +397,7 @@ pub fn error_on_copy_directory_with_progress_on_existing_directory_without_optio
     // Still the harness setup.
     let replicated_foo_dir_name = harness.dir_foo.path().file_name().unwrap();
     let replicated_foo_dir_path = empty_harness.root.child_path(replicated_foo_dir_name);
-    std::fs::create_dir_all(replicated_foo_dir_path)?;
+    std::fs::create_dir_all(&replicated_foo_dir_path)?;
     // End of setup, we have now pre-copied a single file to test our overwriting options.
 
 
@@ -423,12 +421,15 @@ pub fn error_on_copy_directory_with_progress_on_existing_directory_without_optio
         "copy_directory_with_progress should have errored due to existing destination file"
     );
 
-    let copy_err = copy_result.unwrap_err();
+
     assert_matches!(
-        copy_err,
-        CopyDirectoryError::PreparationError(CopyDirectoryPreparationError::DestinationDirectoryValidationError(
-            DestinationDirectoryPathValidationError::AlreadyExists { directory_path, .. }
-        )) if directory_path == empty_harness.root.path()
+        copy_result.unwrap_err(),
+        CopyDirectoryError::PreparationError(
+            CopyDirectoryPreparationError::CopyPlanningError(
+                CopyDirectoryPlanError::DestinationItemAlreadyExists { path }
+            )
+        )
+        if path == replicated_foo_dir_path
     );
 
 
@@ -581,9 +582,9 @@ pub fn error_on_copy_directory_to_existing_destination_directory_without_option(
         copy_result.unwrap_err(),
         CopyDirectoryError::PreparationError(
             CopyDirectoryPreparationError::DestinationDirectoryValidationError(
-                DestinationDirectoryPathValidationError::AlreadyExists { directory_path, .. }
+                DestinationDirectoryPathValidationError::AlreadyExists { path, .. }
             )
-        ) if directory_path == harness.root.path()
+        ) if path == empty_harness.root.path()
     );
 
     empty_harness.root.assert_is_empty();
@@ -610,7 +611,7 @@ pub fn error_on_copy_directory_to_non_empty_destination_without_option() -> Test
     )
     .unwrap();
 
-    let test_file = AssertableFilePath::from_path_with_captured_content(test_file_path)?;
+    let test_file = AssertableFilePath::from_path_with_captured_content(&test_file_path)?;
 
     test_file.assert_exists();
     test_file.assert_content_unchanged();
@@ -634,10 +635,10 @@ pub fn error_on_copy_directory_to_non_empty_destination_without_option() -> Test
     assert_matches!(
         copy_result.unwrap_err(),
         CopyDirectoryError::PreparationError(
-            CopyDirectoryPreparationError::DestinationDirectoryValidationError(
-                DestinationDirectoryPathValidationError::NotEmpty { directory_path, .. }
+            CopyDirectoryPreparationError::CopyPlanningError(
+                CopyDirectoryPlanError::DestinationItemAlreadyExists { path }
             )
-        ) if directory_path == empty_harness.root.path()
+        ) if path == test_file_path
     );
 
     empty_harness.root.assert_is_not_empty();
@@ -1089,13 +1090,23 @@ pub fn copy_directory_preemptively_checks_for_file_collisions() -> TestResult {
     );
 
 
+    let expected_errored_path = empty_harness.root.path().join(
+        harness
+            .dir_foo
+            .path()
+            .strip_prefix(harness.root.path())
+            .unwrap(),
+    );
+
     assert_matches!(
         copy_result.unwrap_err(),
         CopyDirectoryError::PreparationError(
             CopyDirectoryPreparationError::CopyPlanningError(
                 CopyDirectoryPlanError::DestinationItemAlreadyExists { path }
             )
-        ) if path == existing_target_file.path()
+        ) if path == expected_errored_path,
+        "DestinationItemAlreadyExists {{ path }} does not match path {}",
+        expected_errored_path.display()
     );
 
     empty_harness.root.assert_is_not_empty();

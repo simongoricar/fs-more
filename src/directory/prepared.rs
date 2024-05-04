@@ -227,7 +227,7 @@ pub(super) fn validate_destination_directory_path(
             ) {
                 return Err(
                     DestinationDirectoryPathValidationError::AlreadyExists {
-                        directory_path: resolved_destination_directory_path,
+                        path: resolved_destination_directory_path,
                         destination_directory_rule,
                     },
                 );
