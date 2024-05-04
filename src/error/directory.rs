@@ -111,7 +111,8 @@ pub enum DestinationDirectoryPathValidationError {
         error: std::io::Error,
     },
 
-    /// A destination directory or a file inside it already exists.
+    /// A destination directory or a file inside it already exists,
+    /// which is against the provided [`DestinationDirectoryRule`].
     #[error(
         "destination directory already exists, which is against \
         the configured destination directory rule ({:?}): {}",
@@ -144,10 +145,10 @@ pub enum DestinationDirectoryPathValidationError {
         destination_directory_rule: DestinationDirectoryRule,
     },
 
-    /// The destination directory path points inside the source directory,
+    /// The destination directory path equals or points inside the source directory,
     /// which is very problematic for copies or moves.
     #[error(
-        "destination directory path points inside the source directory, \
+        "destination directory path equals or points inside the source directory, \
         which is invalid: {} (but source path is {})",
         .destination_directory_path.display(),
         .source_directory_path.display()

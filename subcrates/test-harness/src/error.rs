@@ -21,4 +21,4 @@ pub enum TestError {
 }
 
 /// A main `Result` type for use in unit and integration tests (shorthand for the [`TestError`] error).
-pub type TestResult<O> = std::result::Result<O, TestError>;
+pub type TestResult<O = ()> = std::result::Result<O, TestError>;

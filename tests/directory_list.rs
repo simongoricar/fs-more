@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use fs_more::directory::DirectoryScanDepthLimit;
 use fs_more_test_harness::{error::TestResult, trees::SimpleTreeHarness};
 
 /// Returns `true` if the provided `Vec` of `AsRef<Path>`-implementing items
@@ -16,11 +17,14 @@ where
 }
 
 #[test]
-pub fn scan_directory() -> TestResult<()> {
+pub fn scan_directory() -> TestResult {
     let harness = SimpleTreeHarness::new()?;
 
-    let scan_result =
-        fs_more::directory::DirectoryScan::scan_with_options(harness.root.path(), None, false);
+    let scan_result = fs_more::directory::DirectoryScan::scan_with_options(
+        harness.root.path(),
+        DirectoryScanDepthLimit::Unlimited,
+        false,
+    );
 
     assert!(
         scan_result.is_ok(),
@@ -30,35 +34,35 @@ pub fn scan_directory() -> TestResult<()> {
     let scan = scan_result.unwrap();
 
     assert_eq!(
-        scan.directories.len(),
+        scan.directories().len(),
         1,
         "Unexpected amount of scanned directories."
     );
     assert_eq!(
-        scan.files.len(),
+        scan.files().len(),
         2,
         "Unexpected amount of scanned files."
     );
 
-    assert!(!scan.is_real_directory_deeper_than_scan);
+    assert!(scan.covers_entire_directory_tree());
 
 
     assert!(path_vec_contains_path(
-        &scan.files,
+        scan.files(),
         harness.binary_file_a.path()
     ));
     assert!(path_vec_contains_path(
-        &scan.files,
+        scan.files(),
         harness.binary_file_b.path()
     ));
 
 
     assert!(!path_vec_contains_path(
-        &scan.directories,
+        scan.directories(),
         harness.root.path(),
     ));
     assert!(path_vec_contains_path(
-        &scan.directories,
+        scan.directories(),
         harness.subdirectory_b.path(),
     ));
 
@@ -68,11 +72,14 @@ pub fn scan_directory() -> TestResult<()> {
 
 
 #[test]
-pub fn scan_directory_with_limited_depth() -> TestResult<()> {
+pub fn scan_directory_with_limited_depth() -> TestResult {
     let harness = SimpleTreeHarness::new()?;
 
-    let scan_result =
-        fs_more::directory::DirectoryScan::scan_with_options(harness.root.path(), Some(0), false);
+    let scan_result = fs_more::directory::DirectoryScan::scan_with_options(
+        harness.root.path(),
+        DirectoryScanDepthLimit::Limited { maximum_depth: 0 },
+        false,
+    );
 
     assert!(
         scan_result.is_ok(),
@@ -82,34 +89,34 @@ pub fn scan_directory_with_limited_depth() -> TestResult<()> {
     let scan = scan_result.unwrap();
 
     assert_eq!(
-        scan.directories.len(),
+        scan.directories().len(),
         1,
         "Unexpected amount of scanned directories."
     );
     assert_eq!(
-        scan.files.len(),
+        scan.files().len(),
         1,
         "Unexpected amount of scanned files."
     );
 
-    assert!(scan.is_real_directory_deeper_than_scan);
+    assert!(!scan.covers_entire_directory_tree());
 
 
     assert!(path_vec_contains_path(
-        &scan.files,
+        scan.files(),
         harness.binary_file_a.path()
     ));
     assert!(!path_vec_contains_path(
-        &scan.files,
+        scan.files(),
         harness.binary_file_b.path()
     ));
 
     assert!(!path_vec_contains_path(
-        &scan.directories,
+        scan.directories(),
         harness.root.path(),
     ));
     assert!(path_vec_contains_path(
-        &scan.directories,
+        scan.directories(),
         harness.subdirectory_b.path(),
     ));
 
@@ -120,7 +127,7 @@ pub fn scan_directory_with_limited_depth() -> TestResult<()> {
 
 
 #[test]
-pub fn directory_size_via_directory_scan() -> TestResult<()> {
+pub fn directory_size_via_directory_scan() -> TestResult {
     let harness = SimpleTreeHarness::new()?;
 
     let actual_size_in_bytes = harness.binary_file_a.path().metadata().unwrap().len()
@@ -128,8 +135,11 @@ pub fn directory_size_via_directory_scan() -> TestResult<()> {
         + harness.subdirectory_b.path().metadata().unwrap().len();
 
 
-    let scan_result =
-        fs_more::directory::DirectoryScan::scan_with_options(harness.root.path(), None, false);
+    let scan_result = fs_more::directory::DirectoryScan::scan_with_options(
+        harness.root.path(),
+        DirectoryScanDepthLimit::Unlimited,
+        false,
+    );
 
 
     assert!(
@@ -139,7 +149,7 @@ pub fn directory_size_via_directory_scan() -> TestResult<()> {
     );
     let scan = scan_result.unwrap();
 
-    assert!(!scan.is_real_directory_deeper_than_scan);
+    assert!(scan.covers_entire_directory_tree());
 
     let size_in_bytes = scan
         .total_size_in_bytes()
@@ -164,8 +174,11 @@ pub fn directory_size_via_directory_scan_with_depth_limit() -> TestResult<()> {
         + harness.subdirectory_b.path().metadata().unwrap().len();
 
 
-    let scan_result =
-        fs_more::directory::DirectoryScan::scan_with_options(harness.root.path(), Some(0), false);
+    let scan_result = fs_more::directory::DirectoryScan::scan_with_options(
+        harness.root.path(),
+        DirectoryScanDepthLimit::Limited { maximum_depth: 0 },
+        false,
+    );
 
 
     assert!(
@@ -175,7 +188,7 @@ pub fn directory_size_via_directory_scan_with_depth_limit() -> TestResult<()> {
     );
     let scan = scan_result.unwrap();
 
-    assert!(scan.is_real_directory_deeper_than_scan);
+    assert!(!scan.covers_entire_directory_tree());
 
     let size_in_bytes = scan
         .total_size_in_bytes()
@@ -195,7 +208,7 @@ pub fn directory_size_via_directory_scan_with_depth_limit() -> TestResult<()> {
 
 
 #[test]
-pub fn directory_size_via_size_function() -> TestResult<()> {
+pub fn directory_size_via_size_function() -> TestResult {
     let harness = SimpleTreeHarness::new()?;
 
     let actual_size_in_bytes = harness.binary_file_a.path().metadata().unwrap().len()

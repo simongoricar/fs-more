@@ -6,8 +6,15 @@ use fs_more::{
         DirectoryMoveProgress,
         DirectoryMoveWithProgressOptions,
         DirectoryScan,
+        DirectoryScanDepthLimit,
+        ExistingSubDirectoryBehaviour,
     },
-    error::DirectoryError,
+    error::{
+        DestinationDirectoryPathValidationError,
+        MoveDirectoryError,
+        MoveDirectoryPreparationError,
+    },
+    file::ExistingFileBehaviour,
 };
 use fs_more_test_harness::{
     assertable::AssertableDirectoryPath,
@@ -17,12 +24,17 @@ use fs_more_test_harness::{
 
 
 #[test]
-pub fn move_directory() -> TestResult<()> {
+pub fn move_directory() -> TestResult {
     let harness_for_comparison = DeepTreeHarness::new()?;
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
-    let source_scan = DirectoryScan::scan_with_options(harness.root.path(), None, false).unwrap();
+    let source_scan = DirectoryScan::scan_with_options(
+        harness.root.path(),
+        DirectoryScanDepthLimit::Unlimited,
+        false,
+    )
+    .unwrap();
     let source_size_bytes = source_scan.total_size_in_bytes().unwrap();
 
     empty_harness.root.assert_is_empty();
@@ -56,7 +68,7 @@ pub fn move_directory() -> TestResult<()> {
 }
 
 #[test]
-pub fn error_on_move_directory_with_source_symlink_to_same_directory() -> TestResult<()> {
+pub fn error_on_move_directory_using_source_symlink_to_destination_directory() -> TestResult {
     let target_harness = DeepTreeHarness::new()?;
     let target_harness_untouched = DeepTreeHarness::new()?;
     let source_symlink_harness = EmptyTreeHarness::new()?;
@@ -82,15 +94,20 @@ pub fn error_on_move_directory_with_source_symlink_to_same_directory() -> TestRe
         target_harness.root.path(),
         DirectoryMoveOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
-                create_missing_subdirectories: true,
-                overwrite_existing_files: true,
+                existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
+                existing_destination_subdirectory_behaviour:
+                    ExistingSubDirectoryBehaviour::Continue,
             },
         },
     );
 
     assert_matches!(
-        move_result,
-        Err(DirectoryError::InvalidDestinationDirectoryPath)
+        move_result.unwrap_err(),
+        MoveDirectoryError::PreparationError(
+            MoveDirectoryPreparationError::DestinationDirectoryValidationError(
+                DestinationDirectoryPathValidationError::DescendantOfSourceDirectory { destination_directory_path, source_directory_path }
+            )
+        ) if source_directory_path == target_harness.root.path() && destination_directory_path == target_harness.root.path()
     );
 
     target_harness_untouched
@@ -105,8 +122,8 @@ pub fn error_on_move_directory_with_source_symlink_to_same_directory() -> TestRe
 }
 
 #[test]
-pub fn error_on_move_directory_with_progress_with_source_symlink_to_same_directory(
-) -> TestResult<()> {
+pub fn error_on_move_directory_with_progress_using_source_symlink_to_destination_directory(
+) -> TestResult {
     let target_harness = DeepTreeHarness::new()?;
     let target_harness_untouched = DeepTreeHarness::new()?;
     let source_symlink_harness = EmptyTreeHarness::new()?;
@@ -132,8 +149,9 @@ pub fn error_on_move_directory_with_progress_with_source_symlink_to_same_directo
         target_harness.root.path(),
         DirectoryMoveWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
-                create_missing_subdirectories: true,
-                overwrite_existing_files: true,
+                existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
+                existing_destination_subdirectory_behaviour:
+                    ExistingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },
@@ -141,8 +159,12 @@ pub fn error_on_move_directory_with_progress_with_source_symlink_to_same_directo
     );
 
     assert_matches!(
-        move_result,
-        Err(DirectoryError::InvalidDestinationDirectoryPath)
+        move_result.unwrap_err(),
+        MoveDirectoryError::PreparationError(
+            MoveDirectoryPreparationError::DestinationDirectoryValidationError(
+                DestinationDirectoryPathValidationError::DescendantOfSourceDirectory { destination_directory_path, source_directory_path }
+            )
+        ) if source_directory_path == target_harness.root.path() && destination_directory_path == target_harness.root.path()
     );
 
     target_harness_untouched
@@ -157,7 +179,7 @@ pub fn error_on_move_directory_with_progress_with_source_symlink_to_same_directo
 }
 
 #[test]
-pub fn move_directory_with_source_symlink_to_different_directory() -> TestResult<()> {
+pub fn move_directory_using_source_symlink_to_non_destination_directory() -> TestResult {
     let symlink_target_harness = DeepTreeHarness::new()?;
     let untouched_harness_copy = DeepTreeHarness::new()?;
     let source_symlink_harness = EmptyTreeHarness::new()?;
@@ -167,8 +189,12 @@ pub fn move_directory_with_source_symlink_to_different_directory() -> TestResult
     copy_target_harness.root.assert_is_empty();
 
 
-    let source_scan =
-        DirectoryScan::scan_with_options(symlink_target_harness.root.path(), None, false).unwrap();
+    let source_scan = DirectoryScan::scan_with_options(
+        symlink_target_harness.root.path(),
+        DirectoryScanDepthLimit::Unlimited,
+        false,
+    )
+    .unwrap();
     let source_size_bytes = source_scan.total_size_in_bytes().unwrap();
 
 
@@ -190,8 +216,9 @@ pub fn move_directory_with_source_symlink_to_different_directory() -> TestResult
         copy_target_harness.root.path(),
         DirectoryMoveOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
-                create_missing_subdirectories: true,
-                overwrite_existing_files: true,
+                existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
+                existing_destination_subdirectory_behaviour:
+                    ExistingSubDirectoryBehaviour::Continue,
             },
         },
     );
@@ -217,7 +244,8 @@ pub fn move_directory_with_source_symlink_to_different_directory() -> TestResult
 }
 
 #[test]
-pub fn move_directory_with_progress_with_source_symlink_to_different_directory() -> TestResult<()> {
+pub fn move_directory_with_progress_using_source_symlink_to_non_destination_directory() -> TestResult
+{
     let symlink_target_harness = DeepTreeHarness::new()?;
     let untouched_harness_copy = DeepTreeHarness::new()?;
     let source_symlink_harness = EmptyTreeHarness::new()?;
@@ -227,8 +255,12 @@ pub fn move_directory_with_progress_with_source_symlink_to_different_directory()
     copy_target_harness.root.assert_is_empty();
 
 
-    let source_scan =
-        DirectoryScan::scan_with_options(symlink_target_harness.root.path(), None, false).unwrap();
+    let source_scan = DirectoryScan::scan_with_options(
+        symlink_target_harness.root.path(),
+        DirectoryScanDepthLimit::Unlimited,
+        false,
+    )
+    .unwrap();
     let source_size_bytes = source_scan.total_size_in_bytes().unwrap();
 
 
@@ -250,8 +282,9 @@ pub fn move_directory_with_progress_with_source_symlink_to_different_directory()
         copy_target_harness.root.path(),
         DirectoryMoveWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
-                create_missing_subdirectories: true,
-                overwrite_existing_files: true,
+                existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
+                existing_destination_subdirectory_behaviour:
+                    ExistingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },
@@ -279,12 +312,17 @@ pub fn move_directory_with_progress_with_source_symlink_to_different_directory()
 }
 
 #[test]
-pub fn move_directory_with_progress() -> TestResult<()> {
+pub fn move_directory_with_progress() -> TestResult {
     let harness_for_comparison = DeepTreeHarness::new()?;
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
-    let source_scan = DirectoryScan::scan_with_options(harness.root.path(), None, false).unwrap();
+    let source_scan = DirectoryScan::scan_with_options(
+        harness.root.path(),
+        DirectoryScanDepthLimit::Unlimited,
+        false,
+    )
+    .unwrap();
     let source_size_bytes = source_scan.total_size_in_bytes().unwrap();
 
     empty_harness.root.assert_is_empty();

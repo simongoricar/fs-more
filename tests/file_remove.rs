@@ -7,7 +7,7 @@ use fs_more_test_harness::{
 };
 
 #[test]
-pub fn remove_file() -> TestResult<()> {
+pub fn remove_file() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     let removal_result = fs_more::file::remove_file(harness.test_file.path());
@@ -28,7 +28,7 @@ pub fn remove_file() -> TestResult<()> {
 
 
 #[test]
-pub fn fail_file_removal_when_it_doesnt_exist() -> TestResult<()> {
+pub fn fail_file_removal_when_it_doesnt_exist() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     let non_existent_file = AssertableFilePath::from_path(
@@ -47,13 +47,10 @@ pub fn fail_file_removal_when_it_doesnt_exist() -> TestResult<()> {
         "failed to error on file removal: expected Err, got Ok"
     );
 
-    let removal_err = removal_result.unwrap_err();
-
     assert_matches!(
-        removal_err,
-        FileRemoveError::NotFound,
-        "expected NotFound, got {}",
-        removal_err
+        removal_result.unwrap_err(),
+        FileRemoveError::NotFound { path }
+        if path == non_existent_file.path()
     );
 
 

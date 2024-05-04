@@ -336,7 +336,7 @@ impl AssertableRootDirectory {
         assert!(!self.directory_path.exists());
     }
 
-    /// Assert the directory is completely empty.
+    /// Assert the directory exists and is completely empty.
     pub fn assert_is_empty(&self) {
         let directory_scan =
             std::fs::read_dir(self.path()).expect("failed to read contents of directory");

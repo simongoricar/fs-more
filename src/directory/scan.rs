@@ -76,23 +76,6 @@ pub enum DirectoryScanDepthLimit {
     },
 }
 
-impl DirectoryScanDepthLimit {
-    /// Construct an unlimited directory scan depth
-    /// ([`Self::Unlimited`]).
-    #[inline]
-    pub const fn unlimited() -> Self {
-        Self::Unlimited
-    }
-
-    /// Construct a limited directory scan depth.
-    ///
-    /// See [`Self::Limited`] for more information about the meaning of `maximum_depth`.
-    #[inline]
-    pub const fn limited(maximum_depth: usize) -> Self {
-        Self::Limited { maximum_depth }
-    }
-}
-
 
 
 /// A directory scanner.
@@ -491,7 +474,7 @@ impl DirectoryScan {
     /// If `maximum_scan_depth` is set to
     /// [`DirectoryScanDepthLimit::Unlimited`][]
     /// in the constructor for this scan, this method will always return `true`.
-    pub fn covers_entire_directory_subtree(&self) -> bool {
+    pub fn covers_entire_directory_tree(&self) -> bool {
         self.covers_entire_subtree
     }
 }
