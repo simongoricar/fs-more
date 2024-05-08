@@ -27,6 +27,8 @@ pub struct MoveFileOptions {
 
 #[allow(clippy::derivable_impls)]
 impl Default for MoveFileOptions {
+    /// Constructs a default [`MoveFileOptions`]:
+    /// - existing destination files will not be overwritten, and will cause an error ([`ExistingFileBehaviour::Abort`]).
     fn default() -> Self {
         Self {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
@@ -76,14 +78,15 @@ pub enum MoveFileFinished {
 pub enum MoveFileMethod {
     /// The source file was renamed to the destination file.
     ///
-    /// This is highly performant on most file systems.
+    /// This is very highly performant on most file systems,
+    /// to the point of being near instantaneous.
     Rename,
 
     /// The source file was copied to the destination,
     /// and the source file was deleted afterwards.
     ///
-    /// This is used if [`Self::Rename`] is impossible, and is
-    /// as fast as writes normally are.
+    /// This is generally used only if [`Self::Rename`] is impossible,
+    /// and is as fast as writes normally are.
     CopyAndDelete,
 }
 
@@ -93,30 +96,84 @@ pub enum MoveFileMethod {
 /// The destination path must be a *file* path, and must not point to a directory.
 ///
 ///
-/// ## Return value
-/// The function returns [`MoveFileFinished`], which indicates whether the file was created,
-/// overwritten or skipped, and includes the number of bytes moved, if relevant.
+/// # Symbolic links
+/// If `source_file_path` leads to a symbolic link that points to a file,
+/// the contents of the file at the symlink destination will be copied to `destination_file_path`
+/// (the link will not be preserved at `destination_file_path`).
+///
+/// The original `source_file_path` symbolic link will be removed at the end to complete the move.
 ///
 ///
-/// ## Options
-/// See [`CopyFileOptions`].
+/// # Options
+/// See [`MoveFileOptions`] for available file moving options.
 ///
 ///
-/// ## Symbolic links
-/// If `source_file_path` leads to a symbolic link to a file,
-/// the contents of the link destination file will be copied to `destination_file_path`.
-/// Finally, the original `source_file_path` symbolic link will be removed.
-///
-/// In short, the link target will be untouched, but the link itself will
-/// not be preserved; the destination will be a normal file - a copy of the source.
+/// # Return value
+/// If the move succeeds, the function returns [`MoveFileFinished`],
+/// which indicates whether the file was created,
+/// overwritten or skipped. The struct also includes the number of bytes moved,
+/// if relevant.
 ///
 ///
-/// ## Internals
-/// This function will first attempt to move the file with [`std::fs::rename`].
-/// If that fails (e.g. if paths are on different mount points / drives), a copy-and-delete will be attempted.
+/// # Errors
+/// If the file cannot be moved to the destination, a [`FileError`] is returned;
+/// see its documentatio for more details. Here is a non-exhaustive list of error causes:
+/// - If the source path has issues (does not exist, does not have the correct permissions, etc.),
+///   one of [`SourceFileNotFound`], [`SourcePathNotAFile`], [`UnableToAccessSourceFile`],
+///   or [`UnableToCanonicalizeSourceFilePath`] variants will be returned.
+/// - If the destination already exists, and [`options.existing_destination_file_behaviour`]
+///   is set to [`ExistingFileBehaviour::Abort`], then a [`DestinationPathAlreadyExists`]
+///   will be returned.
+/// - If the source and destination paths are canonically actually the same file,
+///   then copying will be aborted with [`SourceAndDestinationAreTheSame`].
+/// - If the destination path has other issues (is a directory, does not have the correct permissions, etc.),
+///   [`UnableToAccessDestinationFile`] or [`UnableToCanonicalizeDestinationFilePath`]
+///   will be returned.
+///
+/// There do exist other failure points, mostly due to unavoidable
+/// [time-of-check time-of-use](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use)
+/// issues and other potential IO errors that can prop up.
+/// These errors are grouped under the [`OtherIoError`] variant.
 ///
 ///
-/// [`CopyFileOptions`]: [super::CopyFileOptions]
+/// <br>
+///
+/// #### See also
+/// If you are looking for a file moving function that reports progress,
+/// see [`move_file_with_progress`].
+///
+///
+/// <details>
+/// <summary><h4>Implementation details</h4></summary>
+///
+/// *This section describes internal implementations details.
+/// They should not be relied on, because they are informative
+/// and may change in the future.*
+///
+/// <br>
+///
+/// This function will first attempt to move the file by renaming it using [`std::fs::rename`]
+/// (or [`fs_err::rename`](https://docs.rs/fs-err/latest/fs_err/fn.rename.html) if
+/// the `fs-err` feature flag is enabled).
+///
+/// If the rename fails, for example when the source and destination path are on different
+/// mount points or drives, a copy-and-delete will be performed instead.
+///
+/// The method used will be reflected in the [`MoveFileMethod`] used in the return value.
+///
+/// </details>
+///
+///
+/// [`options.existing_destination_file_behaviour`]: MoveFileOptions::existing_destination_file_behaviour
+/// [`SourceFileNotFound`]: FileError::SourceFileNotFound
+/// [`SourcePathNotAFile`]: FileError::SourcePathNotAFile
+/// [`UnableToAccessSourceFile`]: FileError::UnableToAccessSourceFile
+/// [`UnableToCanonicalizeSourceFilePath`]: FileError::UnableToCanonicalizeSourceFilePath
+/// [`DestinationPathAlreadyExists`]: FileError::DestinationPathAlreadyExists
+/// [`UnableToAccessDestinationFile`]: FileError::UnableToAccessDestinationFile
+/// [`UnableToCanonicalizeDestinationFilePath`]: FileError::UnableToCanonicalizeDestinationFilePath
+/// [`SourceAndDestinationAreTheSame`]: FileError::SourceAndDestinationAreTheSame
+/// [`OtherIoError`]: FileError::OtherIoError
 pub fn move_file<S, D>(
     source_file_path: S,
     destination_file_path: D,
@@ -218,7 +275,7 @@ where
 
 /// Options that influence the [`move_file_with_progress`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct FileMoveWithProgressOptions {
+pub struct MoveFileWithProgressOptions {
     /// How to behave for destination files that already exist.
     pub existing_destination_file_behaviour: ExistingFileBehaviour,
 
@@ -247,7 +304,11 @@ pub struct FileMoveWithProgressOptions {
     pub progress_update_byte_interval: u64,
 }
 
-impl Default for FileMoveWithProgressOptions {
+impl Default for MoveFileWithProgressOptions {
+    /// Constructs a default [`MoveFileOptions`]:
+    /// - existing destination files will not be overwritten, and will cause an error ([`ExistingFileBehaviour::Abort`]),
+    /// - read and write buffers with be 64 KiB large,
+    /// - the progress report closure interval will be 64 KiB.
     fn default() -> Self {
         Self {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
@@ -262,42 +323,112 @@ impl Default for FileMoveWithProgressOptions {
 }
 
 
-/// Moves a single file from the `source_file_path` to the `target_file_path` with progress reporting.
+/// Moves a single file from the source to the destination path, with progress reporting
 ///
 /// The destination path must be a *file* path, and must not point to a directory.
 ///
-/// ## Return value
-/// The function returns [`MoveFileFinished`], which indicates whether the file was created,
-/// overwritten or skipped, and includes the number of bytes moved, if relevant.
+///
+/// # Symbolic links
+/// If `source_file_path` leads to a symbolic link that points to a file,
+/// the contents of the file at the symlink destination will be copied to `destination_file_path`
+/// (the link will not be preserved at `destination_file_path`).
+///
+/// The original `source_file_path` symbolic link will be removed at the end to complete the move.
+///
+///
+/// # Options
+/// See [`MoveFileWithProgressOptions`] for available file moving options.
+///
+///
+/// # Return value
+/// If the move succeeds, the function returns [`MoveFileFinished`],
+/// which indicates whether the file was created,
+/// overwritten or skipped. The struct also includes the number of bytes moved,
+/// if relevant.
 ///
 ///
 /// ## Progress handling
-/// You must also provide a progress handler that receives a
-/// [`&FileProgress`][super::FileProgress] on each progress update.
+/// This function allows you to receive progress reports by passing
+/// a `progress_handler` closure. It will be called with
+/// a reference to [`FileProgress`] regularly.
+///
 /// You can control the progress update frequency with the
-/// [`options.progress_update_byte_interval`][FileMoveWithProgressOptions::progress_update_byte_interval] option.
-/// That option is the *minumum* amount of bytes written between two progress reports, meaning we can't guarantee
-/// a specific amount of progress reports per file size.
-/// We do, however, guarantee at least one progress report (the final one).
+/// [`options.progress_update_byte_interval`] option.
+/// The value of this option is the minimum amount of bytes written to a file between
+/// two calls to the provided `progress_handler`.
+///
+/// This function does not guarantee a precise amount of progress reports per file size
+/// and progress reporting interval setting; it does, however, guarantee at least one progress report:
+/// the final one, which happens when the file has been completely copied.
+/// In most cases though, the number of calls to
+/// the closure will be near the expected amount,
+/// which is `file_size / progress_update_byte_interval`.
 ///
 ///
-/// ## Options
-/// See [`FileMoveWithProgressOptions`] for more details.
+/// # Errors
+/// If the file cannot be moved to the destination, a [`FileError`] is returned;
+/// see its documentatio for more details. Here is a non-exhaustive list of error causes:
+/// - If the source path has issues (does not exist, does not have the correct permissions, etc.),
+///   one of [`SourceFileNotFound`], [`SourcePathNotAFile`], [`UnableToAccessSourceFile`],
+///   or [`UnableToCanonicalizeSourceFilePath`] variants will be returned.
+/// - If the destination already exists, and [`options.existing_destination_file_behaviour`]
+///   is set to [`ExistingFileBehaviour::Abort`], then a [`DestinationPathAlreadyExists`]
+///   will be returned.
+/// - If the source and destination paths are canonically actually the same file,
+///   then copying will be aborted with [`SourceAndDestinationAreTheSame`].
+/// - If the destination path has other issues (is a directory, does not have the correct permissions, etc.),
+///   [`UnableToAccessDestinationFile`] or [`UnableToCanonicalizeDestinationFilePath`]
+///   will be returned.
+///
+/// There do exist other failure points, mostly due to unavoidable
+/// [time-of-check time-of-use](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use)
+/// issues and other potential IO errors that can prop up.
+/// These errors are grouped under the [`OtherIoError`] variant.
 ///
 ///
-/// ## Symbolic links
-/// If the `source_file_path` is a symbolic link to a file, the contents of the file that the link points to
-/// will be copied to the `target_file_path` and the original `source_file_path` symbolic link will be removed
-/// (i.e. the link destination will be untouched, but we won't preserve the link on the destination file).
+/// <br>
+///
+/// #### See also
+/// If you are looking for a file moving function that does not report progress,
+/// see [`move_file`].
 ///
 ///
-/// ## Internals
-/// This function will first attempt to move the file with [`std::fs::rename`].
-/// If that fails (e.g. if paths are on different mount points / drives), a copy-and-delete will be attempted.
+/// <details>
+/// <summary><h4>Implementation details</h4></summary>
+///
+/// *This section describes internal implementations details.
+/// They should not be relied on, because they are informative
+/// and may change in the future.*
+///
+/// <br>
+///
+/// This function will first attempt to move the file by renaming it using [`std::fs::rename`]
+/// (or [`fs_err::rename`](https://docs.rs/fs-err/latest/fs_err/fn.rename.html) if
+/// the `fs-err` feature flag is enabled).
+///
+/// If the rename fails, for example when the source and destination path are on different
+/// mount points or drives, a copy-and-delete will be performed instead.
+///
+/// The method used will be reflected in the [`MoveFileMethod`] used in the return value.
+///
+/// </details>
+///
+///
+/// [`options.progress_update_byte_interval`]: MoveFileWithProgressOptions::progress_update_byte_interval
+/// [`options.existing_destination_file_behaviour`]: MoveFileWithProgressOptions::existing_destination_file_behaviour
+/// [`SourceFileNotFound`]: FileError::SourceFileNotFound
+/// [`SourcePathNotAFile`]: FileError::SourcePathNotAFile
+/// [`UnableToAccessSourceFile`]: FileError::UnableToAccessSourceFile
+/// [`UnableToCanonicalizeSourceFilePath`]: FileError::UnableToCanonicalizeSourceFilePath
+/// [`DestinationPathAlreadyExists`]: FileError::DestinationPathAlreadyExists
+/// [`UnableToAccessDestinationFile`]: FileError::UnableToAccessDestinationFile
+/// [`UnableToCanonicalizeDestinationFilePath`]: FileError::UnableToCanonicalizeDestinationFilePath
+/// [`SourceAndDestinationAreTheSame`]: FileError::SourceAndDestinationAreTheSame
+/// [`OtherIoError`]: FileError::OtherIoError
 pub fn move_file_with_progress<S, D, P>(
     source_file_path: S,
     destination_file_path: D,
-    options: FileMoveWithProgressOptions,
+    options: MoveFileWithProgressOptions,
     mut progress_handler: P,
 ) -> Result<MoveFileFinished, FileError>
 where

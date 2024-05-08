@@ -1,14 +1,22 @@
 use std::io::Write;
 
 /// File copying or moving progress.
+///
+/// Primarily used in [`copy_file_with_progress`] and [`move_file_with_progress`].
+///
+///
+/// [`copy_file_with_progress`]: super::copy_file_with_progress
+/// [`move_file_with_progress`]: super::move_file_with_progress
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct FileProgress {
     /// Current number of bytes copied or moved to the destination.
     pub bytes_finished: u64,
 
-    /// Total number of bytes that must be copied or moved to the destination.
+    /// Total number of bytes that must be copied or moved to the destination
+    /// to complete the copy or move operation.
     ///
-    /// Always `<= bytes_finished`.
+    /// This value is always smaller or at most equal to
+    /// the  [`bytes_finished`][Self::bytes_finished] field.
     pub bytes_total: u64,
 }
 

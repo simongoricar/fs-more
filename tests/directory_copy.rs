@@ -1,11 +1,11 @@
 use assert_matches::assert_matches;
 use fs_more::{
     directory::{
+        CopyDirectoryDepthLimit,
         CopyDirectoryOptions,
         CopyDirectoryProgress,
         CopyDirectoryWithProgressOptions,
         DestinationDirectoryRule,
-        DirectoryCopyDepthLimit,
         DirectoryScan,
         DirectoryScanDepthLimit,
         ExistingSubDirectoryBehaviour,
@@ -94,8 +94,8 @@ pub fn copy_directory_respect_maximum_depth_option() -> TestResult {
     const MAXIMUM_SCAN_DEPTH: DirectoryScanDepthLimit =
         DirectoryScanDepthLimit::Limited { maximum_depth: 2 };
 
-    const MAXIMUM_COPY_DEPTH: DirectoryCopyDepthLimit =
-        DirectoryCopyDepthLimit::Limited { maximum_depth: 2 };
+    const MAXIMUM_COPY_DEPTH: CopyDirectoryDepthLimit =
+        CopyDirectoryDepthLimit::Limited { maximum_depth: 2 };
 
 
     let source_scan =
@@ -292,7 +292,7 @@ pub fn copy_directory_with_progress_respect_depth_option() -> TestResult {
         empty_harness.root.path(),
         CopyDirectoryWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
-            copy_depth_limit: DirectoryCopyDepthLimit::Limited {
+            copy_depth_limit: CopyDirectoryDepthLimit::Limited {
                 maximum_depth: MAXIMUM_DEPTH,
             },
             ..Default::default()
@@ -871,7 +871,7 @@ pub fn copy_directory_containing_symbolic_link_to_directory_and_respect_depth_li
         harness.root.path(),
         empty_harness.root.path(),
         CopyDirectoryOptions {
-            copy_depth_limit: DirectoryCopyDepthLimit::Limited { maximum_depth: 1 },
+            copy_depth_limit: CopyDirectoryDepthLimit::Limited { maximum_depth: 1 },
             ..Default::default()
         },
     )
@@ -930,7 +930,7 @@ pub fn copy_directory_with_progress_containing_symbolic_link_to_directory_and_re
         harness.root.path(),
         empty_harness.root.path(),
         CopyDirectoryWithProgressOptions {
-            copy_depth_limit: DirectoryCopyDepthLimit::Limited { maximum_depth: 1 },
+            copy_depth_limit: CopyDirectoryDepthLimit::Limited { maximum_depth: 1 },
             ..Default::default()
         },
         |_| {},

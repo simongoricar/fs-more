@@ -363,7 +363,7 @@ fn parse_struct_field(field: &syn::Field) -> Option<ParsedField> {
 
     // If we haven't returned at this point, this means the field could just be
     // some random field that isn't annotated/important for this macro.
-    // However, if we were able to find a speficic assertable type on it, we should abort
+    // However, if we were able to find a specific assertable type on it, we should abort
     // as those types should only really be used along with the macro and reaching this
     // point in the code might indicate the user forgot to add
     // a #[root]/#[file(...)]/#[directory(...)] field attribute.
@@ -730,7 +730,7 @@ fn generate_impl(
 ///
 ///     // Tree harnesses can have one or more #[file(...)] annotations on fields of type `AssertableFilePath`.
 ///     //
-///     // The `path` field is required - it specifies the path of the given file to be created on initalization.
+///     // The `path` field is required - it specifies the path of the given file to be created on initialization.
 ///     // The `content` field is optional - it specified, it represents the content of the file as an expression resolving into `&[u8]`.
 ///     //
 ///     // The value of this field, or rather the path it represents, is the configured file path.
@@ -742,7 +742,7 @@ fn generate_impl(
 ///
 ///     // Tree harnesses can have one or more #[directory(...)] annotations on fields of type `AssertableDirectoryPath`.
 ///     //
-///     // The `path` field is required - it specifies the path of the given directory to be created on initalization.
+///     // The `path` field is required - it specifies the path of the given directory to be created on initialization.
 ///     //
 ///     // The value of this field, or rather the path it represents, is the configured directory path.
 ///     #[directory(path = "subdirectory_b")]

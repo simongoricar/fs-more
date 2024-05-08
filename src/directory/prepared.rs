@@ -7,7 +7,7 @@ use cfg_if::cfg_if;
 use super::{
     common::DestinationDirectoryRule,
     is_directory_empty_unchecked,
-    DirectoryCopyDepthLimit,
+    CopyDirectoryDepthLimit,
 };
 use crate::{
     directory::common::join_relative_source_path_onto_destination,
@@ -42,6 +42,7 @@ pub(crate) enum QueuedOperation {
 #[derive(Clone, Debug)]
 pub(crate) struct ValidatedSourceDirectory {
     pub(crate) directory_path: PathBuf,
+    pub(crate) original_path_was_symlink_to_directory: bool,
 }
 
 /// Ensures the given source directory path is valid.
@@ -80,13 +81,43 @@ pub(super) fn validate_source_directory_path(
         }
     }
 
-    if !source_directory_path.is_dir() {
-        return Err(
-            SourceDirectoryPathValidationError::NotADirectory {
-                path: source_directory_path.to_path_buf(),
-            },
-        );
-    }
+
+    let is_symlink_to_directory = {
+        let metadata_without_follow =
+            fs::symlink_metadata(source_directory_path).map_err(|error| {
+                SourceDirectoryPathValidationError::UnableToAccess {
+                    directory_path: source_directory_path.to_path_buf(),
+                    error,
+                }
+            })?;
+
+        if metadata_without_follow.is_symlink() {
+            let metadata_with_follow = fs::metadata(source_directory_path).map_err(|error| {
+                SourceDirectoryPathValidationError::UnableToAccess {
+                    directory_path: source_directory_path.to_path_buf(),
+                    error,
+                }
+            })?;
+
+            if !metadata_with_follow.is_dir() {
+                return Err(
+                    SourceDirectoryPathValidationError::NotADirectory {
+                        path: source_directory_path.to_path_buf(),
+                    },
+                );
+            } else {
+                true
+            }
+        } else if metadata_without_follow.is_dir() {
+            false
+        } else {
+            return Err(
+                SourceDirectoryPathValidationError::NotADirectory {
+                    path: source_directory_path.to_path_buf(),
+                },
+            );
+        }
+    };
 
 
     let canonical_source_directory_path =
@@ -105,6 +136,7 @@ pub(super) fn validate_source_directory_path(
 
         Ok(ValidatedSourceDirectory {
             directory_path: de_unced_canonical_path,
+            original_path_was_symlink_to_directory: is_symlink_to_directory,
         })
     }
 
@@ -112,6 +144,7 @@ pub(super) fn validate_source_directory_path(
     {
         Ok(ValidatedSourceDirectory {
             directory_path: canonical_source_directory_path,
+            original_path_was_symlink_to_directory: is_symlink_to_directory,
         })
     }
 }
@@ -301,7 +334,7 @@ pub(super) fn validate_source_destination_directory_pair(
 fn scan_and_plan_directory_copy(
     source_directory_path: PathBuf,
     destination_directory_path: PathBuf,
-    copy_depth_limit: DirectoryCopyDepthLimit,
+    copy_depth_limit: CopyDirectoryDepthLimit,
 ) -> Result<Vec<QueuedOperation>, CopyDirectoryPlanError> {
     let mut operation_queue: Vec<QueuedOperation> = Vec::new();
 
@@ -397,7 +430,7 @@ fn scan_and_plan_directory_copy(
                 // If we haven't reached the maximum depth yet, we queue the directory
                 // to be scanned for further files and sub-directories.
                 match copy_depth_limit {
-                    DirectoryCopyDepthLimit::Limited { maximum_depth } => {
+                    CopyDirectoryDepthLimit::Limited { maximum_depth } => {
                         if next_directory.depth < maximum_depth {
                             directory_scan_queue.push(PendingDirectoryScan {
                                 source_directory_path: directory_item_source_path,
@@ -405,7 +438,7 @@ fn scan_and_plan_directory_copy(
                             });
                         }
                     }
-                    DirectoryCopyDepthLimit::Unlimited => {
+                    CopyDirectoryDepthLimit::Unlimited => {
                         directory_scan_queue.push(PendingDirectoryScan {
                             source_directory_path: directory_item_source_path,
                             depth: next_directory.depth + 1,
@@ -453,7 +486,7 @@ fn scan_and_plan_directory_copy(
 
                     // If we haven't reached the maximum depth yet, we queue the directory for scanning.
                     match copy_depth_limit {
-                        DirectoryCopyDepthLimit::Limited { maximum_depth } => {
+                        CopyDirectoryDepthLimit::Limited { maximum_depth } => {
                             if next_directory.depth < maximum_depth {
                                 directory_scan_queue.push(PendingDirectoryScan {
                                     source_directory_path: directory_item_source_path.clone(),
@@ -461,7 +494,7 @@ fn scan_and_plan_directory_copy(
                                 });
                             }
                         }
-                        DirectoryCopyDepthLimit::Unlimited => {
+                        CopyDirectoryDepthLimit::Unlimited => {
                             directory_scan_queue.push(PendingDirectoryScan {
                                 source_directory_path: directory_item_source_path,
                                 depth: next_directory.depth + 1,
@@ -579,7 +612,7 @@ impl DirectoryCopyPrepared {
         source_directory_path: &Path,
         destination_directory_path: &Path,
         destination_directory_rule: DestinationDirectoryRule,
-        copy_depth_limit: DirectoryCopyDepthLimit,
+        copy_depth_limit: CopyDirectoryDepthLimit,
     ) -> Result<Self, CopyDirectoryPreparationError> {
         let (canonical_source_directory_path, validated_destination) =
             Self::validate_source_and_destination(
@@ -604,7 +637,7 @@ impl DirectoryCopyPrepared {
         validated_source_directory: ValidatedSourceDirectory,
         validated_destination_directory: ValidatedDestinationDirectory,
         destination_directory_rule: DestinationDirectoryRule,
-        copy_depth_limit: DirectoryCopyDepthLimit,
+        copy_depth_limit: CopyDirectoryDepthLimit,
     ) -> Result<Self, CopyDirectoryPlanError> {
         let operations = Self::prepare_directory_operations(
             validated_source_directory.directory_path,
@@ -666,7 +699,7 @@ impl DirectoryCopyPrepared {
     }
 
     /// Scans the source directory and prepares a plan (a set of operations)
-    /// to copy the source directory to the destination directory, as confgured.
+    /// to copy the source directory to the destination directory, as configured.
     ///
     /// <br>
     ///
@@ -687,7 +720,7 @@ impl DirectoryCopyPrepared {
         source_directory_path: PathBuf,
         destination_directory_path: PathBuf,
         destination_directory_rule: DestinationDirectoryRule,
-        copy_depth_limit: DirectoryCopyDepthLimit,
+        copy_depth_limit: CopyDirectoryDepthLimit,
     ) -> Result<Vec<QueuedOperation>, CopyDirectoryPlanError> {
         // Initialize a queue of file copy or directory create operations.
         let copy_queue = scan_and_plan_directory_copy(

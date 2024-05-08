@@ -3,10 +3,10 @@ use fs_more::{
     error::FileError,
     file::{
         ExistingFileBehaviour,
-        FileMoveWithProgressOptions,
         FileProgress,
         MoveFileFinished,
         MoveFileOptions,
+        MoveFileWithProgressOptions,
     },
 };
 use fs_more_test_harness::{
@@ -59,7 +59,7 @@ pub fn move_file_with_progress() -> TestResult {
     let file_copy_result = fs_more::file::move_file_with_progress(
         harness.test_file.path(),
         target_file.path(),
-        FileMoveWithProgressOptions {
+        MoveFileWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
             ..Default::default()
         },
@@ -366,7 +366,7 @@ pub fn move_file_with_progress_symlink_behaviour() -> TestResult {
     let finished_move = fs_more::file::move_file_with_progress(
         symlinked_file.path(),
         target_file.path(),
-        FileMoveWithProgressOptions::default(),
+        MoveFileWithProgressOptions::default(),
         |_| {},
     )
     .unwrap();
@@ -443,7 +443,7 @@ pub fn forbid_move_file_with_progress_when_source_is_symlink_to_target() -> Test
     let copy_result = fs_more::file::move_file_with_progress(
         test_symlink.path(),
         harness.test_file.path(),
-        FileMoveWithProgressOptions {
+        MoveFileWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
             ..Default::default()
         },

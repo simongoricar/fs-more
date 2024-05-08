@@ -78,7 +78,7 @@ pub enum DirectoryScanDepthLimit {
 
 
 
-/// A directory scanner.
+/// A directory scanner with configurable scan depth and symlink behaviour.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DirectoryScan {
     /// Path of the directory that was scanned.
@@ -124,7 +124,7 @@ impl DirectoryScan {
     /// ## `follow_symbolic_links = true`
     /// We'll follow the symbolic links, even if they lead outside the base `directory_path`.
     /// Note that this means the files and directories included in the scan results
-    /// **might not necesarrily be sub-paths of the provided base `directory_path`**.
+    /// **might not necessarily be sub-paths of the provided base `directory_path`**.
     ///
     /// If a symbolic link turns out to be broken (its destination doesn't exist), it is simply ignored
     /// (not included in the scan results).
@@ -427,7 +427,7 @@ impl DirectoryScan {
     ///
     /// It is up to the user to decide whether that is desired behavior or not.
     /// To find out whether the returned number of bytes will not reflect the full depth
-    /// of the directory structure, see [`Self::covers_entire_directory_subtree`].
+    /// of the directory structure, see [`Self::covers_entire_directory_tree`].
     pub fn total_size_in_bytes(&self) -> Result<u64, DirectorySizeScanError> {
         let mut total_bytes = 0;
 

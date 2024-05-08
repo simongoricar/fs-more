@@ -4,7 +4,7 @@ use_enabled_fs_module!();
 
 use super::{
     copy_directory_unchecked,
-    perform_prepared_copy_directory_with_progress_unchecked,
+    execute_prepared_copy_directory_with_progress_unchecked,
     prepared::{
         validate_destination_directory_path,
         validate_source_destination_directory_pair,
@@ -14,16 +14,21 @@ use super::{
         ValidatedDestinationDirectory,
         ValidatedSourceDirectory,
     },
+    CopyDirectoryDepthLimit,
     CopyDirectoryOperation,
     CopyDirectoryOptions,
     CopyDirectoryWithProgressOptions,
     DestinationDirectoryRule,
-    DirectoryCopyDepthLimit,
     DirectoryScan,
     DirectoryScanDepthLimit,
 };
 use crate::{
-    error::{MoveDirectoryError, MoveDirectoryExecutionError, MoveDirectoryPreparationError},
+    error::{
+        MoveDirectoryError,
+        MoveDirectoryExecutionError,
+        MoveDirectoryPreparationError,
+        SourceDirectoryPathValidationError,
+    },
     file::FileProgress,
     use_enabled_fs_module,
 };
@@ -53,35 +58,35 @@ impl Default for DirectoryMoveOptions {
 
 
 
-/// Describes strategies for moving a directory.
+/// Describes a strategy for performing a directory move.
 ///
-/// Included in [`FinishedDirectoryMove`] to allow callers
+/// Included in [`MoveDirectoryFinished`] to allow callers
 /// to understand how the directory was moved.
 ///
-/// To clarify: *the caller can not request that a specific move strategy be used*.
+/// Note: *the caller can not request that a specific move strategy be used*.
 /// This enum is simply included in the return value to help the caller understand how the move was performed.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum DirectoryMoveStrategy {
     /// The source directory was simply renamed from the source path to the target path.
     ///
-    /// **This is the fastest method**, but generally works only if both paths are
-    /// on the same mount point / drive.
+    /// **This is the fastest method**, to the point of being near instantenous,
+    /// but generally works only if both paths are on the same mount point or drive.
     RenameSourceDirectory,
 
-    /// The *contents* of the source directory were renamed from their source paths
-    /// to their target pahts. This is Windows-specific behaviour since it doesn't allow
-    /// renaming to existing (even if empty) target directories.
+    /// The individual entries in the source directory were renamed from their source paths
+    /// to their destination paths. This is Windows-specific behaviour since it doesn't allow
+    /// renaming to existing destination directories, even if they are empty.
     ///
-    /// *This should be almost as fast as [`Self::RenameSourceDirectory`]*,
+    /// *This is nearly as fast as [`Self::RenameSourceDirectory`]*,
     /// but just like it, this method generally works only if both paths are
-    /// on the same mount point / drive.
+    /// on the same mount point or drive.
     RenameSourceDirectoryContents,
 
     /// The source directory was recursively copied to the target directory,
-    /// with the source directory being deleted afterwards.
+    /// and the source directory was deleted afterwards.
     ///
-    /// Out of the three methods given, this is the slowest. It is also unavoidable
-    /// if the directory can't renamed, which can happen when the source and target
+    /// Out of the three methods given, this is the slowest -- it is as fast as a normal recursive copy.
+    /// It is also unavoidable if the directory can't renamed, which can happen when the source and destination
     /// directory exist on different mount points or drives.
     CopyAndDelete,
 }
@@ -93,7 +98,7 @@ pub enum DirectoryMoveStrategy {
 /// This is the return value of [`move_directory`] and [`move_directory_with_progress`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct MoveDirectoryFinished {
-    /// Total amount of bytes moved.
+    /// Total number of bytes moved.
     pub total_bytes_moved: u64,
 
     /// Number of files moved (created).
@@ -122,8 +127,8 @@ struct DirectoryContentDetails {
 
 
 
-/// Scans the provided directory (no depth limit) for auxiliary details,
-/// such as the total number of bytes it contains.
+/// Scans the provided directory for auxiliary details (without a depth limit).
+/// This includes information like the total number of bytes it contains.
 fn collect_source_directory_details(
     source_directory_path: &Path,
 ) -> Result<DirectoryContentDetails, MoveDirectoryPreparationError> {
@@ -146,6 +151,7 @@ fn collect_source_directory_details(
 }
 
 
+
 pub(crate) enum DirectoryMoveByRenameAction {
     Renamed {
         finished_move: MoveDirectoryFinished,
@@ -156,16 +162,12 @@ pub(crate) enum DirectoryMoveByRenameAction {
     Impossible,
 }
 
-/// TODO update documentation
-///
+
 /// Attempts a directory move by using the [`std::fs::rename`]
 /// (or `fs_err::rename` is using the `fs-err` feature).
 ///
-/// - If a trivial rename is performed, `Ok(Some(...))` is returned.
-/// - If a trivial rename is not possible (e.g. target directory is not empty) or fails,
-///   the function returns `Ok(None)`. This can happen when source and target are on different mount points.
-///   This return value indicates you need to perform a copy-and-delete instead.
-/// - If an error occurs, the function returns `Err(DirectoryError)`.
+/// Returns [`DirectoryMoveByRenameAction`], which indicates whether the move-by-rename
+/// succeeded, or failed due to source and destination being on different mount points or drives.
 fn attempt_directory_move_by_rename(
     validated_source_directory: &ValidatedSourceDirectory,
     source_directory_details: &DirectoryContentDetails,
@@ -325,13 +327,16 @@ fn attempt_directory_move_by_rename(
     }
 }
 
-/// Move a directory from `source_directory_path` to `target_directory_path`.
+
+
+/// Moves a directory from the source to the destination directory.
 ///
-/// Things to consider:
-/// - `source_directory_path` must point to an existing directory path.
-/// - `target_directory_path` represents a path to the directory that will contain `source_directory_path`'s contents.
-///   If needed, `target_directory_path` will be created.
 ///
+/// # Symbolic links
+/// If `source_directory_path` itself leads to a symbolic link that
+/// points to a directory, an error is returned.
+///
+/// TODO update documentation
 ///
 /// ### Warnings
 /// *This function does not follow or move symbolic links in the source directory.*
@@ -347,9 +352,6 @@ fn attempt_directory_move_by_rename(
 /// - with [`AllowEmpty`][DestinationDirectoryRule::AllowEmpty]: either not exist or be empty, or,
 /// - with [`AllowNonEmpty`][DestinationDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
 ///   the specified overwriting rules are respected (see [variant fields][DestinationDirectoryRule::AllowNonEmpty]).
-///
-/// If the specified target directory rule is not satisfied,
-/// a [`DirectoryError`] containing the reason will be returned before any move is performed.
 ///
 ///
 /// ### Move strategies
@@ -368,7 +370,7 @@ fn attempt_directory_move_by_rename(
 /// ### Return value
 /// Upon success, the function returns the number of files and directories that were moved
 /// as well as the total amount of bytes moved and how the move was performed
-/// (see [`FinishedDirectoryMove`]).
+/// (see [`MoveDirectoryFinished`]).
 pub fn move_directory<S, T>(
     source_directory_path: S,
     target_directory_path: T,
@@ -380,6 +382,17 @@ where
 {
     let validated_source_directory = validate_source_directory_path(source_directory_path.as_ref())
         .map_err(MoveDirectoryPreparationError::SourceDirectoryValidationError)?;
+
+    if validated_source_directory.original_path_was_symlink_to_directory {
+        return Err(MoveDirectoryError::PreparationError(
+            MoveDirectoryPreparationError::SourceDirectoryValidationError(
+                SourceDirectoryPathValidationError::NotADirectory {
+                    path: source_directory_path.as_ref().to_path_buf(),
+                },
+            ),
+        ));
+    }
+
 
     let validated_destination_directory = validate_destination_directory_path(
         target_directory_path.as_ref(),
@@ -398,6 +411,7 @@ where
         collect_source_directory_details(&validated_source_directory.directory_path)?;
 
 
+    // FIXME what happens if `source_directory_path` is a symlink to a directory?
     match attempt_directory_move_by_rename(
         &validated_source_directory,
         &source_details,
@@ -418,7 +432,7 @@ where
         validated_source_directory.clone(),
         validated_destination_directory,
         options.destination_directory_rule,
-        DirectoryCopyDepthLimit::Unlimited,
+        CopyDirectoryDepthLimit::Unlimited,
     )
     .map_err(MoveDirectoryPreparationError::CopyPlanningError)?;
 
@@ -426,7 +440,7 @@ where
         prepared_copy,
         CopyDirectoryOptions {
             destination_directory_rule: options.destination_directory_rule,
-            copy_depth_limit: DirectoryCopyDepthLimit::Unlimited,
+            copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
         },
     )
     .map_err(MoveDirectoryExecutionError::CopyDirectoryError)?;
@@ -581,9 +595,6 @@ pub struct DirectoryMoveProgress {
 /// - with [`AllowNonEmpty`][DestinationDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
 ///   the specified overwriting rules are respected (see [variant fields][DestinationDirectoryRule::AllowNonEmpty]).
 ///
-/// If the specified target directory rule is not satisfied,
-/// a [`DirectoryError`] containing the reason will be returned before any move is performed.
-///
 ///
 /// ### Move strategies
 /// Depending on the situation, the move will be performed one of two ways:
@@ -622,7 +633,7 @@ pub struct DirectoryMoveProgress {
 /// ### Return value
 /// Upon success, the function returns the number of files and directories that were moved
 /// as well as the total amount of bytes moved and how the move was performed
-/// (see [`FinishedDirectoryMove`]).
+/// (see [`MoveDirectoryFinished`]).
 pub fn move_directory_with_progress<S, T, F>(
     source_directory_path: S,
     target_directory_path: T,
@@ -696,7 +707,7 @@ where
         read_buffer_size: options.read_buffer_size,
         write_buffer_size: options.write_buffer_size,
         progress_update_byte_interval: options.progress_update_byte_interval,
-        copy_depth_limit: DirectoryCopyDepthLimit::Unlimited,
+        copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
     };
 
     let prepared_copy = DirectoryCopyPrepared::prepare_with_validated(
@@ -708,7 +719,7 @@ where
     .map_err(MoveDirectoryPreparationError::CopyPlanningError)?;
 
 
-    let directory_copy_result = perform_prepared_copy_directory_with_progress_unchecked(
+    let directory_copy_result = execute_prepared_copy_directory_with_progress_unchecked(
         prepared_copy,
         copy_options,
         |progress| {

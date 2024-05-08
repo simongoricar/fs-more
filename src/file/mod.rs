@@ -19,17 +19,17 @@ pub use size::*;
 use crate::{error::FileError, use_enabled_fs_module};
 
 
-/// Rules that dictate how existing files are handled when copying or moving.
+/// Controls behaviour for existing destination files when copying or moving.
 ///
 /// See also: [`CopyFileOptions`] and [`MoveFileOptions`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum ExistingFileBehaviour {
-    /// Ensures that an error will be returned from the corresponding
-    /// file copying or moving function when a destination file already exists.
+    /// Ensures that an error will be returned from the corresponding function
+    /// when the destination file already exists.
     Abort,
 
     /// Ensures that an existing destination file will not be overwritten
-    /// by the corresponding copying or moving function.
+    /// by the corresponding copy or move operation.
     ///
     /// However, the function will skip the file silently; no error will be returned.
     Skip,
@@ -41,18 +41,25 @@ pub enum ExistingFileBehaviour {
 
 
 
+/// A set of paths and auxiliary information about a source file path.
 pub(crate) struct ValidatedSourceFilePath {
     /// Canonical source file path.
+    ///
+    /// If the original file path was a symlink leading to some target file,
+    /// this path points to that target file.
     pub(crate) source_file_path: PathBuf,
 
-    /// Indicates that the file at `source_file_path` **must not** be moved.
+    /// Indicates whether the original source file path (before canonicalization)
+    /// was a symlink to a file.
     ///
     /// **This flag is relevant only if the operation happens to be moving a file.**
     ///
-    /// This flag can be `true` in cases when the `source_file_path` was a symlink to a file and we
-    /// canonicalized the path in `validate_source_file_path`, meaning the path in this struct no longer points to the
-    /// user-provided symlink, but to the file that link points to. In that case, we must not move the file, but copy it,
-    /// and then delete the original symbolic link the user wanted to move.
+    /// This flag is be `true` when the original `source_file_path` was a symlink to a file and we
+    /// canonicalized the path in [`validate_source_file_path`].
+    ///
+    /// This means the path in this struct no longer points to the symlink,
+    /// but to the file that link itself points to. In that case, we must not move the file,
+    /// but copy it and then delete the original symlink the user wanted to move.
     pub(crate) original_was_symlink_to_file: bool,
 }
 
@@ -123,10 +130,15 @@ fn validate_source_file_path(
 }
 
 
+/// A set of paths and auxiliary information about a destination file path.
 pub(crate) struct ValidatedDestinationFilePath {
     /// Canonical destination file path.
+    ///
+    /// If the original file path was a symlink leading to some target file,
+    /// this path points to that target file.
     pub(crate) destination_file_path: PathBuf,
 
+    /// Whether the destination already exists.
     pub(crate) exists: bool,
 }
 
@@ -136,10 +148,16 @@ pub(crate) enum DestinationValidationAction {
     /// and `existing_destination_file_behaviour` is set to [`ExistingFileBehaviour::Skip`].
     SkipCopyOrMove,
 
-    /// The validation logic found no errors.
+    /// The validation logic found no path validation errors.
     Continue(ValidatedDestinationFilePath),
 }
 
+
+/// Given a destination file path, validate that it respects `existing_destination_file_behaviour`,
+/// and that if it is a symlink, that it points to a file.
+///
+/// If the given path is a symlink to a file, the returned path will be a resolved (canonical) one,
+/// i.e. pointing to the real file.
 fn validate_destination_file_path(
     validated_source_file_path: &ValidatedSourceFilePath,
     destination_file_path: &Path,

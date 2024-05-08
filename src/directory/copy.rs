@@ -7,7 +7,7 @@ use super::{
     prepared::{DirectoryCopyPrepared, QueuedOperation},
 };
 use crate::{
-    error::{CopyDirectoryError, CopyDirectoryExcutionError},
+    error::{CopyDirectoryError, CopyDirectoryExecutionError},
     file::{
         copy_file,
         copy_file_with_progress,
@@ -19,10 +19,10 @@ use crate::{
     use_enabled_fs_module,
 };
 
-/// The maximum directory copy depth option.
+/// The maximum depth of a directory copy operation.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
-pub enum DirectoryCopyDepthLimit {
-    /// No depth limit.
+pub enum CopyDirectoryDepthLimit {
+    /// No depth limit - the entire directory tree will be copied.
     Unlimited,
 
     /// Copy depth is limited to `maximum_depth`, where the value refers to
@@ -70,36 +70,36 @@ pub enum DirectoryCopyDepthLimit {
 
 
 
-/// Options for the [`copy_directory`] function.
+/// Options that influence the [`copy_directory`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct CopyDirectoryOptions {
-    /// Specifies whether you allow the target directory to exist before copying
+    /// Specifies whether you allow the destination directory to exist before copying
     /// and whether it must be empty or not.
     ///
-    /// If you allow a non-empty target directory, you may also specify whether you allow
-    /// destination files or subdirectories to already exist (and be overwritten).
+    /// If you allow a non-empty destination directory, you may also specify
+    /// how to behave for existing destination files and sub-directories.
     ///
     /// See [`DestinationDirectoryRule`] for more details and examples.
     pub destination_directory_rule: DestinationDirectoryRule,
 
     /// Maximum depth of the source directory to copy over to the destination.
-    pub copy_depth_limit: DirectoryCopyDepthLimit,
+    pub copy_depth_limit: CopyDirectoryDepthLimit,
 }
 
 impl Default for CopyDirectoryOptions {
     /// Constructs defaults for copying a directory:
-    /// - destination files aren't allowed to be overwritten (see [`DestinationDirectoryRule::AllowEmpty`]), and
-    /// - there is no copy depth limit (see [`DirectoryCopyDepthLimit::Unlimited`]).
+    /// - if the destination directory already exists, it must be empty ([`DestinationDirectoryRule::AllowEmpty`]), and
+    /// - there is no copy depth limit ([`CopyDirectoryDepthLimit::Unlimited`]).
     fn default() -> Self {
         Self {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
-            copy_depth_limit: DirectoryCopyDepthLimit::Unlimited,
+            copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
         }
     }
 }
 
 
-/// Describes actions taken by the [`copy_directory`] function.
+/// Describes a successful directory copy operation.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct CopyDirectoryFinished {
     /// Total amount of bytes copied.
@@ -116,14 +116,11 @@ pub struct CopyDirectoryFinished {
 
 /// Perform a copy using prepared data from [`PreparedDirectoryCopy`].
 ///
-/// This `*_unchecked` function does not validate the source and target paths;
-/// it expects them to be already validated.
-///
 /// For more details, see [`copy_directory`].
 pub(crate) fn copy_directory_unchecked(
     prepared_directory_copy: DirectoryCopyPrepared,
     options: CopyDirectoryOptions,
-) -> Result<CopyDirectoryFinished, CopyDirectoryExcutionError> {
+) -> Result<CopyDirectoryFinished, CopyDirectoryExecutionError> {
     let can_overwrite_files = options
         .destination_directory_rule
         .allows_overwriting_existing_destination_files();
@@ -158,7 +155,7 @@ pub(crate) fn copy_directory_unchecked(
                 .directory_path,
         )
         .map_err(
-            |error| CopyDirectoryExcutionError::UnableToCreateDirectory {
+            |error| CopyDirectoryExecutionError::UnableToCreateDirectory {
                 directory_path: prepared_directory_copy
                     .validated_destination_directory
                     .directory_path,
@@ -180,7 +177,7 @@ pub(crate) fn copy_directory_unchecked(
             } => {
                 let destination_file_exists =
                     destination_file_path.try_exists().map_err(|error| {
-                        CopyDirectoryExcutionError::UnableToAccessDestination {
+                        CopyDirectoryExecutionError::UnableToAccessDestination {
                             path: destination_file_path.clone(),
                             error,
                         }
@@ -188,17 +185,17 @@ pub(crate) fn copy_directory_unchecked(
 
                 if destination_file_exists {
                     let destination_file_metadata = fs::symlink_metadata(&destination_file_path)
-                        .map_err(
-                            |error| CopyDirectoryExcutionError::UnableToAccessDestination {
+                        .map_err(|error| {
+                            CopyDirectoryExecutionError::UnableToAccessDestination {
                                 path: destination_file_path.clone(),
                                 error,
-                            },
-                        )?;
+                            }
+                        })?;
 
 
                     if !destination_file_metadata.is_file() {
                         return Err(
-                            CopyDirectoryExcutionError::DestinationEntryUnexpected {
+                            CopyDirectoryExecutionError::DestinationEntryUnexpected {
                                 path: destination_file_path.clone(),
                             },
                         );
@@ -206,7 +203,7 @@ pub(crate) fn copy_directory_unchecked(
 
                     if !can_overwrite_files {
                         return Err(
-                            CopyDirectoryExcutionError::DestinationEntryUnexpected {
+                            CopyDirectoryExecutionError::DestinationEntryUnexpected {
                                 path: destination_file_path.clone(),
                             },
                         );
@@ -225,7 +222,7 @@ pub(crate) fn copy_directory_unchecked(
                     },
                 )
                 .map_err(|file_error| {
-                    CopyDirectoryExcutionError::FileCopyError {
+                    CopyDirectoryExecutionError::FileCopyError {
                         file_path: destination_file_path,
                         error: file_error,
                     }
@@ -241,7 +238,7 @@ pub(crate) fn copy_directory_unchecked(
                 if destination_directory_path.exists() {
                     if !destination_directory_path.is_dir() {
                         return Err(
-                            CopyDirectoryExcutionError::DestinationEntryUnexpected {
+                            CopyDirectoryExecutionError::DestinationEntryUnexpected {
                                 path: destination_directory_path.clone(),
                             },
                         );
@@ -249,7 +246,7 @@ pub(crate) fn copy_directory_unchecked(
 
                     if !can_ignore_existing_sub_directories {
                         return Err(
-                            CopyDirectoryExcutionError::DestinationEntryUnexpected {
+                            CopyDirectoryExecutionError::DestinationEntryUnexpected {
                                 path: destination_directory_path.clone(),
                             },
                         );
@@ -259,7 +256,7 @@ pub(crate) fn copy_directory_unchecked(
                 }
 
                 fs::create_dir(&destination_directory_path).map_err(|error| {
-                    CopyDirectoryExcutionError::UnableToCreateDirectory {
+                    CopyDirectoryExecutionError::UnableToCreateDirectory {
                         directory_path: destination_directory_path,
                         error,
                     }
@@ -279,46 +276,55 @@ pub(crate) fn copy_directory_unchecked(
 }
 
 
-/// Copy a directory from `source_directory_path` to `destination_directory_path`.
+/// Copies a directory from the source to the destination directory.
 ///
-/// Things to consider:
-/// - `source_directory_path` must point to an existing directory path.
-/// - `destination_directory_path` represents a path to the directory that will contain `source_directory_path`'s contents.
-///   If needed, `destination_directory_path` will be created.
+/// Contents of the source directory will be copied into the destination directory.
+/// If needed, the destination directory will be created before the copying begins.
 ///
 ///
-/// ### Target directory
-/// Depending on the [`options.destination_directory_rule`][DirectoryCopyOptions::destination_directory_rule] option,
-/// the `destination_directory_path` must:
-/// - with [`DisallowExisting`][DestinationDirectoryRule::DisallowExisting]: not exist,
-/// - with [`AllowEmpty`][DestinationDirectoryRule::AllowEmpty]: either not exist or be empty, or,
-/// - with [`AllowNonEmpty`][DestinationDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
-///   the specified overwriting rules are respected (see fields).
+/// # Symbolic links
+/// If `source_directory_path` itself leads to a symbolic link that points to a directory,
+/// the contents of the directory at the symlink destination will be copied to `destination_directory_path`
+/// (i.e. the link will be followed, but not preserved at the destination).
+/// This matches the behaviour of `cp` without `-P` on Unix.
 ///
-/// If the specified destination directory rule does not hold,
-/// `Err(`[`DirectoryError::InvalidDestinationDirectoryPath`]`)` or
-/// `Err(`[`DirectoryError::DestinationDirectoryNotEmpty`]`)` is returned (depending on the rule).
-///
-///
-/// ### Copy depth
-/// Depending on the [`DirectoryCopyOptions::maximum_copy_depth`] option, calling this function means copying:
-/// - `Some(0)` -- a single directory and its direct descendants (files and direct directories, but *not their contents*, i.e. just empty directories),
-/// - `Some(>=1)` -- files and subdirectories (and their files and directories, etc.) up to a certain depth limit (e.g. `Some(1)` copies direct descendants as well as one layer deeper),
-/// - `None` -- the entire subtree. **This is probably what you want most of the time**.
+/// Similarly, if one of the entries inside `source_directory_path` is a symlink to a directory,
+/// the contents of the directory at the symlink destination will be copied
+/// to the corresponding sub-directory inside `destination_directory_path`
+/// (i.e. symlink is followed, but not preserved). The same is true for symlinks
+/// to files, which match [`copy_file`]'s symlink behaviour
+/// (follows symbolic links, but does not preserve them).
 ///
 ///
-/// ## Symbolic links
-/// - If the `source_directory_path` directory contains a symbolic link to a file,
-/// the contents of the file it points to will be copied
-/// into the corresponding subpath inside `destination_directory_path`
-/// (same behaviour as `cp` without `-P` on Unix, i.e. link is followed, but not preserved).
-/// - If the `source_directory_path` directory contains a symbolic link to a directory,
-/// the directory and its contents will be copied as normal - the links will be followed, but not preserved.
+/// # Options
+/// See [`CopyDirectoryOptions`] for a full set of available directory copying options.
 ///
 ///
-/// ### Return value
+/// # Return value
 /// Upon success, the function returns information about the files and directories that were copied or created
-/// as well as the total amount of bytes copied, see [`FinishedDirectoryCopy`].
+/// as well as the total amount of bytes copied, see [`CopyDirectoryFinished`].
+///
+///
+/// # Errors
+/// If the directory cannot be copied to the destination, a [`CopyDirectoryError`] is returned;
+/// see its documentation for more details.
+///
+/// Errors for this function are quite granular, and are split into two main groups:
+/// - Preparation errors ([`CopyDirectoryError::PreparationError`]) are emitted during
+///   the preparation phase of copying. Importantly, if an error from this group is returned,
+///   the destination directory *hasn't been changed yet* in any way.
+/// - Copy execution errors ([`CopyDirectoryError::ExecutionError`]) are emitted during
+///   the actual copying phase. If an error from this group is returned,
+///   it is very likely that the destination directory is in an unpredictable state, since
+///   the error occurred while trying to copy a file or create a directory.
+///
+///
+/// [`options.destination_directory_rule`]: CopyDirectoryOptions::destination_directory_rule
+/// [`options.copy_depth_limit`]: CopyDirectoryOptions::copy_depth_limit
+/// [`DisallowExisting`]: DestinationDirectoryRule::DisallowExisting
+/// [`AllowEmpty`]: DestinationDirectoryRule::AllowEmpty
+/// [`AllowNonEmpty`]: DestinationDirectoryRule::AllowNonEmpty
+/// [`copy_file`]: crate::file::copy_file
 pub fn copy_directory<S, T>(
     source_directory_path: S,
     destination_directory_path: T,
@@ -343,12 +349,12 @@ where
 
 /// Describes a directory copy operation.
 ///
-/// Used in progress reporting in [`copy_directory_with_progress`].
+/// Used for progress reporting in [`copy_directory_with_progress`].
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum CopyDirectoryOperation {
     /// A directory is being created.
     CreatingDirectory {
-        /// Path of the directory that is being created.
+        /// Path to the directory that is being created.
         destination_directory_path: PathBuf,
     },
 
@@ -356,7 +362,7 @@ pub enum CopyDirectoryOperation {
     ///
     /// For more precise copying progress, see the `progress` field.
     CopyingFile {
-        /// Path of the file is being created.
+        /// Path to the file that is being created.
         destination_file_path: PathBuf,
 
         /// Progress of the file copy operation.
@@ -365,15 +371,17 @@ pub enum CopyDirectoryOperation {
 }
 
 
-/// Represents the progress of copying a directory.
+/// Directory copying progress.
 ///
-/// Used to report directory copying progress to a user-provided closure, see [`copy_directory_with_progress`].
+/// This struct is used to report progress to a user-provided closure,
+/// see usage in [`copy_directory_with_progress`].
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct CopyDirectoryProgress {
-    /// Amount of bytes that need to be copied for the directory copy to be complete.
+    /// Total number of bytes that need to be copied
+    /// for the directory copy to be complete.
     pub bytes_total: u64,
 
-    /// Amount of bytes that have been copied so far.
+    /// Number of bytes that have been copied so far.
     pub bytes_finished: u64,
 
     /// Number of files that have been copied so far.
@@ -385,33 +393,39 @@ pub struct CopyDirectoryProgress {
     /// The current operation being performed.
     pub current_operation: CopyDirectoryOperation,
 
-    /// The index of the current operation (starts at `0`, goes up to (including) `total_operations - 1`).
+    // TODO Consider refactoring this and total_operations to usize.
+    /// The index of the current operation.
+    ///
+    /// Starts at `0`, goes up to (including) `total_operations - 1`.
     pub current_operation_index: isize,
 
-    /// The total amount of operations that need to be performed to copy the requested directory.
+    /// The total amount of operations that need to be performed to
+    /// copy the requested directory.
     ///
-    /// A single operation is either copying a file or creating a directory, see [`CopyDirectoryOperation`].
+    /// A single operation is either copying a file or creating a directory,
+    /// see [`CopyDirectoryOperation`].
     pub total_operations: isize,
 }
 
 impl CopyDirectoryProgress {
-    /// Update the current [`CopyDirectoryOperation`] with the given closure.
-    /// After updating the operation, this function calls the given progress handler.
+    /// Modifies `self` with the provided `FnMut` closure.
+    /// Then, the provided progress handler closure is called.
     fn update_operation_and_emit_progress<M, F>(
         &mut self,
-        mut modifer_closure: M,
+        mut self_modifier_closure: M,
         progress_handler: &mut F,
     ) where
         M: FnMut(&mut Self),
         F: FnMut(&CopyDirectoryProgress),
     {
-        modifer_closure(self);
-
+        self_modifier_closure(self);
         progress_handler(self);
     }
 
-    /// Replace the current [`CopyDirectoryOperation`] with the next one (incrementing the operation index).
-    /// After updating the operation, this function calls the given progress handler.
+    /// Replaces the current [`current_operation`][Self::current_operation]
+    /// with the next one. The [`current_operation_index`][Self::current_operation_index]
+    /// is also incremented.
+    /// Then, the provided progress handler closure is called.
     fn set_next_operation_and_emit_progress<F>(
         &mut self,
         operation: CopyDirectoryOperation,
@@ -431,15 +445,15 @@ impl CopyDirectoryProgress {
 /// Options that influence the [`copy_directory_with_progress`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct CopyDirectoryWithProgressOptions {
-    /// Specifies whether you allow the destination directory to exist before copying and whether it must be empty or not.
-    /// If you allow a non-empty destination directory, you may also specify whether you allow
-    /// destination files or subdirectories to already exist (and be overwritten).
+    /// Specifies whether you allow the destination directory to exist before copying,
+    /// and whether you require it to be empty. If you allow a non-empty destination directory,
+    /// you may also specify how to handle existing destination files and sub-directories.
     ///
-    /// See [`DestinationDirectoryRule`] for more details and examples.
+    /// See [`DestinationDirectoryRule`] documentation for more details and examples.
     pub destination_directory_rule: DestinationDirectoryRule,
 
     /// Maximum depth of the source directory to copy.
-    pub copy_depth_limit: DirectoryCopyDepthLimit,
+    pub copy_depth_limit: CopyDirectoryDepthLimit,
 
     /// Internal buffer size used for reading source files.
     ///
@@ -452,17 +466,24 @@ pub struct CopyDirectoryWithProgressOptions {
     pub write_buffer_size: usize,
 
     /// *Minimum* amount of bytes written between two consecutive progress reports.
+    ///
     /// Defaults to 64 KiB.
     ///
-    /// *Note that the real reporting interval can be larger.*
+    /// *Note that the real reporting interval can be larger*
+    /// (see [`copy_directory_with_progress`] for more info).
     pub progress_update_byte_interval: u64,
 }
 
 impl Default for CopyDirectoryWithProgressOptions {
+    /// Constructs defaults for copying a directory:
+    /// - if the destination directory already exists, it must be empty ([`DestinationDirectoryRule::AllowEmpty`]), and
+    /// - there is no copy depth limit ([`CopyDirectoryDepthLimit::Unlimited`]),
+    /// - read and write buffers are 64 KiB large, and
+    /// - the progress reporting closure byte interval is set to 64 KiB.
     fn default() -> Self {
         Self {
-            destination_directory_rule: DestinationDirectoryRule::default(),
-            copy_depth_limit: DirectoryCopyDepthLimit::Unlimited,
+            destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
+            copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
             // 64 KiB
             read_buffer_size: 1024 * 64,
             // 64 KiB
@@ -476,10 +497,9 @@ impl Default for CopyDirectoryWithProgressOptions {
 
 
 /// Given inner data of [`QueuedOperation::CopyFile`], this function
-/// copies the given file with progress information.
+/// copies the given file, with progress information.
 ///
-/// The function respects given `options` (e.g. returning an error
-/// if the file already exists if configured to do so).
+/// The function respects given `options`.
 fn execute_copy_file_operation_with_progress<F>(
     source_file_path: PathBuf,
     source_size_bytes: u64,
@@ -487,7 +507,7 @@ fn execute_copy_file_operation_with_progress<F>(
     options: &CopyDirectoryWithProgressOptions,
     progress: &mut CopyDirectoryProgress,
     progress_handler: &mut F,
-) -> Result<(), CopyDirectoryExcutionError>
+) -> Result<(), CopyDirectoryExecutionError>
 where
     F: FnMut(&CopyDirectoryProgress),
 {
@@ -498,7 +518,7 @@ where
 
 
     let destination_path_exists = destination_path.try_exists().map_err(|error| {
-        CopyDirectoryExcutionError::UnableToAccessDestination {
+        CopyDirectoryExecutionError::UnableToAccessDestination {
             path: destination_path.clone(),
             error,
         }
@@ -507,7 +527,7 @@ where
     if destination_path_exists {
         let destination_path_metadata =
             fs::symlink_metadata(&destination_path).map_err(|error| {
-                CopyDirectoryExcutionError::UnableToAccessDestination {
+                CopyDirectoryExecutionError::UnableToAccessDestination {
                     path: destination_path.clone(),
                     error,
                 }
@@ -516,7 +536,7 @@ where
 
         if !destination_path_metadata.is_file() {
             return Err(
-                CopyDirectoryExcutionError::DestinationEntryUnexpected {
+                CopyDirectoryExecutionError::DestinationEntryUnexpected {
                     path: destination_path.clone(),
                 },
             );
@@ -524,7 +544,7 @@ where
 
         if !can_overwrite_destination_file {
             return Err(
-                CopyDirectoryExcutionError::DestinationEntryUnexpected {
+                CopyDirectoryExecutionError::DestinationEntryUnexpected {
                     path: destination_path.clone(),
                 },
             );
@@ -596,7 +616,7 @@ where
                 progress_handler,
             )
     )
-        .map_err(|file_error| CopyDirectoryExcutionError::FileCopyError { file_path: destination_path, error: file_error })?;
+        .map_err(|file_error| CopyDirectoryExecutionError::FileCopyError { file_path: destination_path, error: file_error })?;
 
 
     progress.files_copied += 1;
@@ -618,13 +638,13 @@ fn execute_create_directory_operation_with_progress<F>(
     options: &CopyDirectoryWithProgressOptions,
     progress: &mut CopyDirectoryProgress,
     progress_handler: &mut F,
-) -> Result<(), CopyDirectoryExcutionError>
+) -> Result<(), CopyDirectoryExecutionError>
 where
     F: FnMut(&CopyDirectoryProgress),
 {
     let destination_directory_exists =
         destination_directory_path.try_exists().map_err(|error| {
-            CopyDirectoryExcutionError::UnableToAccessDestination {
+            CopyDirectoryExecutionError::UnableToAccessDestination {
                 path: destination_directory_path.clone(),
                 error,
             }
@@ -633,7 +653,7 @@ where
     if destination_directory_exists {
         let destination_directory_metadata = fs::symlink_metadata(&destination_directory_path)
             .map_err(
-                |error| CopyDirectoryExcutionError::UnableToAccessDestination {
+                |error| CopyDirectoryExecutionError::UnableToAccessDestination {
                     path: destination_directory_path.clone(),
                     error,
                 },
@@ -641,7 +661,7 @@ where
 
         if !destination_directory_metadata.is_dir() {
             return Err(
-                CopyDirectoryExcutionError::DestinationEntryUnexpected {
+                CopyDirectoryExecutionError::DestinationEntryUnexpected {
                     path: destination_directory_path,
                 },
             );
@@ -649,7 +669,7 @@ where
 
         if options.destination_directory_rule == DestinationDirectoryRule::DisallowExisting {
             return Err(
-                CopyDirectoryExcutionError::DestinationEntryUnexpected {
+                CopyDirectoryExecutionError::DestinationEntryUnexpected {
                     path: destination_directory_path,
                 },
             );
@@ -669,7 +689,7 @@ where
     );
 
     fs::create_dir(&destination_directory_path).map_err(|error| {
-        CopyDirectoryExcutionError::UnableToCreateDirectory {
+        CopyDirectoryExecutionError::UnableToCreateDirectory {
             directory_path: destination_directory_path,
             error,
         }
@@ -684,34 +704,24 @@ where
 
 
 
-/// Perform a with-progress copy from `source_directory_path` to `validated_target`.
-///
-/// This `*_unchecked` function does not validate the source and target paths (i.e. expects them to be already validated).
+/// Execute a prepared copy with progress tracking.
 ///
 /// For more details, see [`copy_directory_with_progress`].
-pub(crate) fn perform_prepared_copy_directory_with_progress_unchecked<F>(
+pub(crate) fn execute_prepared_copy_directory_with_progress_unchecked<F>(
     prepared_copy: DirectoryCopyPrepared,
     options: CopyDirectoryWithProgressOptions,
     mut progress_handler: F,
-) -> Result<CopyDirectoryFinished, CopyDirectoryExcutionError>
+) -> Result<CopyDirectoryFinished, CopyDirectoryExecutionError>
 where
     F: FnMut(&CopyDirectoryProgress),
 {
-    // let allows_existing_destination_directory = options
-    //     .destination_directory_rule
-    //     .allows_existing_destination_directory();
-    // let should_overwrite_directories = options
-    //     .destination_directory_rule
-    //     .allows_creating_missing_directories();
-
-
     let validated_destination = prepared_copy.validated_destination_directory;
 
     // Create destination directory if needed.
     let mut progress = if validated_destination.state.exists() {
         if options.destination_directory_rule == DestinationDirectoryRule::DisallowExisting {
             return Err(
-                CopyDirectoryExcutionError::DestinationEntryUnexpected {
+                CopyDirectoryExecutionError::DestinationEntryUnexpected {
                     path: validated_destination.directory_path,
                 },
             );
@@ -748,7 +758,7 @@ where
         progress_handler(&progress);
 
         fs::create_dir_all(&validated_destination.directory_path).map_err(|error| {
-            CopyDirectoryExcutionError::UnableToCreateDirectory {
+            CopyDirectoryExecutionError::UnableToCreateDirectory {
                 directory_path: validated_destination.directory_path.clone(),
                 error,
             }
@@ -799,62 +809,76 @@ where
 }
 
 
-/// Copy an entire directory from `source_directory_path` to `destination_directory_path`
-/// (with progress reporting).
+/// Copies a directory from the source to the destination directory, with progress reporting.
 ///
-/// Things to consider:
-/// - `source_directory_path` must point to an existing directory path.
-/// - `destination_directory_path` represents a path to the directory that will contain `source_directory_path`'s contents.
-///   If needed, `destination_directory_path` will be created.
+/// Contents of the source directory will be copied into the destination directory.
+/// If needed, the destination directory will be created before the copying begins.
 ///
 ///
-/// ### Target directory
-/// Depending on the [`options.destination_directory_rule`][DirectoryCopyOptions::destination_directory_rule] option,
-/// the `destination_directory_path` must:
-/// - with [`DisallowExisting`][DestinationDirectoryRule::DisallowExisting]: not exist,
-/// - with [`AllowEmpty`][DestinationDirectoryRule::AllowEmpty]: either not exist or be empty, or,
-/// - with [`AllowNonEmpty`][DestinationDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
-///   the specified overwriting rules are respected (see variant's fields).
+/// # Symbolic links
+/// If `source_directory_path` itself leads to a symbolic link that points to a directory,
+/// the contents of the directory at the symlink destination will be copied to `destination_directory_path`
+/// (i.e. the link will be followed, but not preserved at the destination).
+/// This matches the behaviour of `cp` without `-P` on Unix.
 ///
-/// If the specified destination directory rule does not hold,
-/// `Err(`[`DirectoryError::InvalidDestinationDirectoryPath`]`)` or
-/// `Err(`[`DirectoryError::DestinationDirectoryNotEmpty`]`)` is returned (depending on the rule).
+/// Similarly, if one of the entries inside `source_directory_path` is a symlink to a directory,
+/// the contents of the directory at the symlink destination will be copied
+/// to the corresponding sub-directory inside `destination_directory_path`
+/// (i.e. symlink is followed, but not preserved). The same is true for symlinks
+/// to files, which match [`copy_file`]'s symlink behaviour
+/// (follows symbolic links, but does not preserve them).
+///
+///
+/// # Options
+/// See [`CopyDirectoryWithProgressOptions`] for a full set of available directory copying options.
+///
+///
+/// # Return value
+/// Upon success, the function returns information about the files and directories that were copied or created
+/// as well as the total amount of bytes copied, see [`CopyDirectoryFinished`].
 ///
 ///
 /// ## Progress reporting
-/// You must also provide a progress handler closure that will receive
-/// a [`&DirectoryCopyProgress`][DirectoryCopyProgress] containing progress state.
+/// This function allows you to receive progress reports by passing
+/// a `progress_handler` closure. It will be called with
+/// a reference to [`CopyDirectoryProgress`] regularly.
 ///
-/// You can control the progress update frequency with the
-/// [`options.progress_update_byte_interval`][DirectoryCopyWithProgressOptions::progress_update_byte_interval]
-/// option. The value of that option is the *minimum* amount of bytes written to a single file
-/// between two progress reports (defaults to 64 KiB).
-/// As such, this function does not guarantee a fixed amount of progress reports per file size.
-/// It does, however, guarantee *at least one progress report per file copy operation and per directory creation operation*.
-/// It also guarantees one final progress report, when the state indicates copy completion.
+/// You can control the progress reporting frequency by setting the
+/// [`options.progress_update_byte_interval`] option to a sufficiently small or large value,
+/// but note that smaller intervals are likely to have an impact on performance.
+/// The value of this option is the minimum amount of bytes written to a file between
+/// two calls to the provided `progress_handler`.
 ///
+/// This function does not guarantee a precise amount of progress reports;
+/// it does, however, guarantee at least one progress report per file copy operation,
+/// and one progress report per directory creation operation.
+/// It also guarantees one final progress report, when the state indicates the copy has been completed.
 ///
-/// ## Copy depth
-/// TODO update documentation
-/// Depending on the [`options.maximum_copy_depth`][DirectoryCopyWithProgressOptions::maximum_copy_depth]
-/// option, calling this function means copying:
-/// - `Some(0)` -- a single directory and its direct descendants (files and direct directories, but *not their contents*, i.e. just empty directories),
-/// - `Some(>=1)` -- files and subdirectories (and their files and directories, etc.) up to a certain depth limit (e.g. `Some(1)` copies direct descendants as well as one layer deeper),
-/// - `None` -- the entire subtree. **This is probably what you want most of the time**.
+/// For more details on reporting intervals for file copies, see progress reporting section
+/// for [`copy_file`][crate::file::copy_file].
 ///
 ///
-/// ## Symbolic links
-/// - If the `source_directory_path` directory contains a symbolic link to a file,
-/// the contents of the file it points to will be copied
-/// into the corresponding subpath inside `target_file_path`
-/// (same behaviour as `cp` without `-P` on Unix, i.e. link is followed, but not preserved).
-/// - If the `source_directory_path` directory contains a symbolic link to a directory,
-/// the directory and its contents will be copied as normal - the links will be followed, but not preserved.
+/// # Errors
+/// If the directory cannot be copied to the destination, a [`CopyDirectoryError`] is returned;
+/// see its documentation for more details.
+///
+/// Errors for this function are quite granular, and are split into two main groups:
+/// - Preparation errors ([`CopyDirectoryError::PreparationError`]) are emitted during
+///   the preparation phase of copying. Importantly, if an error from this group is returned,
+///   the destination directory *hasn't been changed yet* in any way.
+/// - Copy execution errors ([`CopyDirectoryError::ExecutionError`]) are emitted during
+///   the actual copying phase. If an error from this group is returned,
+///   it is very likely that the destination directory is in an unpredictable state, since
+///   the error occurred while trying to copy a file or create a directory.
 ///
 ///
-/// ## Return value
-/// Upon success, the function returns information about the files and directories that were copied or created
-/// as well as the total amount of bytes copied, see [`FinishedDirectoryCopy`].
+/// [`options.progress_update_byte_interval`]: CopyDirectoryWithProgressOptions::progress_update_byte_interval
+/// [`options.destination_directory_rule`]: CopyDirectoryWithProgressOptions::destination_directory_rule
+/// [`options.copy_depth_limit`]: CopyDirectoryWithProgressOptions::copy_depth_limit
+/// [`DisallowExisting`]: DestinationDirectoryRule::DisallowExisting
+/// [`AllowEmpty`]: DestinationDirectoryRule::AllowEmpty
+/// [`AllowNonEmpty`]: DestinationDirectoryRule::AllowNonEmpty
+/// [`copy_file`]: crate::file::copy_file
 pub fn copy_directory_with_progress<S, T, F>(
     source_directory_path: S,
     destination_directory_path: T,
@@ -874,7 +898,7 @@ where
     )?;
 
 
-    let finished_copy = perform_prepared_copy_directory_with_progress_unchecked(
+    let finished_copy = execute_prepared_copy_directory_with_progress_unchecked(
         prepared_copy,
         options,
         progress_handler,

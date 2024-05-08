@@ -464,7 +464,7 @@ pub fn copy_file_with_progress() -> TestResult {
 /// **On Windows**, creating symbolic links requires administrator privileges, unless Developer mode is enabled.
 /// See [https://stackoverflow.com/questions/58038683/allow-mklink-for-a-non-admin-user].
 #[test]
-pub fn copy_file_symlink_behaviour() -> TestResult {
+pub fn copy_file_does_not_preserve_symlinks() -> TestResult {
     let harness = SimpleTreeHarness::new()?;
 
     let symlinked_file = AssertableFilePath::from_path(harness.root.child_path("my-symlink.txt"));
@@ -507,7 +507,7 @@ pub fn copy_file_symlink_behaviour() -> TestResult {
 /// **On Windows**, creating symbolic links requires administrator privileges, unless Developer mode is enabled.
 /// See [https://stackoverflow.com/questions/58038683/allow-mklink-for-a-non-admin-user].
 #[test]
-pub fn copy_file_with_progress_symlink_behaviour() -> TestResult {
+pub fn copy_file_with_progress_does_not_preserve_symlinks() -> TestResult {
     let harness = SimpleTreeHarness::new()?;
 
     let symlinked_file = AssertableFilePath::from_path(harness.root.child_path("my-symlink.txt"));

@@ -105,7 +105,7 @@ pub enum FileError {
     },
 
     /// Some other [`std::io::Error`] was encountered.
-    #[error("other std::io::Error")]
+    #[error("uncategorized std::io::Error")]
     OtherIoError {
         /// IO error describing the cause of the outer error.
         #[source]

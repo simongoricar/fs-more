@@ -188,7 +188,7 @@ pub enum CopyDirectoryPlanError {
     ///
     /// # Implementation detail
     /// This is an extremely unlikely error, because its requirement
-    /// is that [`fs::read_dir`]'s iterator returns a directory entry
+    /// is that [`std::fs::read_dir`]'s iterator returns a directory entry
     /// outside the provided directory path.
     ///
     /// Even though this seems extremely unlikely, a `panic!` would be
@@ -264,7 +264,7 @@ pub enum CopyDirectoryPreparationError {
 /// Directory copy execution error.
 #[derive(Error, Debug)]
 #[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
-pub enum CopyDirectoryExcutionError {
+pub enum CopyDirectoryExecutionError {
     /// Failed to create a directory inside the destination folder.
     ///
     /// For example, this can happen due to missing write permissions.
@@ -338,7 +338,7 @@ pub enum CopyDirectoryError {
 
     /// Directory copy execution error.
     #[error(transparent)]
-    ExecutionError(#[from] CopyDirectoryExcutionError),
+    ExecutionError(#[from] CopyDirectoryExecutionError),
 }
 
 
@@ -389,7 +389,7 @@ pub enum MoveDirectoryExecutionError {
     ///
     /// # Implementation detail
     /// This is an extremely unlikely error, because its requirement
-    /// is that [`fs::read_dir`]'s iterator returns a directory entry
+    /// is that [`std::fs::read_dir`]'s iterator returns a directory entry
     /// outside the provided directory path.
     ///
     /// Even though this seems extremely unlikely, a `panic!` would be
@@ -425,7 +425,7 @@ pub enum MoveDirectoryExecutionError {
     /// Directory copy execution error. These errors can happen
     /// when a move-by-rename fails and a copy-and-delete is performed instead.
     #[error(transparent)]
-    CopyDirectoryError(#[from] CopyDirectoryExcutionError),
+    CopyDirectoryError(#[from] CopyDirectoryExecutionError),
 
     /// An uncategorized unrecoverable IO error. See `error` for more information.
     #[error("uncategorized std::io::Error")]

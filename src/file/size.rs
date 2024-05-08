@@ -6,10 +6,33 @@ use crate::{error::FileSizeError, use_enabled_fs_module};
 
 /// Retrieve the size of a file in bytes.
 ///
+///
 /// ## Symbolic link behaviour
-/// Symbolic links are resolved, meaning that, if the provided `file_path` is
+/// Symbolic links are resolved.
+/// This means that, if the provided `file_path` is
 /// a symbolic link leading to a file, the function returns
-/// *the size of the file, not of the link itself*.
+/// *the size of the target file, not of the link itself*.
+///
+///
+/// # Errors
+/// If the file cannot be removed, a [`FileSizeError`] is returned;
+/// see its documentation for more details.
+/// Here is a non-exhaustive list of error causes:
+/// - If the file does not exist, a [`NotFound`] variant is returned.
+/// - If the path exists, but is not a file, [`NotAFile`] is returned.
+/// - If there is an issue accessing the file, for example due to missing permissions,
+///   then a [`UnableToAccessFile`] is returned.
+///
+/// There do exist other failure points, mostly due to unavoidable
+/// [time-of-check time-of-use](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use)
+/// issues and other potential IO errors that can prop up.
+/// These errors are grouped under the [`OtherIoError`] variant.
+///
+///
+/// [`NotFound`]: FileSizeError::NotFound
+/// [`NotAFile`]: FileSizeError::NotAFile
+/// [`UnableToAccessFile`]: FileSizeError::UnableToAccessFile
+/// [`OtherIoError`]: FileSizeError::OtherIoError
 pub fn file_size_in_bytes<P>(file_path: P) -> Result<u64, FileSizeError>
 where
     P: AsRef<Path>,
@@ -35,13 +58,6 @@ where
                 error,
             });
         }
-    }
-
-    // DEPRECATED I don't think we need this? We cover the symlink case just below.
-    if !file_path.is_file() && !file_path.is_symlink() {
-        return Err(FileSizeError::NotAFile {
-            path: file_path.to_path_buf(),
-        });
     }
 
     // This follows symbolic links, but we must recheck that

@@ -9,74 +9,88 @@ use crate::{error::SourceSubPathNotUnderBaseSourceDirectory, file::ExistingFileB
 /// See also: [`DestinationDirectoryRule`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum ExistingSubDirectoryBehaviour {
-    /// An existing destination sub-directory
-    /// will cause an error if the copy operation requires
-    /// copying into it.
+    /// An existing destination sub-directory will cause an error.
     Abort,
 
     /// An existing destination sub-directory will have no effect.
     Continue,
 }
 
+
 /// Specifies whether you allow the destination directory to exist
 /// before copying or moving files or directories into it.
 ///
-/// If you allow the target directory to exist, you can also specify whether it must be empty;
-/// if not, you may also specify whether you allow files and directories to be overwritten.
+/// If you allow the destination directory to exist, you can also specify whether it must be empty;
+/// if not, you may also specify how to behave for existing destination files and directories.
 ///
 ///
-/// ## Defaults
+/// # Defaults
 /// [`Default`] is implemented for this enum. The default value is [`DestinationDirectoryRule::AllowEmpty`].
 ///
 ///
-/// ## Examples
+/// # Examples
 /// If you want the associated directory copying or moving function to
-/// *return an error if the target directory already exists*, use [`DestinationDirectoryRule::DisallowExisting`];
+/// return an error if the base destination directory already exists,
+/// use [`DestinationDirectoryRule::DisallowExisting`].
 ///
-/// If you want to copy into an *existing empty target directory*, you should use [`DestinationDirectoryRule::AllowEmpty`]
-/// (this rule *does not require* the target directory to exist and will create one if missing).
+/// If you want to copy into an existing—but empty—destination directory, use [`DestinationDirectoryRule::AllowEmpty`].
+/// This rule does not require the destination directory to exist, only allows it.
 ///
-/// If the target directory could already exist and have some files or directories in it, you can use the following rule:
+/// <br>
 ///
-/// ```
+/// If the destination directory is allowed to exist *and* contain existing files or sub-directories,
+/// but you don't want to overwrite any of the existing files, you can use the following rule:
+///
+/// ```no_run
 /// # use fs_more::directory::DestinationDirectoryRule;
+/// # use fs_more::directory::ExistingSubDirectoryBehaviour;
+/// # use fs_more::file::ExistingFileBehaviour;
 /// let rules = DestinationDirectoryRule::AllowNonEmpty {
-///     create_missing_subdirectories: false,
-///     overwrite_existing_files: false,
+///     existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+///     existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Continue,
 /// };
 /// ```
 ///
-/// This will still not overwrite any overlapping files (i.e. a merge without overwrites will be performed).
+/// This will create any missing destination sub-directories and ignore the ones that already exist,
+/// even if their counterparts also exist in the source directory. Also, this will still not overwrite
+/// existing destination files - it will effectively be a merge without overwrites.
 ///
-/// If you want files and/or directories to be overwritten, you may set the flags for overwriting to `true`:
+/// <br>
 ///
-/// ```
+/// If you want files to be overwritten, you may set the behaviour this way:
+///
+/// ```no_run
 /// # use fs_more::directory::DestinationDirectoryRule;
+/// # use fs_more::directory::ExistingSubDirectoryBehaviour;
+/// # use fs_more::file::ExistingFileBehaviour;
 /// let rules = DestinationDirectoryRule::AllowNonEmpty {
-///     create_missing_subdirectories: true,
-///     overwrite_existing_files: true,
+///     existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
+///     existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Continue,
 /// };
 /// ```
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum DestinationDirectoryRule {
-    /// Indicates the associated function should return an error if the target directory already exists.
+    /// Indicates the associated directory function should return an error,
+    /// if the destination directory already exists.
     DisallowExisting,
 
-    /// Indicates the associated function should return an error if the target directory
-    /// exists *and is not empty*.
+    /// Indicates the associated function should return an error,
+    /// if the destination directory exists *and is not empty*.
     AllowEmpty,
 
-    /// Indicates that an existing non-empty target directory should not cause an error.
+    /// Indicates that an existing destination directory should not cause an error,
+    /// even if it is not empty.
+    ///
     /// **Do not use this as a default if you're not sure what rule to choose.**
+    /// This rule can, if the destination directory already has some content,
+    /// allow a copy or move that results in a destination directory
+    /// with *merged* source and destination directory contents.
+    /// Unless you know you want precisely this, you should probably avoid this option.
     ///
-    /// This can, if the target directory already has some content, end up in a target directory
-    /// with *merged* source and target directory contents. Unless you know you want this,
-    /// you probably want to avoid this option.
-    ///
-    /// If the `overwrite_*` options are `false`, this essentially behaves
-    /// like a merge that will not touch existing destination files.
-    /// If they are `true`, it behaves like a merge that will
-    /// overwrite any existing files and create any missing directories.
+    /// Missing destination directories will always be created,
+    /// regardless of the `existing_destination_subdirectory_behaviour` option.
+    /// Setting it to [`ExistingSubDirectoryBehaviour::Continue`] simply means that,
+    /// if they already exist on the destination, nothing special will happen.
     AllowNonEmpty {
         /// How to behave for destination files that already exist.
         existing_destination_file_behaviour: ExistingFileBehaviour,
@@ -118,15 +132,16 @@ impl DestinationDirectoryRule {
 
 
 
-/// Applies the same sub-path that `source_sub_path` has, relative to `source_base_directory_path`,
-/// onto `target_base_directory_path`.
+/// Computes a relative path of `source_sub_path` relative to `source_base_directory_path`,
+/// and applies it onto `target_base_directory_path`.
 ///
 /// `source_base_directory_path` is the base source directory path,
 /// and `source_sub_path` *must* be a descendant of that path.
 /// `target_base_directory_path` can be an arbitrary target directory path.
 ///
-/// Returns a [`DirectoryError::SourceSubPathEscapesSourceDirectory`]
-/// if the `source_sub_path` is not a sub-path of `source_base_directory_path`.
+/// Returns [`SourceSubPathNotUnderBaseSourceDirectory`]
+/// if `source_sub_path` is not a sub-path of `source_base_directory_path`.
+///
 ///
 /// # Example
 /// ```ignore

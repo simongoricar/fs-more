@@ -36,19 +36,19 @@ impl Default for CopyFileOptions {
 }
 
 
-/// Information about a successful file copy operation.
+/// Results of a successful file copy operation.
 ///
-/// See also: [`copy_file`].
+/// Returned from: [`copy_file`] and [`copy_file_with_progress`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum CopyFileFinished {
-    /// The destination file did not exist prior to the operation,
-    /// and was freshly created and written to.
+    /// The destination file did not exist prior to the operation.
+    /// The file was freshly created and written to.
     Created {
         /// Number of bytes written to the file.
         bytes_copied: u64,
     },
 
-    /// The destination file already existed, and was overwritten.
+    /// The destination file already existed, and was overwritten by the copy operation.
     Overwritten {
         /// Number of bytes written to the file.
         bytes_copied: u64,
@@ -56,11 +56,11 @@ pub enum CopyFileFinished {
 
     /// The destination file already existed, and the copy operation was skipped.
     ///
-    /// This variant can be returned when [`options.existing_destination_file_behaviour`]
+    /// This can only be returned when existing destination file behaviour
     /// is set to [`ExistingFileBehaviour::Skip`].
     ///
     ///
-    /// [`options.existing_destination_file_behaviour`]: [CopyFileOptions::existing_destination_file_behaviour]
+    /// [`options.existing_destination_file_behaviour`]: CopyFileOptions::existing_destination_file_behaviour
     Skipped,
 }
 
@@ -68,23 +68,85 @@ pub enum CopyFileFinished {
 
 /// Copies a single file from the source to the destination path.
 ///
-/// The destination path must be a *file* path and cannot point to a directory.
+/// The destination path must be a *file* path, and must not point to a directory.
 ///
 ///
-/// ## Return value
-/// The function returns [`CopyFileFinished`], which indicates whether the file was created,
-/// overwritten or skipped, and includes the number of bytes copied, if relevant.
+/// # Symbolic links
+/// If `source_file_path` leads to a symbolic link that points to a file,
+/// the contents of the file at the symlink destination will be copied to `destination_file_path`
+/// (the link will not be preserved at `destination_file_path`).
+/// This matches the behaviour of `cp` without `--no-dereference` (`-P`) on Unix.
+///
+/// TODO update
 ///
 ///
-/// ## Symbolic links
-/// If `source_file_path` leads to a symbolic link to a file,
-/// the contents of the link destination file will be copied to `destination_file_path`.
-/// This matches the behaviour of `cp` without `-P` on Unix.
+/// # Options
+/// See [`CopyFileOptions`] for available file copying options.
 ///
 ///
-/// ## Implementation
-/// This function internally delegates copying to [`std::fs::copy`]
-/// (but note that [`copy_file_with_progress`] does not).
+/// # Return value
+/// If the copy succeeds, the function returns [`CopyFileFinished`],
+/// which contains information about whether the file was created,
+/// overwritten or skipped. The struct includes the number of bytes copied,
+/// if relevant.
+///
+///
+/// # Errors
+/// If the file cannot be copied to the destination, a [`FileError`] is returned;
+/// see its documentation for more details.
+/// Here is a non-exhaustive list of error causes:
+/// - If the source path has issues (does not exist, does not have the correct permissions, etc.), one of
+///   [`SourceFileNotFound`], [`SourcePathNotAFile`],
+///   [`UnableToAccessSourceFile`], or [`UnableToCanonicalizeSourceFilePath`]
+///   variants will be returned.
+/// - If the destination already exists, and [`options.existing_destination_file_behaviour`]
+///   is set to [`ExistingFileBehaviour::Abort`], then a [`DestinationPathAlreadyExists`]
+///   will be returned.
+/// - If the source and destination paths are canonically actually the same file,
+///   then copying will be aborted with [`SourceAndDestinationAreTheSame`].
+/// - If the destination path has other issues (is a directory, does not have the correct permissions, etc.),
+///   [`UnableToAccessDestinationFile`] or [`UnableToCanonicalizeDestinationFilePath`]
+///   will be returned.
+///
+/// There do exist other failure points, mostly due to unavoidable
+/// [time-of-check time-of-use](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use)
+/// issues and other potential IO errors that can prop up.
+/// These errors are grouped under the [`OtherIoError`] variant.
+///
+///
+/// <br>
+///
+/// #### See also
+/// If you are looking for a file copying function that reports progress,
+/// see [`copy_file_with_progress`].
+///
+///
+/// <details>
+/// <summary><h4>Implementation details</h4></summary>
+///
+/// *This section describes internal implementations details.
+/// They should not be relied on, because they are informative
+/// and may change in the future.*
+///
+/// <br>
+///
+/// This function currently delegates file IO to [`std::fs::copy`],
+/// or [`fs_err::copy`](https://docs.rs/fs-err/latest/fs_err/fn.copy.html)
+/// if the `fs-err` feature flag is enabled.
+///
+/// </details>
+///
+///
+/// [`options.existing_destination_file_behaviour`]: CopyFileOptions::existing_destination_file_behaviour
+/// [`SourceFileNotFound`]: FileError::SourceFileNotFound
+/// [`SourcePathNotAFile`]: FileError::SourcePathNotAFile
+/// [`UnableToAccessSourceFile`]: FileError::UnableToAccessSourceFile
+/// [`UnableToCanonicalizeSourceFilePath`]: FileError::UnableToCanonicalizeSourceFilePath
+/// [`DestinationPathAlreadyExists`]: FileError::DestinationPathAlreadyExists
+/// [`UnableToAccessDestinationFile`]: FileError::UnableToAccessDestinationFile
+/// [`UnableToCanonicalizeDestinationFilePath`]: FileError::UnableToCanonicalizeDestinationFilePath
+/// [`SourceAndDestinationAreTheSame`]: FileError::SourceAndDestinationAreTheSame
+/// [`OtherIoError`]: FileError::OtherIoError
 pub fn copy_file<S, D>(
     source_file_path: S,
     destination_file_path: D,
@@ -152,12 +214,14 @@ pub struct CopyFileWithProgressOptions {
     /// Defaults to 64 KiB.
     pub write_buffer_size: usize,
 
-    /// The smallest amount of bytes processed between two consecutive progress reports.
+    /// The smallest amount of bytes copied between two consecutive progress reports.
     ///
-    /// Increase this value to make progress reports less frequent, and decrease it
-    /// to make them more frequent.
+    /// Increase this value to make progress reports less frequent,
+    /// and decrease it to make them more frequent. Keep in mind that
+    /// decreasing the interval will likely come at some performance cost,
+    /// depending on your progress handling closure.
     ///
-    /// *Note that this is the minimum;* the real reporting interval can be larger.
+    /// *Note that this is the minimum interval.* The actual reporting interval can be larger.
     /// Consult [`copy_file_with_progress`] documentation for more details.
     ///
     /// Defaults to 64 KiB.
@@ -166,9 +230,9 @@ pub struct CopyFileWithProgressOptions {
 
 impl Default for CopyFileWithProgressOptions {
     /// Constructs relatively safe defaults for copying a file:
-    /// - aborts if there is an existing destination file,
-    /// - sets buffer sizes to 64 KiB, and
-    /// - sets the progress update interval to 64 KiB.
+    /// - aborts if there is an existing destination file ([`ExistingFileBehaviour::Abort`]),
+    /// - sets buffer size for reading and writing to 64 KiB, and
+    /// - sets the progress update closure call interval to 64 KiB.
     fn default() -> Self {
         Self {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
@@ -176,6 +240,7 @@ impl Default for CopyFileWithProgressOptions {
             read_buffer_size: 1024 * 64,
             // 64 KiB
             write_buffer_size: 1024 * 64,
+            // TODO Increase this to a much larger default value to avoid performance problems.
             // 64 KiB
             progress_update_byte_interval: 1024 * 64,
         }
@@ -184,14 +249,17 @@ impl Default for CopyFileWithProgressOptions {
 
 
 /// Copies the specified file from the source to the destination using the provided options
-/// and progress handler.
+/// and progress reporting closure.
 ///
 /// This is done by opening two file handles (one for reading, another for writing),
-/// wrapping them in buffered readers or writers (and our progress tracker intermediary),
-/// and then using the [`std::io::copy`] function to copy the entire file.
+/// wrapping them in buffered readers and writers, plus our progress tracker intermediary,
+/// and then finally using the [`std::io::copy`] function to copy the entire file.
 ///
-/// **Be warned:** no checks are performed before copying
-/// (e.g. whether source exists or whether target is a directory or already exists).
+///
+/// # Invariants
+/// **Be warned:** no path validation or other checks are performed before copying.
+/// It is fully up to the caller to use e.g. [`validate_source_file_path`] +
+/// [`validate_destination_file_path`], before passing the validated paths to this function.
 pub(crate) fn copy_file_with_progress_unchecked<F>(
     source_file_path: &Path,
     destination_file_path: &Path,
@@ -264,46 +332,104 @@ where
 
 
 
-/// Copies a single file from the source to the destination path (with progress reporting).
+/// Copies a single file from the source to the destination path, with progress reporting.
 ///
-/// The destination path must be a *file* path and cannot point to a directory.
-///
-///
-/// ## Return value
-/// The function returns [`CopyFileFinished`], which indicates whether the file was created,
-/// overwritten or skipped, and includes the number of bytes copied, if relevant.
+/// The destination path must be a *file* path, and must not point to a directory.
 ///
 ///
-/// ## Progress reporting
-/// You must also provide a progress handler that receives a
-/// [`&FileProgress`][super::FileProgress] containing progress state.
-///
-/// You can control the progress update frequency with the
-/// [`options.progress_update_byte_interval`] option.
-/// This option is the *minumum* amount of bytes written between two progress reports.
-/// As such this function does not guarantee a specific amount of progress reports per file size.
-/// It does, however, guarantee at least one progress report: the final one, which happens when the file is completely copied.
+/// # Symbolic links
+/// If `source_file_path` leads to a symbolic link that points to a file,
+/// the contents of the file at the symlink destination will be copied to `destination_file_path`
+/// (the link will not be preserved at `destination_file_path`).
+/// This matches the behaviour of `cp` without `-P` on Unix.
 ///
 ///
-/// ## Special return values
-/// If [`options.existing_destination_file_behaviour`]
-/// is set to [`ExistingFileBehaviour::Skip`], and copying the file is consequently skipped
-/// due to it already existing, the return value of this function will be `Ok(0)`.
+/// # Options
+/// See [`CopyFileWithProgressOptions`] for available file copying options.
 ///
 ///
-/// ## Symbolic links
-/// If `source_file_path` leads to a symbolic link to a file,
-/// the contents of the file the path points to will be copied to `destination_file_path`.
-/// This matches the behaviour of `cp` without `-P` on Unix.s
+/// # Return value
+/// If the copy succeeds, the function returns [`CopyFileFinished`],
+/// which contains information about whether the file was created,
+/// overwritten or skipped. The struct includes the number of bytes copied,
+/// if relevant.
 ///
 ///
-/// ## Internals
-/// This function handles copying itself by opening handles of both files itself
-/// and buffering reads and writes.
+/// # Progress reporting
+/// This function allows you to receive progress reports by passing
+/// a `progress_handler` closure. It will be called with
+/// a reference to [`FileProgress`] regularly.
+///
+/// You can control the progress reporting frequency by setting the
+/// [`options.progress_update_byte_interval`] option to a sufficiently small or large value,
+/// but note that smaller intervals are likely to have an impact on performance.
+/// The value of this option is the minimum amount of bytes written to a file between
+/// two calls to the provided `progress_handler`.
+///
+/// This function does not guarantee a precise amount of progress reports per file size
+/// and progress reporting interval setting; it does, however, guarantee at least one progress report:
+/// the final one, which happens when the file has been completely copied.
+/// In most cases though, the number of calls to
+/// the closure will be near the expected amount,
+/// which is `file_size / progress_update_byte_interval`.
 ///
 ///
-/// [`options.progress_update_byte_interval`]: [CopyFileWithProgressOptions::progress_update_byte_interval]
-/// [`options.existing_destination_file_behaviour`]: [CopyFileWithProgressOptions::existing_destination_file_behaviour]
+/// # Errors
+/// If the file cannot be copied to the destination, a [`FileError`] is returned;
+/// see its documentation for more details.
+/// Here is a non-exhaustive list of error causes:
+/// - If the source path has issues (does not exist, does not have the correct permissions, etc.), one of
+///   [`SourceFileNotFound`], [`SourcePathNotAFile`],
+///   [`UnableToAccessSourceFile`], or [`UnableToCanonicalizeSourceFilePath`]
+///   variants will be returned.
+/// - If the destination already exists, and [`options.existing_destination_file_behaviour`]
+///   is set to [`ExistingFileBehaviour::Abort`], then a [`DestinationPathAlreadyExists`]
+///   will be returned.
+/// - If the source and destination paths are canonically actually the same file,
+///   then copying will be aborted with [`SourceAndDestinationAreTheSame`].
+/// - If the destination path has other issues (is a directory, does not have the correct permissions, etc.),
+///   [`UnableToAccessDestinationFile`] or [`UnableToCanonicalizeDestinationFilePath`]
+///   will be returned.
+///
+/// There do exist other failure points, mostly due to unavoidable
+/// [time-of-check time-of-use](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use)
+/// issues and other potential IO errors that can prop up.
+/// These errors are grouped under the [`OtherIoError`] variant.
+///
+///
+/// <br>
+///
+/// #### See also
+/// If you are looking for a file copying function that does not report progress,
+/// see [`copy_file`].
+///
+///
+/// <details>
+/// <summary><h4>Implementation details</h4></summary>
+///
+/// *This section describes internal implementations details.
+/// They should not be relied on, because they are informative
+/// and may change in the future.*
+///
+/// <br>
+///
+/// Unlike [`copy_file`], this function handles copying itself by opening file handles for
+/// both the source and destination file, then buffering reads and writes.
+///
+/// </details>
+///
+///
+/// [`options.progress_update_byte_interval`]: CopyFileWithProgressOptions::progress_update_byte_interval
+/// [`options.existing_destination_file_behaviour`]: CopyFileOptions::existing_destination_file_behaviour
+/// [`SourceFileNotFound`]: FileError::SourceFileNotFound
+/// [`SourcePathNotAFile`]: FileError::SourcePathNotAFile
+/// [`UnableToAccessSourceFile`]: FileError::UnableToAccessSourceFile
+/// [`UnableToCanonicalizeSourceFilePath`]: FileError::UnableToCanonicalizeSourceFilePath
+/// [`DestinationPathAlreadyExists`]: FileError::DestinationPathAlreadyExists
+/// [`UnableToAccessDestinationFile`]: FileError::UnableToAccessDestinationFile
+/// [`UnableToCanonicalizeDestinationFilePath`]: FileError::UnableToCanonicalizeDestinationFilePath
+/// [`SourceAndDestinationAreTheSame`]: FileError::SourceAndDestinationAreTheSame
+/// [`OtherIoError`]: FileError::OtherIoError
 pub fn copy_file_with_progress<P, T, F>(
     source_file_path: P,
     destination_file_path: T,

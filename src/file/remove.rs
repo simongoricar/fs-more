@@ -6,8 +6,44 @@ use crate::{error::FileRemoveError, use_enabled_fs_module};
 
 /// Removes a single file.
 ///
-/// ## Internals
-/// This function uses [`std::fs::remove_file`] internally.
+///
+/// # Errors
+/// If the file cannot be removed, a [`FileRemoveError`] is returned;
+/// see its documentation for more details.
+/// Here is a non-exhaustive list of error causes:
+/// - If the file does not exist, a [`NotFound`] variant is returned.
+/// - If the path exists, but is not a file, [`NotAFile`] is returned.
+/// - If there is an issue accessing the file, for example due to missing permissions,
+///   then a [`UnableToAccessFile`] is returned.
+///
+/// There do exist other failure points, mostly due to unavoidable
+/// [time-of-check time-of-use](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use)
+/// issues and other potential IO errors that can prop up.
+/// These errors are grouped under the [`OtherIoError`] variant.
+///
+///
+/// <br>
+///
+/// <details>
+/// <summary><h4>Implementation details</h4></summary>
+///
+/// *This section describes internal implementations details.
+/// They should not be relied on, because they are informative
+/// and may change in the future.*
+///
+/// <br>
+///
+/// This function currently uses [`std::fs::remove_file`] internally
+/// (or [`fs_err::remove_file`](https://docs.rs/fs-err/latest/fs_err/fn.remove_file.html)
+/// if the `fs-err` feature flag is enabled).
+///
+/// </details>
+///
+///
+/// [`NotFound`]: FileRemoveError::NotFound
+/// [`NotAFile`]: FileRemoveError::NotAFile
+/// [`UnableToAccessFile`]: FileRemoveError::UnableToAccessFile
+/// [`OtherIoError`]: FileRemoveError::OtherIoError
 pub fn remove_file<P>(file_path: P) -> Result<(), FileRemoveError>
 where
     P: AsRef<Path>,
