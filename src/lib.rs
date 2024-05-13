@@ -22,6 +22,8 @@
 //!   [error types](crate::error),
 //!   allowing users to conveniently call e.g. [`wrap_err`](../miette/trait.Context.html#tymethod.wrap_err) on the error.
 //!
+//! // TODO update feature flags: miette is now disabled by default, dunce is optional, camino has been added (but is not implemented yet).
+//! // (also update this in the README)
 //!
 //! <br>
 //!

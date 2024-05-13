@@ -127,6 +127,7 @@ pub fn forbid_case_insensitive_move_into_itself() -> TestResult {
     let target_file =
         AssertableFilePath::from_path(harness.foo_bar.path().with_file_name(upper_case_file_name));
 
+    // TODO detect case-sensitivity instead of using platform flags
     #[cfg(unix)]
     target_file.assert_not_exists();
 

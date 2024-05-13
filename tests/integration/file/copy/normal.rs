@@ -145,6 +145,7 @@ pub fn case_insensitive_copy_into_self() -> Result<(), FixtureError> {
         },
     );
 
+    // TODO detect case-sensitivity instead of using platform flags
     #[cfg(unix)]
     {
         assert!(
@@ -226,6 +227,7 @@ pub fn forbid_non_trivial_copy_into_self() -> Result<(), FixtureError> {
 
     let target_file = AssertableFilePath::from_path(target_file_path);
 
+    // TODO detect case-sensitivity instead of using platform flags
     #[cfg(unix)]
     target_file.assert_not_exists();
 
