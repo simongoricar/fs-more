@@ -16,6 +16,8 @@ where
         .any(|path| path.as_ref().eq(target_path.as_ref()))
 }
 
+
+
 #[test]
 pub fn scan_directory() -> TestResult {
     let harness = SimpleTreeHarness::new()?;
@@ -69,6 +71,7 @@ pub fn scan_directory() -> TestResult {
     harness.destroy()?;
     Ok(())
 }
+
 
 
 #[test]
@@ -126,6 +129,7 @@ pub fn scan_directory_with_limited_depth() -> TestResult {
 }
 
 
+
 #[test]
 pub fn directory_size_via_directory_scan() -> TestResult {
     let harness = SimpleTreeHarness::new()?;
@@ -165,6 +169,8 @@ pub fn directory_size_via_directory_scan() -> TestResult {
     harness.destroy()?;
     Ok(())
 }
+
+
 
 #[test]
 pub fn directory_size_via_directory_scan_with_depth_limit() -> TestResult<()> {
