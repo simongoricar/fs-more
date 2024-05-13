@@ -283,17 +283,16 @@ pub(crate) fn copy_directory_unchecked(
 ///
 ///
 /// # Symbolic links
-/// If `source_directory_path` itself leads to a symbolic link that points to a directory,
-/// the contents of the directory at the symlink destination will be copied to `destination_directory_path`
-/// (i.e. the link will be followed, but not preserved at the destination).
-/// This matches the behaviour of `cp` without `-P` on Unix.
+/// Symbolic links are followed, but not preserved.
 ///
-/// Similarly, if one of the entries inside `source_directory_path` is a symlink to a directory,
-/// the contents of the directory at the symlink destination will be copied
-/// to the corresponding sub-directory inside `destination_directory_path`
-/// (i.e. symlink is followed, but not preserved). The same is true for symlinks
-/// to files, which match [`copy_file`]'s symlink behaviour
-/// (follows symbolic links, but does not preserve them).
+/// If the provided `source_directory_path` itself leads to a symlink that points to a directory,
+/// the link will be followed and the contents of the link target directory will be copied.
+///
+/// Similarly, if one of the entries *inside* the source directory is a symlink to either a directory
+/// or file, the link will be followed, and the corresponding contents of the target directory or file
+/// will be copied to the destination.
+///
+/// This matches the behaviour of `cp` with `--recursive --dereference` flags on Unix[^unix-cp-rd].
 ///
 ///
 /// # Options
@@ -325,6 +324,8 @@ pub(crate) fn copy_directory_unchecked(
 /// [`AllowEmpty`]: DestinationDirectoryRule::AllowEmpty
 /// [`AllowNonEmpty`]: DestinationDirectoryRule::AllowNonEmpty
 /// [`copy_file`]: crate::file::copy_file
+/// [^unix-cp-rd]: Source for coreutils' `cp` is available
+///     [here](https://github.com/coreutils/coreutils/blob/ccf47cad93bc0b85da0401b0a9d4b652e4c930e4/src/cp.c).
 pub fn copy_directory<S, T>(
     source_directory_path: S,
     destination_directory_path: T,
@@ -816,17 +817,16 @@ where
 ///
 ///
 /// # Symbolic links
-/// If `source_directory_path` itself leads to a symbolic link that points to a directory,
-/// the contents of the directory at the symlink destination will be copied to `destination_directory_path`
-/// (i.e. the link will be followed, but not preserved at the destination).
-/// This matches the behaviour of `cp` without `-P` on Unix.
+/// Symbolic links are followed, but not preserved.
 ///
-/// Similarly, if one of the entries inside `source_directory_path` is a symlink to a directory,
-/// the contents of the directory at the symlink destination will be copied
-/// to the corresponding sub-directory inside `destination_directory_path`
-/// (i.e. symlink is followed, but not preserved). The same is true for symlinks
-/// to files, which match [`copy_file`]'s symlink behaviour
-/// (follows symbolic links, but does not preserve them).
+/// If the provided `source_directory_path` itself leads to a symlink that points to a directory,
+/// the link will be followed and the contents of the link target directory will be copied.
+///
+/// Similarly, if one of the entries *inside* the source directory is a symlink to either a directory
+/// or file, the link will be followed, and the corresponding contents of the target directory or file
+/// will be copied to the destination.
+///
+/// This matches the behaviour of `cp` with `--recursive --dereference` flags on Unix[^unix-cp-rd].
 ///
 ///
 /// # Options
@@ -879,6 +879,8 @@ where
 /// [`AllowEmpty`]: DestinationDirectoryRule::AllowEmpty
 /// [`AllowNonEmpty`]: DestinationDirectoryRule::AllowNonEmpty
 /// [`copy_file`]: crate::file::copy_file
+/// [^unix-cp-rd]: Source for coreutils' `cp` is available
+///     [here](https://github.com/coreutils/coreutils/blob/ccf47cad93bc0b85da0401b0a9d4b652e4c930e4/src/cp.c).
 pub fn copy_directory_with_progress<S, T, F>(
     source_directory_path: S,
     destination_directory_path: T,

@@ -50,6 +50,7 @@ fn symlink_to_directory(
     Ok(())
 }
 
+#[track_caller]
 fn assert_directory_contents_match_other_directory<P1, P2>(
     self_directory_path: P1,
     other_directory_path: P2,
@@ -57,6 +58,8 @@ fn assert_directory_contents_match_other_directory<P1, P2>(
     P1: Into<PathBuf>,
     P2: Into<PathBuf>,
 {
+    // TODO add support for symlnks (will need to compare destinations' contents too)
+
     let self_directory_path: PathBuf = self_directory_path.into();
     let other_directory_path: PathBuf = other_directory_path.into();
 
@@ -327,16 +330,19 @@ impl AssertableRootDirectory {
     }
 
     /// Assert the directory exists.
+    #[track_caller]
     pub fn assert_exists(&self) {
         assert!(self.directory_path.exists() && self.directory_path.is_dir());
     }
 
     /// Assert the directory does not exist.
+    #[track_caller]
     pub fn assert_not_exists(&self) {
         assert!(!self.directory_path.exists());
     }
 
     /// Assert the directory exists and is completely empty.
+    #[track_caller]
     pub fn assert_is_empty(&self) {
         let directory_scan =
             std::fs::read_dir(self.path()).expect("failed to read contents of directory");
@@ -345,6 +351,7 @@ impl AssertableRootDirectory {
     }
 
     /// Assert the directory is not completely empty.
+    #[track_caller]
     pub fn assert_is_not_empty(&self) {
         let directory_scan =
             std::fs::read_dir(self.path()).expect("failed to read contents of directory");
@@ -354,11 +361,38 @@ impl AssertableRootDirectory {
 
     /// Assert contents of directory `self` and `other_directory_path` perfectly match.
     /// Structure and exact file contents are compared, but **symlinks and metadata are ignored**.
+    #[track_caller]
     pub fn assert_directory_contents_match_directory<P>(&self, other_directory_path: P)
     where
         P: Into<PathBuf>,
     {
         assert_directory_contents_match_other_directory(self.path(), other_directory_path);
+    }
+
+    /// Asserts that this path leads to a symbolic link to a directory.
+    #[track_caller]
+    pub fn assert_is_symlink_to_directory(&self) {
+        assert!(self.directory_path.is_symlink() && self.directory_path.is_dir());
+    }
+
+    /// Asserts that this path leads to a symbolic link (either a file or directory).
+    #[track_caller]
+    pub fn assert_is_symlink(&self) {
+        assert!(self.directory_path.is_symlink());
+    }
+
+    /// Asserts that a path is a symlink and resolves the symlink, returning the path it points to.
+    #[track_caller]
+    pub fn resolve_target_symlink_path(&self) -> PathBuf {
+        self.assert_is_symlink();
+
+        fs::read_link(self.path()).unwrap()
+    }
+
+    /// Asserts that this path leads to a directory which is not a symlink.
+    #[track_caller]
+    pub fn assert_is_directory(&self) {
+        assert!(self.directory_path.is_dir() && !self.directory_path.is_symlink());
     }
 
     /// Consume `self` and return the inner [`assert_fs::TempDir`](../../assert_fs/fixture/struct.TempDir.html).
@@ -442,6 +476,7 @@ impl AssertableDirectoryPath {
     }
 
     /// Creates a symbolic link at the directory path of `self` that points to a target directory (`target_path`).
+    #[track_caller]
     pub fn symlink_to_directory<P2>(&self, target_path: P2) -> Result<(), AssertableFilePathError>
     where
         P2: AsRef<Path>,
@@ -455,27 +490,47 @@ impl AssertableDirectoryPath {
     }
 
     /// Assert the directory exists.
+    #[track_caller]
     pub fn assert_exists(&self) {
         assert!(self.directory_path.exists() && self.directory_path.is_dir());
     }
 
     /// Assert the directory does not exist.
+    #[track_caller]
     pub fn assert_not_exists(&self) {
         assert!(!self.directory_path.exists());
     }
 
     /// Asserts that this path leads to a directory which is not a symlink.
+    #[track_caller]
     pub fn assert_is_directory(&self) {
-        assert!(self.directory_path.is_dir() && !self.directory_path.is_symlink());
+        if self.directory_path.is_symlink() {
+            panic!(
+                "{} is symlink, expected a directory instead",
+                self.directory_path.display()
+            );
+        } else if self.directory_path.is_file() {
+            panic!(
+                "{} is a file, expected a directory instead",
+                self.directory_path.display()
+            );
+        } else if !self.directory_path.exists() {
+            panic!(
+                "{} does not exist, expected a directory",
+                self.directory_path.display()
+            );
+        }
     }
 
     /// Asserts that this path leads to a symbolic link to a directory.
+    #[track_caller]
     pub fn assert_is_symlink_to_directory(&self) {
         assert!(self.directory_path.is_symlink() && self.directory_path.is_dir());
     }
 
 
     /// Asserts that a path is a symlink and resolves the symlink, returning the path it points to.
+    #[track_caller]
     pub fn resolve_target_symlink_path(&self) -> PathBuf {
         self.assert_is_symlink();
 
@@ -483,11 +538,13 @@ impl AssertableDirectoryPath {
     }
 
     /// Asserts that this path leads to a symbolic link (either a file or directory).
+    #[track_caller]
     pub fn assert_is_symlink(&self) {
         assert!(self.directory_path.is_symlink());
     }
 
     /// Assert the directory is completely empty.
+    #[track_caller]
     pub fn assert_is_empty(&self) {
         let directory_scan =
             std::fs::read_dir(self.path()).expect("failed to read contents of directory");
@@ -496,6 +553,7 @@ impl AssertableDirectoryPath {
     }
 
     /// Assert the directory is not completely empty.
+    #[track_caller]
     pub fn assert_is_not_empty(&self) {
         let directory_scan =
             std::fs::read_dir(self.path()).expect("failed to read contents of directory");
@@ -505,6 +563,7 @@ impl AssertableDirectoryPath {
 
     /// Assert contents of directory `self` and `other_directory_path` perfectly match.
     /// Structure and exact file contents are compared, but **symlinks and metadata are ignored**.
+    #[track_caller]
     pub fn assert_directory_contents_match_directory<P>(&self, other_directory_path: P)
     where
         P: Into<PathBuf>,
@@ -718,16 +777,19 @@ impl AssertableFilePath {
     }
 
     /// Asserts that this path leads to a file which is not a symlink.
+    #[track_caller]
     pub fn assert_is_file(&self) {
         assert!(self.file_path.is_file() && !self.file_path.is_symlink());
     }
 
     /// Asserts that this path leads to a symbolic link to a file.
+    #[track_caller]
     pub fn assert_is_symlink_to_file(&self) {
         assert!(self.file_path.is_symlink() && self.file_path.is_file());
     }
 
     /// Asserts that this path leads to a symbolic link to a directory.
+    #[track_caller]
     pub fn assert_is_symlink_to_directory(&self) {
         assert!(self.file_path.is_symlink() && self.file_path.is_dir());
     }
@@ -740,16 +802,19 @@ impl AssertableFilePath {
     }
 
     /// Asserts that this path leads to a symbolic link (to either a file or directory).
+    #[track_caller]
     pub fn assert_is_symlink(&self) {
         assert!(self.file_path.is_symlink());
     }
 
     /// Assert this file exists.
+    #[track_caller]
     pub fn assert_exists(&self) {
         assert!(self.file_path.exists());
     }
 
     /// Assert this file does not exist.
+    #[track_caller]
     pub fn assert_not_exists(&self) {
         assert!(!self.file_path.exists());
     }
@@ -762,6 +827,7 @@ impl AssertableFilePath {
     /// (e.g. when using the [`from_path_with_expected_content`][Self::from_path_with_expected_content]
     /// or [`from_path`][Self::from_path]
     /// methods to initialize [`Self`]).
+    #[track_caller]
     pub fn assert_content_unchanged(&self) {
         let Some(expected_contents) = self.expected_file_content.as_ref() else {
             panic!("Expected file contents are unknown.")
@@ -789,6 +855,7 @@ impl AssertableFilePath {
     /// ## Panics
     /// This method also panics if `other`'s expected content is unknown
     /// (i.e. when its [`expected_content`][Self::expected_content] returns `None`).
+    #[track_caller]
     pub fn assert_content_matches_expected_value_of_assertable(&self, other: &Self) {
         let other_expected_content = other
             .expected_content()
@@ -808,6 +875,7 @@ impl AssertableFilePath {
     /// Assert a file's contents match another file.
     ///
     /// You can provide anything that implements `AsRef<Path>`.
+    #[track_caller]
     pub fn assert_content_matches_file<P>(&self, other: P)
     where
         P: AsRef<Path>,
@@ -832,6 +900,7 @@ impl AssertableFilePath {
     }
 
     /// Assert a file's contents match a `&str`.
+    #[track_caller]
     pub fn assert_content_matches_str<C>(&self, content: C)
     where
         C: AsRef<str>,
@@ -840,6 +909,7 @@ impl AssertableFilePath {
     }
 
     /// Assert a file's contents match a `[u8]`.
+    #[track_caller]
     pub fn assert_content_matches_bytes<C>(&self, content: C)
     where
         C: AsRef<[u8]>,

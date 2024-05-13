@@ -19,7 +19,7 @@ use crate::{error::FileError, use_enabled_fs_module};
 
 
 /// Options that influence the [`copy_file`] function.
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct CopyFileOptions {
     /// How to behave for a destination file that already exists.
     pub existing_destination_file_behaviour: ExistingFileBehaviour,
@@ -68,16 +68,18 @@ pub enum CopyFileFinished {
 
 /// Copies a single file from the source to the destination path.
 ///
+/// The source file path must be an existing file, or a symlink to one.
 /// The destination path must be a *file* path, and must not point to a directory.
 ///
 ///
 /// # Symbolic links
-/// If `source_file_path` leads to a symbolic link that points to a file,
-/// the contents of the file at the symlink destination will be copied to `destination_file_path`
-/// (the link will not be preserved at `destination_file_path`).
-/// This matches the behaviour of `cp` without `--no-dereference` (`-P`) on Unix.
+/// Symbolic links are not preserved.
 ///
-/// TODO update
+/// This means the following: if `source_file_path` leads to a symbolic link that points to a file,
+/// the contents of the file at the symlink target will be copied to `destination_file_path`.
+///
+/// This matches the behaviour of `cp` without `--no-dereference` (`-P`) on Unix[^unix-cp].
+///
 ///
 ///
 /// # Options
@@ -147,6 +149,8 @@ pub enum CopyFileFinished {
 /// [`UnableToCanonicalizeDestinationFilePath`]: FileError::UnableToCanonicalizeDestinationFilePath
 /// [`SourceAndDestinationAreTheSame`]: FileError::SourceAndDestinationAreTheSame
 /// [`OtherIoError`]: FileError::OtherIoError
+/// [^unix-cp]: Source for coreutils' `cp` is available
+///     [here](https://github.com/coreutils/coreutils/blob/ccf47cad93bc0b85da0401b0a9d4b652e4c930e4/src/cp.c).
 pub fn copy_file<S, D>(
     source_file_path: S,
     destination_file_path: D,
@@ -334,14 +338,17 @@ where
 
 /// Copies a single file from the source to the destination path, with progress reporting.
 ///
+/// The source file path must be an existing file, or a symlink to one.
 /// The destination path must be a *file* path, and must not point to a directory.
 ///
 ///
 /// # Symbolic links
-/// If `source_file_path` leads to a symbolic link that points to a file,
-/// the contents of the file at the symlink destination will be copied to `destination_file_path`
-/// (the link will not be preserved at `destination_file_path`).
-/// This matches the behaviour of `cp` without `-P` on Unix.
+/// Symbolic links are not preserved.
+///
+/// This means the following: if `source_file_path` leads to a symbolic link that points to a file,
+/// the contents of the file at the symlink target will be copied to `destination_file_path`.
+///
+/// This matches the behaviour of `cp` without `--no-dereference` (`-P`) on Unix[^unix-cp].
 ///
 ///
 /// # Options
@@ -430,6 +437,8 @@ where
 /// [`UnableToCanonicalizeDestinationFilePath`]: FileError::UnableToCanonicalizeDestinationFilePath
 /// [`SourceAndDestinationAreTheSame`]: FileError::SourceAndDestinationAreTheSame
 /// [`OtherIoError`]: FileError::OtherIoError
+/// [^unix-cp]: Source for coreutils' `cp` is available
+///     [here](https://github.com/coreutils/coreutils/blob/ccf47cad93bc0b85da0401b0a9d4b652e4c930e4/src/cp.c).
 pub fn copy_file_with_progress<P, T, F>(
     source_file_path: P,
     destination_file_path: T,

@@ -86,7 +86,7 @@ pub fn copy_directory() -> TestResult {
 
 
 #[test]
-pub fn copy_directory_respect_maximum_depth_option() -> TestResult {
+pub fn copy_directory_respects_maximum_depth_option() -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -267,7 +267,7 @@ pub fn copy_directory_with_progress() -> TestResult {
 
 
 #[test]
-pub fn copy_directory_with_progress_respect_depth_option() -> TestResult {
+pub fn copy_directory_with_progress_respects_depth_option() -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -328,7 +328,7 @@ pub fn copy_directory_with_progress_respect_depth_option() -> TestResult {
 
 
 #[test]
-pub fn error_on_copy_directory_with_progress_on_existing_file_without_option() -> TestResult {
+pub fn disallow_copy_directory_with_progress_on_existing_file_without_option() -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -390,7 +390,7 @@ pub fn error_on_copy_directory_with_progress_on_existing_file_without_option() -
 }
 
 #[test]
-pub fn error_on_copy_directory_with_progress_on_existing_directory_without_option() -> TestResult {
+pub fn disallow_copy_directory_with_progress_on_existing_directory_without_option() -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -563,7 +563,7 @@ pub fn disallow_copy_directory_with_progress_into_subdirectory_of_itself() -> Te
 }
 
 #[test]
-pub fn error_on_copy_directory_to_existing_destination_directory_without_option() -> TestResult {
+pub fn disallow_copy_directory_to_existing_destination_directory_without_option() -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -595,7 +595,7 @@ pub fn error_on_copy_directory_to_existing_destination_directory_without_option(
 }
 
 #[test]
-pub fn error_on_copy_directory_to_non_empty_destination_without_option() -> TestResult {
+pub fn disallow_copy_directory_to_non_empty_destination_without_option() -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -649,7 +649,7 @@ pub fn error_on_copy_directory_to_non_empty_destination_without_option() -> Test
 }
 
 #[test]
-pub fn error_on_copy_directory_to_non_empty_destination_with_subdirectory_without_option(
+pub fn disallow_copy_directory_to_non_empty_destination_with_subdirectory_without_option(
 ) -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
@@ -712,7 +712,7 @@ pub fn error_on_copy_directory_to_non_empty_destination_with_subdirectory_withou
 
 
 #[test]
-pub fn copy_directory_containing_symbolic_link_to_file() -> TestResult {
+pub fn copy_directory_does_not_preserve_file_symlinks() -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -746,7 +746,7 @@ pub fn copy_directory_containing_symbolic_link_to_file() -> TestResult {
 }
 
 #[test]
-pub fn copy_directory_with_progress_containing_symbolic_link_to_file() -> TestResult {
+pub fn copy_directory_with_progress_does_not_preserve_file_symlinks() -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -782,7 +782,7 @@ pub fn copy_directory_with_progress_containing_symbolic_link_to_file() -> TestRe
 
 
 #[test]
-pub fn copy_directory_containing_symbolic_link_to_directory() -> TestResult {
+pub fn copy_directory_does_not_preserve_directory_symlinks() -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -807,6 +807,7 @@ pub fn copy_directory_containing_symbolic_link_to_directory() -> TestResult {
         AssertableDirectoryPath::from_path(empty_harness.root.child_path("symlinked-directory"));
 
     previously_symlinked_dir_in_target.assert_exists();
+    previously_symlinked_dir_in_target.assert_is_directory();
     previously_symlinked_dir_in_target
         .assert_directory_contents_match_directory(harness.dir_foo.path());
 
@@ -817,7 +818,7 @@ pub fn copy_directory_containing_symbolic_link_to_directory() -> TestResult {
 }
 
 #[test]
-pub fn copy_directory_with_progress_containing_symbolic_link_to_directory() -> TestResult {
+pub fn copy_directory_with_progress_does_not_preserve_directory_symlink() -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -843,6 +844,7 @@ pub fn copy_directory_with_progress_containing_symbolic_link_to_directory() -> T
         AssertableDirectoryPath::from_path(empty_harness.root.child_path("symlinked-directory"));
 
     previously_symlinked_dir_in_target.assert_exists();
+    previously_symlinked_dir_in_target.assert_is_directory();
     previously_symlinked_dir_in_target
         .assert_directory_contents_match_directory(harness.dir_foo.path());
 
@@ -853,7 +855,7 @@ pub fn copy_directory_with_progress_containing_symbolic_link_to_directory() -> T
 }
 
 #[test]
-pub fn copy_directory_containing_symbolic_link_to_directory_and_respect_depth_limit() -> TestResult
+pub fn copy_directory_containing_symbolic_link_to_directory_and_respects_depth_limit() -> TestResult
 {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
@@ -882,12 +884,12 @@ pub fn copy_directory_containing_symbolic_link_to_directory_and_respect_depth_li
         AssertableDirectoryPath::from_path(empty_harness.root.child_path("symlinked-directory"));
 
     previously_symlinked_dir_in_target.assert_exists();
+    previously_symlinked_dir_in_target.assert_is_directory();
 
 
     let previously_symlinked_file_b = AssertableFilePath::from_path(
-        empty_harness
-            .root
-            .child_path("symlinked-directory")
+        previously_symlinked_dir_in_target
+            .path()
             .join(harness.file_b.path().file_name().unwrap()),
     );
 
@@ -896,9 +898,8 @@ pub fn copy_directory_containing_symbolic_link_to_directory_and_respect_depth_li
 
 
     let previously_symlinked_file_c = AssertableFilePath::from_path(
-        empty_harness
-            .root
-            .child_path("symlinked-directory")
+        previously_symlinked_dir_in_target
+            .path()
             .join(harness.dir_bar.path().file_name().unwrap())
             .join(harness.file_c.path().file_name().unwrap()),
     );
@@ -912,7 +913,7 @@ pub fn copy_directory_containing_symbolic_link_to_directory_and_respect_depth_li
 }
 
 #[test]
-pub fn copy_directory_with_progress_containing_symbolic_link_to_directory_and_respect_depth_limit(
+pub fn copy_directory_with_progress_containing_symbolic_link_to_directory_and_respects_depth_limit(
 ) -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
@@ -942,12 +943,12 @@ pub fn copy_directory_with_progress_containing_symbolic_link_to_directory_and_re
         AssertableDirectoryPath::from_path(empty_harness.root.child_path("symlinked-directory"));
 
     previously_symlinked_dir_in_target.assert_exists();
+    previously_symlinked_dir_in_target.assert_is_directory();
 
 
     let previously_symlinked_file_b = AssertableFilePath::from_path(
-        empty_harness
-            .root
-            .child_path("symlinked-directory")
+        previously_symlinked_dir_in_target
+            .path()
             .join(harness.file_b.path().file_name().unwrap()),
     );
 
@@ -956,9 +957,8 @@ pub fn copy_directory_with_progress_containing_symbolic_link_to_directory_and_re
 
 
     let previously_symlinked_file_c = AssertableFilePath::from_path(
-        empty_harness
-            .root
-            .child_path("symlinked-directory")
+        previously_symlinked_dir_in_target
+            .path()
             .join(harness.dir_bar.path().file_name().unwrap())
             .join(harness.file_c.path().file_name().unwrap()),
     );
@@ -1287,7 +1287,7 @@ pub fn copy_directory_with_progress_preemptively_checks_for_file_collisions() ->
 
 
 #[test]
-pub fn error_on_copy_directory_when_source_is_symlink_to_destination() -> TestResult {
+pub fn disallow_copy_directory_when_source_is_symlink_to_destination() -> TestResult {
     // Tests behaviour when copying "symlink to directory A" to "A".
     // This should fail.
 

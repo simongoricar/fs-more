@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    io::{self, ErrorKind},
+    path::{Path, PathBuf},
+};
 
 use_enabled_fs_module!();
 
@@ -342,13 +345,15 @@ fn scan_and_plan_directory_copy(
     // Scan the source directory and queue all copy and
     // directory creation operations that need to happen.
     struct PendingDirectoryScan {
-        source_directory_path: PathBuf,
+        directory_path: PathBuf,
+        directory_path_without_symlink_follows: PathBuf,
         depth: usize,
     }
 
     let mut directory_scan_queue = Vec::new();
     directory_scan_queue.push(PendingDirectoryScan {
-        source_directory_path: source_directory_path.clone(),
+        directory_path: source_directory_path.clone(),
+        directory_path_without_symlink_follows: source_directory_path.clone(),
         depth: 0,
     });
 
@@ -356,28 +361,46 @@ fn scan_and_plan_directory_copy(
     while let Some(next_directory) = directory_scan_queue.pop() {
         // Scan the directory for its files and directories.
         // Files are queued for copying, directories are queued for creation.
-        let directory_iterator =
-            fs::read_dir(&next_directory.source_directory_path).map_err(|error| {
-                CopyDirectoryPlanError::UnableToAccess {
-                    path: next_directory.source_directory_path.clone(),
-                    error,
-                }
-            })?;
+        let directory_iterator = fs::read_dir(&next_directory.directory_path).map_err(|error| {
+            CopyDirectoryPlanError::UnableToAccess {
+                path: next_directory.directory_path.clone(),
+                error,
+            }
+        })?;
 
         for directory_item in directory_iterator {
             let directory_item =
                 directory_item.map_err(|error| CopyDirectoryPlanError::UnableToAccess {
-                    path: next_directory.source_directory_path.clone(),
+                    path: next_directory.directory_path.clone(),
                     error,
                 })?;
 
             let directory_item_source_path = directory_item.path();
+            let directory_item_name = directory_item_source_path.file_name().ok_or_else(|| {
+                CopyDirectoryPlanError::UnableToAccess {
+                    path: directory_item_source_path.clone(),
+                    error: io::Error::new(
+                        ErrorKind::Other,
+                        "ReadDir's iterator generated a path that terminates in ..",
+                    ),
+                }
+            })?;
 
-            // Remaps `directory_item_source_path` (relative to `next_directory.source_directory_path`)
-            // onto the destination directory (`destination_directory_path`), preserving directory structure.
+            // We construct an updated `directory_path_without_symlink_follows` manually,
+            // since following symlinks can make it hard to understand where under the
+            // original source directory structure we are. But only if we have a sub-path of the
+            // source directory can we correctly remap the relative sub-path inside the source
+            // onto the destination directory.
+            let new_directory_path_without_symlink_follows = next_directory
+                .directory_path_without_symlink_follows
+                .join(directory_item_name);
+
+
+            // Remaps `new_directory_path_without_symlink_follows` (relative to `next_directory.source_directory_path`)
+            // onto `destination_directory_path`, preserving directory structure.
             let directory_item_destination_path = join_relative_source_path_onto_destination(
                 &source_directory_path,
-                &directory_item_source_path,
+                &new_directory_path_without_symlink_follows,
                 &destination_directory_path,
             )
             .map_err(
@@ -433,21 +456,25 @@ fn scan_and_plan_directory_copy(
                     CopyDirectoryDepthLimit::Limited { maximum_depth } => {
                         if next_directory.depth < maximum_depth {
                             directory_scan_queue.push(PendingDirectoryScan {
-                                source_directory_path: directory_item_source_path,
+                                directory_path: directory_item_source_path.clone(),
+                                directory_path_without_symlink_follows:
+                                    new_directory_path_without_symlink_follows,
                                 depth: next_directory.depth + 1,
                             });
                         }
                     }
                     CopyDirectoryDepthLimit::Unlimited => {
                         directory_scan_queue.push(PendingDirectoryScan {
-                            source_directory_path: directory_item_source_path,
+                            directory_path: directory_item_source_path.clone(),
+                            directory_path_without_symlink_follows:
+                                new_directory_path_without_symlink_follows,
                             depth: next_directory.depth + 1,
                         });
                     }
                 };
             } else if item_type.is_symlink() {
-                // If the path is a symbolic link, we need to follow it and queue a copy from the underlying file.
-                // We need to keep in mind that the symlink can point to either a directory or a file.
+                // If the path is a symbolic link, we need to follow it and queue a copy
+                // from the underlying file or directory.
 
                 // Now we should retrieve the metadata of the target of the symbolic link
                 // (unlike [`DirEntry::metadata`], this metadata call *does* follow symolic links).
@@ -489,14 +516,18 @@ fn scan_and_plan_directory_copy(
                         CopyDirectoryDepthLimit::Limited { maximum_depth } => {
                             if next_directory.depth < maximum_depth {
                                 directory_scan_queue.push(PendingDirectoryScan {
-                                    source_directory_path: directory_item_source_path.clone(),
+                                    directory_path: directory_item_source_path.clone(),
+                                    directory_path_without_symlink_follows:
+                                        new_directory_path_without_symlink_follows,
                                     depth: next_directory.depth + 1,
                                 });
                             }
                         }
                         CopyDirectoryDepthLimit::Unlimited => {
                             directory_scan_queue.push(PendingDirectoryScan {
-                                source_directory_path: directory_item_source_path,
+                                directory_path: directory_item_source_path,
+                                directory_path_without_symlink_follows:
+                                    new_directory_path_without_symlink_follows,
                                 depth: next_directory.depth + 1,
                             });
                         }

@@ -10,14 +10,26 @@ use crate::assertable::AssertableFilePathError;
 /// - [`std::io::Error`].
 #[derive(Error, Debug)]
 pub enum TestError {
-    #[error("assert_fs' FixtureError: {0}")]
-    FixtureError(#[from] FixtureError),
+    #[error("assert_fs' FixtureError")]
+    FixtureError(
+        #[from]
+        #[source]
+        FixtureError,
+    ),
 
-    #[error("assertable file path error: {0}")]
-    AssertableFilePathError(#[from] AssertableFilePathError),
+    #[error("assertable file path error")]
+    AssertableFilePathError(
+        #[from]
+        #[source]
+        AssertableFilePathError,
+    ),
 
-    #[error("std::io::Error: {0}")]
-    IoError(#[from] std::io::Error),
+    #[error("std::io::Error")]
+    IoError(
+        #[from]
+        #[source]
+        std::io::Error,
+    ),
 }
 
 /// A main `Result` type for use in unit and integration tests (shorthand for the [`TestError`] error).

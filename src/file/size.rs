@@ -8,10 +8,13 @@ use crate::{error::FileSizeError, use_enabled_fs_module};
 ///
 ///
 /// ## Symbolic link behaviour
-/// Symbolic links are resolved.
+/// Symbolic links are followed.
+///
 /// This means that, if the provided `file_path` is
 /// a symbolic link leading to a file, the function returns
 /// *the size of the target file, not of the link itself*.
+///
+/// This matches the behaviour of `du` with the `--dereference` flag on Unix[^unix-du].
 ///
 ///
 /// # Errors
@@ -33,6 +36,8 @@ use crate::{error::FileSizeError, use_enabled_fs_module};
 /// [`NotAFile`]: FileSizeError::NotAFile
 /// [`UnableToAccessFile`]: FileSizeError::UnableToAccessFile
 /// [`OtherIoError`]: FileSizeError::OtherIoError
+/// [^unix-du]: Source for coreutils' `du` is available
+///     [here](https://github.com/coreutils/coreutils/blob/ccf47cad93bc0b85da0401b0a9d4b652e4c930e4/src/du.c).
 pub fn file_size_in_bytes<P>(file_path: P) -> Result<u64, FileSizeError>
 where
     P: AsRef<Path>,

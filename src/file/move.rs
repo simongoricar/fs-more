@@ -97,11 +97,14 @@ pub enum MoveFileMethod {
 ///
 ///
 /// # Symbolic links
-/// If `source_file_path` leads to a symbolic link that points to a file,
-/// the contents of the file at the symlink destination will be copied to `destination_file_path`
-/// (the link will not be preserved at `destination_file_path`).
+/// Symbolic links are generally preserved, unless renaming them fails.
 ///
-/// The original `source_file_path` symbolic link will be removed at the end to complete the move.
+/// This means the following: if `source_file_path` leads to a symbolic link that points to a file,
+/// we'll try to move the file by renaming it to the destination path, even if it is a symbolic link to a file.
+/// If that fails, the contents of the file the symlink points to will instead
+/// be *copied*, then the symlink at `source_file_path` itself will be removed.
+///
+/// This matches `mv` behaviour on Unix[^unix-mv].
 ///
 ///
 /// # Options
@@ -174,6 +177,8 @@ pub enum MoveFileMethod {
 /// [`UnableToCanonicalizeDestinationFilePath`]: FileError::UnableToCanonicalizeDestinationFilePath
 /// [`SourceAndDestinationAreTheSame`]: FileError::SourceAndDestinationAreTheSame
 /// [`OtherIoError`]: FileError::OtherIoError
+/// [^unix-mv]: Source for coreutils' `mv` is available
+///   [here](https://github.com/coreutils/coreutils/blob/ccf47cad93bc0b85da0401b0a9d4b652e4c930e4/src/mv.c#L196-L244).
 pub fn move_file<S, D>(
     source_file_path: S,
     destination_file_path: D,
@@ -189,16 +194,19 @@ where
 
     let validated_source_path = validate_source_file_path(source_file_path)?;
 
-    let (destination_file_path, destination_file_exists) = match validate_destination_file_path(
-        &validated_source_path,
-        destination_file_path,
-        options.existing_destination_file_behaviour,
-    )? {
-        DestinationValidationAction::SkipCopyOrMove => {
-            return Ok(MoveFileFinished::Skipped);
-        }
-        DestinationValidationAction::Continue(info) => (info.destination_file_path, info.exists),
-    };
+    let (validated_destination_file_path, destination_file_exists) =
+        match validate_destination_file_path(
+            &validated_source_path,
+            destination_file_path,
+            options.existing_destination_file_behaviour,
+        )? {
+            DestinationValidationAction::SkipCopyOrMove => {
+                return Ok(MoveFileFinished::Skipped);
+            }
+            DestinationValidationAction::Continue(info) => {
+                (info.destination_file_path, info.exists)
+            }
+        };
 
     let ValidatedSourceFilePath {
         source_file_path: validated_source_file_path,
@@ -207,21 +215,26 @@ where
 
 
     // All checks have passed. Now we do the following:
-    // - if both paths reside on the same filesystem
-    //   (as indicated by std::fs::rename succeeding) that's nice (and fast),
-    // - otherwise we need to copy to target and remove source.
+    // - Try to move by renaming the source file. If that succeeds,
+    //   that's nice and fast (and symlink-preserving).
+    // - Otherwise, we need to copy the source (or the file underneath it,
+    //   if it a symlink) to target and remove the source.
 
-    // Note that we *must not* go for the renaming shortcut if the user-provided path was actually a symbolic link to a file.
-    // In that case, we need to copy the file behind the symbolic link, then remove the symbolic link.
-    if !source_file_was_symlink_to_file
-        && fs::rename(
-            &validated_source_file_path,
-            &destination_file_path,
-        )
-        .is_ok()
+
+    let source_file_path_to_rename = if source_file_was_symlink_to_file {
+        source_file_path
+    } else {
+        validated_source_file_path.as_path()
+    };
+
+    if fs::rename(
+        source_file_path_to_rename,
+        &validated_destination_file_path,
+    )
+    .is_ok()
     {
         // Get size of file that we just renamed.
-        let target_file_path_metadata = fs::metadata(&destination_file_path)
+        let target_file_path_metadata = fs::metadata(&validated_destination_file_path)
             .map_err(|error| FileError::OtherIoError { error })?;
 
         match destination_file_exists {
@@ -239,16 +252,21 @@ where
         // Special case: if the original was a symlink to a file, we need to
         // delete the symlink, not the file it points to.
 
-        let num_bytes_copied = fs::copy(&validated_source_file_path, destination_file_path)
-            .map_err(|error| FileError::OtherIoError { error })?;
+        let num_bytes_copied = fs::copy(
+            &validated_source_file_path,
+            validated_destination_file_path,
+        )
+        .map_err(|error| FileError::OtherIoError { error })?;
 
-        let file_path_to_remove = if source_file_was_symlink_to_file {
+        let source_file_path_to_remove = if source_file_was_symlink_to_file {
+            // `source_file_path` instead of `validated_source_file_path` is intentional:
+            // if the source was a symlink, we should remove the link, not its destination.
             source_file_path
         } else {
             validated_source_file_path.as_path()
         };
 
-        super::remove_file(file_path_to_remove).map_err(|error| match error {
+        super::remove_file(source_file_path_to_remove).map_err(|error| match error {
             FileRemoveError::NotFound { path } => FileError::SourceFileNotFound { path },
             FileRemoveError::NotAFile { path } => FileError::SourcePathNotAFile { path },
             FileRemoveError::UnableToAccessFile { path, error } => {
@@ -329,11 +347,14 @@ impl Default for MoveFileWithProgressOptions {
 ///
 ///
 /// # Symbolic links
-/// If `source_file_path` leads to a symbolic link that points to a file,
-/// the contents of the file at the symlink destination will be copied to `destination_file_path`
-/// (the link will not be preserved at `destination_file_path`).
+/// Symbolic links are generally preserved, unless renaming them fails.
 ///
-/// The original `source_file_path` symbolic link will be removed at the end to complete the move.
+/// This means the following: if `source_file_path` leads to a symbolic link that points to a file,
+/// we'll try to move the file by renaming it to the destination path, even if it is a symbolic link to a file.
+/// If that fails, the contents of the file the symlink points to will instead
+/// be *copied*, then the symlink at `source_file_path` itself will be removed.
+///
+/// This matches `mv` behaviour on Unix[^unix-mv].
 ///
 ///
 /// # Options
@@ -425,6 +446,8 @@ impl Default for MoveFileWithProgressOptions {
 /// [`UnableToCanonicalizeDestinationFilePath`]: FileError::UnableToCanonicalizeDestinationFilePath
 /// [`SourceAndDestinationAreTheSame`]: FileError::SourceAndDestinationAreTheSame
 /// [`OtherIoError`]: FileError::OtherIoError
+/// [^unix-mv]: Source for coreutils' `mv` is available
+///   [here](https://github.com/coreutils/coreutils/blob/ccf47cad93bc0b85da0401b0a9d4b652e4c930e4/src/mv.c#L196-L244).
 pub fn move_file_with_progress<S, D, P>(
     source_file_path: S,
     destination_file_path: D,
@@ -463,17 +486,23 @@ where
 
 
     // All checks have passed. Now we do the following:
-    // - if both paths reside on the same filesystem
-    //   (as indicated by std::fs::rename succeeding)
-    //   that's nice and fast (we mustn't forget to do at least one progress report),
-    // - otherwise we need to copy to target and remove source.
+    // - Try to move by renaming the source file. If that succeeds,
+    //   that's nice and fast (and symlink-preserving). We must also not forget
+    //   to do one progress report.
+    // - Otherwise, we need to copy the source (or the file underneath it,
+    //   if it a symlink) to target and remove the source.
 
-    if !source_file_was_symlink_to_file
-        && fs::rename(
-            &validated_source_file_path,
-            &validated_destination_file_path,
-        )
-        .is_ok()
+    let source_file_path_to_rename = if source_file_was_symlink_to_file {
+        source_file_path
+    } else {
+        validated_source_file_path.as_path()
+    };
+
+    if fs::rename(
+        source_file_path_to_rename,
+        &validated_destination_file_path,
+    )
+    .is_ok()
     {
         // Get size of file that we just renamed, emit one progress report, and return.
 
@@ -514,14 +543,15 @@ where
         )?;
 
 
-        let file_path_to_remove = if source_file_was_symlink_to_file {
-            // `source_file_path` instead of `validated_source_file_path` is intentional.
+        let source_file_path_to_remove = if source_file_was_symlink_to_file {
+            // `source_file_path` instead of `validated_source_file_path` is intentional:
+            // if the source was a symlink, we should remove the link, not its destination.
             source_file_path
         } else {
             validated_source_file_path.as_path()
         };
 
-        super::remove_file(file_path_to_remove).map_err(|error| match error {
+        super::remove_file(source_file_path_to_remove).map_err(|error| match error {
             FileRemoveError::NotFound { path } => FileError::SourceFileNotFound { path },
             FileRemoveError::NotAFile { path } => FileError::SourcePathNotAFile { path },
             FileRemoveError::UnableToAccessFile { path, error } => {

@@ -7,12 +7,19 @@ use crate::{error::FileRemoveError, use_enabled_fs_module};
 /// Removes a single file.
 ///
 ///
+/// # Symbolic links
+/// If `source_file_path` is a valid symbolic link to a file, the link will be removed
+/// (not the file it points to). If the symlink is broken or points to something
+/// other than a file, an error is returned.
+///
+///
 /// # Errors
 /// If the file cannot be removed, a [`FileRemoveError`] is returned;
 /// see its documentation for more details.
 /// Here is a non-exhaustive list of error causes:
 /// - If the file does not exist, a [`NotFound`] variant is returned.
 /// - If the path exists, but is not a file, [`NotAFile`] is returned.
+///   Notably, this is also returned when the path is a symlink to something other than a file.
 /// - If there is an issue accessing the file, for example due to missing permissions,
 ///   then a [`UnableToAccessFile`] is returned.
 ///
@@ -71,7 +78,26 @@ where
         }
     }
 
-    if !file_path.is_file() {
+
+    let file_metadata =
+        fs::symlink_metadata(file_path).map_err(|error| FileRemoveError::UnableToAccessFile {
+            path: file_path.to_path_buf(),
+            error,
+        })?;
+
+    if file_metadata.is_symlink() {
+        let file_metadata_resolved =
+            fs::metadata(file_path).map_err(|error| FileRemoveError::UnableToAccessFile {
+                path: file_path.to_path_buf(),
+                error,
+            })?;
+
+        if !file_metadata_resolved.is_file() {
+            return Err(FileRemoveError::NotAFile {
+                path: file_path.to_path_buf(),
+            });
+        }
+    } else if !file_metadata.is_file() {
         return Err(FileRemoveError::NotAFile {
             path: file_path.to_path_buf(),
         });

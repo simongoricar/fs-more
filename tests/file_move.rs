@@ -5,6 +5,7 @@ use fs_more::{
         ExistingFileBehaviour,
         FileProgress,
         MoveFileFinished,
+        MoveFileMethod,
         MoveFileOptions,
         MoveFileWithProgressOptions,
     },
@@ -326,15 +327,30 @@ pub fn move_file_symlink_behaviour() -> TestResult {
     )
     .unwrap();
 
-    assert_matches!(
-        finished_move,
-        MoveFileFinished::Created { bytes_copied, .. }
-        if bytes_copied == real_file_size_in_bytes
-    );
+
+    match finished_move {
+        MoveFileFinished::Created {
+            bytes_copied,
+            method,
+        } => match method {
+            MoveFileMethod::Rename => {
+                // The symlink was preserved in this case.
+                target_file.assert_is_symlink_to_file();
+            }
+            MoveFileMethod::CopyAndDelete => {
+                // The symlink was not preserved.
+                assert_eq!(bytes_copied, real_file_size_in_bytes);
+                target_file.assert_is_file();
+            }
+        },
+        _ => {
+            panic!("move_file should have created a destination file");
+        }
+    }
 
     symlinked_file.assert_not_exists();
     harness.binary_file_a.assert_content_unchanged();
-    target_file.assert_is_file();
+    target_file.assert_content_matches_file(harness.binary_file_a.path());
 
     assert_eq!(
         real_file_size_in_bytes,
@@ -371,15 +387,30 @@ pub fn move_file_with_progress_symlink_behaviour() -> TestResult {
     )
     .unwrap();
 
-    assert_matches!(
-        finished_move,
-        MoveFileFinished::Created { bytes_copied, .. }
-        if bytes_copied == real_file_size_in_bytes
-    );
+    match finished_move {
+        MoveFileFinished::Created {
+            bytes_copied,
+            method,
+        } => match method {
+            MoveFileMethod::Rename => {
+                // The symlink was preserved in this case.
+                target_file.assert_is_symlink_to_file();
+            }
+            MoveFileMethod::CopyAndDelete => {
+                // The symlink was not preserved.
+                assert_eq!(bytes_copied, real_file_size_in_bytes);
+                target_file.assert_is_file();
+            }
+        },
+        _ => {
+            panic!("move_file should have created a destination file");
+        }
+    }
+
 
     symlinked_file.assert_not_exists();
     harness.binary_file_a.assert_content_unchanged();
-    target_file.assert_is_file();
+    target_file.assert_content_matches_file(harness.binary_file_a.path());
 
     assert_eq!(
         real_file_size_in_bytes,
