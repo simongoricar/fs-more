@@ -7,6 +7,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  # See https://rustmagazine.org/issue-2/optimize-rust-comptime/#step-3:-disable-incremental-compilation
+  CARGO_INCREMENTAL: 0
 
 jobs:
   build-and-test:
