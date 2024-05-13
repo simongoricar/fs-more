@@ -17,7 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Refactor internal test harness subcrates.
   
 ### Removed
-- `TargetDirectoryRule` no longer publically exposes the three methods that previously returned a bool indicating its existing target directory and overwriting behaviour.
+- `TargetDirectoryRule` no longer publicly exposes the three methods that previously returned a bool indicating its existing target directory and overwriting behaviour.
 
 
 ## [0.3.0] - 2024-01-14

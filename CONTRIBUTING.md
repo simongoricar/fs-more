@@ -47,7 +47,7 @@ Please submit an issue describing what isn't well tested or submit a PR with a f
 To catch a larger set of potential problems, we use [clippy](https://github.com/rust-lang/rust-clippy) instead of a normal `cargo check`.
 As far as code formatting goes, we use nightly [rustfmt](https://github.com/rust-lang/rustfmt) with some rule overrides (see `rustfmt.toml`).
 
-Commited code should always be free of errors, ideally free of warnings, and be formatted with `rustfmt`. 
+Committed code should always be free of errors, ideally free of warnings, and be formatted with `rustfmt`. 
 If a specific `clippy` rule or `rustfmt`'s output doesn't make sense in a certain chunk of code, 
 you can add an ignore for it (`#[allow(...)]` / `#[rustfmt::skip]`), but do so sparingly.
 
