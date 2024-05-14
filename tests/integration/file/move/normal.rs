@@ -12,7 +12,7 @@ use fs_more_test_harness::{
 
 
 #[test]
-pub fn move_file() -> TestResult {
+pub fn move_file_correctly_moves_the_file() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     let target_file =
@@ -45,7 +45,7 @@ pub fn move_file() -> TestResult {
 
 
 #[test]
-pub fn forbid_move_into_itself() -> TestResult {
+pub fn move_file_errors_when_trying_to_copy_into_self() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     let file_move_result = fs_more::file::move_file(
@@ -79,7 +79,8 @@ pub fn forbid_move_into_itself() -> TestResult {
 
 
 #[test]
-pub fn forbid_move_into_itself_with_overwrite_flag() -> TestResult {
+pub fn move_file_errors_when_trying_to_copy_into_self_even_with_overwrite_behaviour() -> TestResult
+{
     let harness = SimpleFileHarness::new()?;
 
     let file_move_result = fs_more::file::move_file(
@@ -113,7 +114,7 @@ pub fn forbid_move_into_itself_with_overwrite_flag() -> TestResult {
 
 
 #[test]
-pub fn forbid_case_insensitive_move_into_itself() -> TestResult {
+pub fn move_file_errors_when_trying_to_copy_into_case_insensitive_self() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     let upper_case_file_name = harness
@@ -183,7 +184,7 @@ pub fn forbid_case_insensitive_move_into_itself() -> TestResult {
 
 
 #[test]
-pub fn forbid_move_file_when_source_is_symlink_to_destination() -> TestResult {
+pub fn move_file_errors_when_source_is_symlink_to_destination() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     let test_symlink =
@@ -220,7 +221,7 @@ pub fn forbid_move_file_when_source_is_symlink_to_destination() -> TestResult {
 
 
 #[test]
-pub fn allow_move_overwriting_target_file_with_flag() -> TestResult {
+pub fn move_file_overwrites_destination_file_when_behaviour_is_overwrite() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     let file_move_result = fs_more::file::move_file(
@@ -258,7 +259,7 @@ pub fn allow_move_overwriting_target_file_with_flag() -> TestResult {
 
 
 #[test]
-pub fn forbid_move_overwriting_target_file_without_flag() -> TestResult {
+pub fn move_file_errors_on_existing_destination_file_when_behaviour_is_abort() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     let file_move_result = fs_more::file::move_file(
@@ -297,7 +298,7 @@ pub fn forbid_move_overwriting_target_file_without_flag() -> TestResult {
 /// **On Windows**, creating symbolic links requires administrator privileges, unless Developer mode is enabled.
 /// See <https://stackoverflow.com/questions/58038683/allow-mklink-for-a-non-admin-user>.
 #[test]
-pub fn move_file_symlink_behaviour() -> TestResult {
+pub fn move_file_may_preserve_symlinks_when_moving_by_rename() -> TestResult {
     let harness = SimpleTreeHarness::new()?;
 
     let symlinked_file = AssertableFilePath::from_path(harness.root.child_path("my-symlink.txt"));

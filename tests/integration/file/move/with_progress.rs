@@ -18,7 +18,7 @@ use fs_more_test_harness::{
 
 
 #[test]
-pub fn move_file_with_progress() -> TestResult {
+pub fn move_file_with_progress_correctly_moves_the_file() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     let source_file_size_bytes = harness.test_file.path().metadata().unwrap().len();
@@ -68,11 +68,214 @@ pub fn move_file_with_progress() -> TestResult {
 }
 
 
+#[test]
+pub fn move_file_with_progress_errors_when_trying_to_copy_into_self() -> TestResult {
+    let harness = SimpleFileHarness::new()?;
+
+    let file_move_result = fs_more::file::move_file_with_progress(
+        harness.foo_bar.path(),
+        harness.foo_bar.path(),
+        MoveFileWithProgressOptions {
+            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+            ..Default::default()
+        },
+        |_| {},
+    );
+
+    assert!(
+        file_move_result.is_err(),
+        "move_file should have errored, but got {:?}.",
+        file_move_result.unwrap()
+    );
+
+    assert_matches!(
+        file_move_result.unwrap_err(),
+        FileError::SourceAndDestinationAreTheSame { path }
+        if path == harness.foo_bar.path()
+    );
+
+    harness.foo_bar.assert_exists();
+    harness.foo_bar.assert_content_unchanged();
+
+
+    harness.destroy()?;
+    Ok(())
+}
+
+
+
+#[test]
+pub fn move_file_with_progress_errors_when_trying_to_copy_into_self_even_with_overwrite_behaviour(
+) -> TestResult {
+    let harness = SimpleFileHarness::new()?;
+
+    let file_move_result = fs_more::file::move_file_with_progress(
+        harness.foo_bar.path(),
+        harness.foo_bar.path(),
+        MoveFileWithProgressOptions {
+            existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
+            ..Default::default()
+        },
+        |_| {},
+    );
+
+    assert!(
+        file_move_result.is_err(),
+        "move_file should have errored, but got {:?}.",
+        file_move_result.unwrap()
+    );
+
+    assert_matches!(
+        file_move_result.unwrap_err(),
+        FileError::SourceAndDestinationAreTheSame { path }
+        if path == harness.foo_bar.path()
+    );
+
+    harness.foo_bar.assert_exists();
+    harness.foo_bar.assert_content_unchanged();
+
+
+    harness.destroy()?;
+    Ok(())
+}
+
+
+
+// TODO add move_file_with_progress version of move_file_errors_when_trying_to_copy_into_case_insensitive_self
+
+
+
+#[test]
+pub fn move_file_with_progress_errors_when_source_is_symlink_to_destination() -> TestResult {
+    let harness = SimpleFileHarness::new()?;
+
+    let test_symlink =
+        AssertableFilePath::from_path(harness.root.child_path("symlink-test-file.txt"));
+    test_symlink.assert_not_exists();
+    test_symlink
+        .symlink_to_file(harness.test_file.path())
+        .unwrap();
+    test_symlink.assert_is_symlink_to_file();
+
+    let mut last_progress: Option<FileProgress> = None;
+
+    let copy_result = fs_more::file::move_file_with_progress(
+        test_symlink.path(),
+        harness.test_file.path(),
+        MoveFileWithProgressOptions {
+            existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
+            ..Default::default()
+        },
+        |progress| {
+            last_progress = Some(progress.clone());
+        },
+    );
+
+    assert!(last_progress.is_none());
+
+
+    assert_matches!(
+        copy_result.unwrap_err(),
+        FileError::SourceAndDestinationAreTheSame { path }
+        if path == harness.test_file.path()
+    );
+
+
+    test_symlink.assert_is_symlink_to_file();
+    harness.test_file.assert_is_file();
+
+    harness.destroy()?;
+    Ok(())
+}
+
+
+
+#[test]
+pub fn move_file_with_progress_overwrites_destination_file_when_behaviour_is_overwrite(
+) -> TestResult {
+    let harness = SimpleFileHarness::new()?;
+
+    let file_move_result = fs_more::file::move_file_with_progress(
+        harness.test_file.path(),
+        harness.foo_bar.path(),
+        MoveFileWithProgressOptions {
+            existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
+            ..Default::default()
+        },
+        |_| {},
+    );
+
+    assert!(
+        file_move_result.is_ok(),
+        "move_file should have Ok-ed, but got {}.",
+        file_move_result.unwrap_err()
+    );
+
+    assert_matches!(
+        file_move_result.unwrap(),
+        MoveFileFinished::Overwritten { bytes_copied, .. }
+        if bytes_copied == harness.test_file.expected_content_unchecked().len() as u64
+    );
+
+    harness.test_file.assert_not_exists();
+    harness.foo_bar.assert_exists();
+
+    harness
+        .foo_bar
+        .assert_content_matches_expected_value_of_assertable(&harness.test_file);
+
+
+    harness.destroy()?;
+    Ok(())
+}
+
+
+
+#[test]
+pub fn move_file_with_progress_errors_on_existing_destination_file_when_behaviour_is_abort(
+) -> TestResult {
+    let harness = SimpleFileHarness::new()?;
+
+    let file_move_result = fs_more::file::move_file_with_progress(
+        harness.test_file.path(),
+        harness.foo_bar.path(),
+        MoveFileWithProgressOptions {
+            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+            ..Default::default()
+        },
+        |_| {},
+    );
+
+    assert!(
+        file_move_result.is_err(),
+        "move_file should have errored, got {:?}.",
+        file_move_result.unwrap()
+    );
+
+    assert_matches!(
+        file_move_result.unwrap_err(),
+        FileError::DestinationPathAlreadyExists { path }
+        if path == harness.foo_bar.path()
+    );
+
+    harness.test_file.assert_exists();
+    harness.foo_bar.assert_exists();
+
+    harness.test_file.assert_content_unchanged();
+    harness.foo_bar.assert_content_unchanged();
+
+
+    harness.destroy()?;
+    Ok(())
+}
+
+
+
 
 /// **On Windows**, creating symbolic links requires administrator privileges, unless Developer mode is enabled.
 /// See <https://stackoverflow.com/questions/58038683/allow-mklink-for-a-non-admin-user>.
 #[test]
-pub fn move_file_with_progress_symlink_behaviour() -> TestResult {
+pub fn move_file_with_progress_may_preserve_symlinks_when_moving_by_rename() -> TestResult {
     let harness = SimpleTreeHarness::new()?;
 
     let symlinked_file = AssertableFilePath::from_path(harness.root.child_path("my-symlink.txt"));
@@ -124,51 +327,6 @@ pub fn move_file_with_progress_symlink_behaviour() -> TestResult {
         real_file_size_in_bytes,
         target_file.file_size_in_bytes()?
     );
-
-    harness.destroy()?;
-    Ok(())
-}
-
-
-
-#[test]
-pub fn forbid_move_file_with_progress_when_source_is_symlink_to_target() -> TestResult {
-    let harness = SimpleFileHarness::new()?;
-
-    let test_symlink =
-        AssertableFilePath::from_path(harness.root.child_path("symlink-test-file.txt"));
-    test_symlink.assert_not_exists();
-    test_symlink
-        .symlink_to_file(harness.test_file.path())
-        .unwrap();
-    test_symlink.assert_is_symlink_to_file();
-
-    let mut last_progress: Option<FileProgress> = None;
-
-    let copy_result = fs_more::file::move_file_with_progress(
-        test_symlink.path(),
-        harness.test_file.path(),
-        MoveFileWithProgressOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
-            ..Default::default()
-        },
-        |progress| {
-            last_progress = Some(progress.clone());
-        },
-    );
-
-    assert!(last_progress.is_none());
-
-
-    assert_matches!(
-        copy_result.unwrap_err(),
-        FileError::SourceAndDestinationAreTheSame { path }
-        if path == harness.test_file.path()
-    );
-
-
-    test_symlink.assert_is_symlink_to_file();
-    harness.test_file.assert_is_file();
 
     harness.destroy()?;
     Ok(())
