@@ -585,13 +585,31 @@ impl AssertableDirectoryPath {
     /// Assert contents of directory `self` and `other_directory_path` perfectly match.
     /// Structure and exact file contents are compared, but **symlinks and metadata are ignored**.
     #[track_caller]
-    pub fn assert_directory_contents_match_directory<P>(&self, other_directory_path: P)
+    pub fn assert_directory_contents_fully_match_directory<P>(&self, other_directory_path: P)
+    where
+        P: Into<PathBuf>,
+    {
+        let other_directory_path: PathBuf = other_directory_path.into();
+
+        assert_primary_directory_contents_exist_in_secondary_directory(
+            self.path(),
+            other_directory_path.clone(),
+        );
+
+        assert_primary_directory_contents_exist_in_secondary_directory(
+            other_directory_path,
+            self.path(),
+        );
+    }
+
+    #[track_caller]
+    pub fn assert_directory_has_contents_of_other_directory<P>(&self, other_directory_path: P)
     where
         P: Into<PathBuf>,
     {
         assert_primary_directory_contents_exist_in_secondary_directory(
-            self.path(),
             other_directory_path,
+            self.path(),
         );
     }
 }

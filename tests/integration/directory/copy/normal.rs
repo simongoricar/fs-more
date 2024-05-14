@@ -25,7 +25,7 @@ use fs_more_test_harness::{
 
 
 #[test]
-pub fn copy_directory() -> TestResult {
+pub fn copy_directory_creates_an_identical_copy() -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -87,7 +87,7 @@ pub fn copy_directory() -> TestResult {
 
 
 #[test]
-pub fn copy_directory_respects_maximum_depth_option() -> TestResult {
+pub fn copy_directory_respects_copy_depth_limit() -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -148,7 +148,7 @@ pub fn copy_directory_respects_maximum_depth_option() -> TestResult {
 
 
 #[test]
-pub fn disallow_copy_directory_into_itself() -> TestResult {
+pub fn copy_directory_errors_when_source_and_destination_are_the_same() -> TestResult {
     let harness = DeepTreeHarness::new()?;
 
     let copy_result = fs_more::directory::copy_directory(
@@ -180,7 +180,7 @@ pub fn disallow_copy_directory_into_itself() -> TestResult {
 
 
 #[test]
-pub fn disallow_copy_directory_into_subdirectory_of_itself() -> TestResult {
+pub fn copy_directory_errors_when_destination_is_inside_source_path() -> TestResult {
     let harness = DeepTreeHarness::new()?;
 
     let copy_result = fs_more::directory::copy_directory(
@@ -209,8 +209,11 @@ pub fn disallow_copy_directory_into_subdirectory_of_itself() -> TestResult {
     Ok(())
 }
 
+
+
 #[test]
-pub fn disallow_copy_directory_to_existing_destination_directory_without_option() -> TestResult {
+pub fn copy_directory_errors_when_destination_directory_already_exists_and_rule_is_disallow_existing(
+) -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -244,7 +247,8 @@ pub fn disallow_copy_directory_to_existing_destination_directory_without_option(
 
 
 #[test]
-pub fn disallow_copy_directory_to_non_empty_destination_without_option() -> TestResult {
+pub fn copy_directory_errors_when_destination_file_collides_and_its_behaviour_is_abort(
+) -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -275,7 +279,8 @@ pub fn disallow_copy_directory_to_non_empty_destination_without_option() -> Test
         CopyDirectoryOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
-                existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
+                existing_destination_subdirectory_behaviour:
+                    ExistingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },
@@ -300,7 +305,7 @@ pub fn disallow_copy_directory_to_non_empty_destination_without_option() -> Test
 
 
 #[test]
-pub fn disallow_copy_directory_to_non_empty_destination_with_subdirectory_without_option(
+pub fn copy_directory_errors_when_destination_subdirectory_collides_and_its_behaviour_is_abort(
 ) -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
@@ -400,8 +405,45 @@ pub fn copy_directory_does_not_preserve_file_symlinks() -> TestResult {
 
 
 #[test]
-pub fn copy_directory_containing_symbolic_link_to_directory_and_respects_depth_limit() -> TestResult
-{
+pub fn copy_directory_does_not_preserve_directory_symlinks() -> TestResult {
+    let harness = DeepTreeHarness::new()?;
+    let empty_harness = EmptyTreeHarness::new()?;
+
+
+    let symlinked_dir =
+        AssertableDirectoryPath::from_path(harness.root.child_path("symlinked-directory"));
+
+    symlinked_dir.assert_not_exists();
+    symlinked_dir.symlink_to_directory(harness.dir_foo.path())?;
+    symlinked_dir.assert_is_symlink_to_directory();
+
+
+    fs_more::directory::copy_directory(
+        harness.root.path(),
+        empty_harness.root.path(),
+        CopyDirectoryOptions::default(),
+    )
+    .unwrap();
+
+
+    let previously_symlinked_dir_in_target =
+        AssertableDirectoryPath::from_path(empty_harness.root.child_path("symlinked-directory"));
+
+    previously_symlinked_dir_in_target.assert_exists();
+    previously_symlinked_dir_in_target.assert_is_directory();
+    previously_symlinked_dir_in_target
+        .assert_directory_contents_fully_match_directory(harness.dir_foo.path());
+
+
+    empty_harness.destroy()?;
+    harness.destroy()?;
+    Ok(())
+}
+
+
+
+#[test]
+pub fn copy_directory_respects_copy_depth_limit_even_if_source_contains_symlink() -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -612,7 +654,7 @@ pub fn copy_directory_preemptively_checks_for_file_collisions() -> TestResult {
 
 
 #[test]
-pub fn disallow_copy_directory_when_source_is_symlink_to_destination() -> TestResult {
+pub fn copy_directory_errors_when_source_is_symlink_to_destination() -> TestResult {
     // Tests behaviour when copying "symlink to directory A" to "A".
     // This should fail.
 

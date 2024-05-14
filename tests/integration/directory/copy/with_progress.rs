@@ -27,7 +27,7 @@ use fs_more_test_harness::{
 
 
 #[test]
-pub fn copy_directory_with_progress() -> TestResult {
+pub fn copy_directory_with_progress_creates_an_identical_copy() -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -148,7 +148,7 @@ pub fn copy_directory_with_progress() -> TestResult {
 
 
 #[test]
-pub fn copy_directory_with_progress_respects_depth_option() -> TestResult {
+pub fn copy_directory_with_progress_respects_copy_depth_limit() -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -274,58 +274,8 @@ pub fn disallow_copy_directory_with_progress_on_existing_file_without_option() -
 
 
 #[test]
-pub fn disallow_copy_directory_with_progress_on_existing_directory_without_option() -> TestResult {
-    let harness = DeepTreeHarness::new()?;
-    let empty_harness = EmptyTreeHarness::new()?;
-
-    // Still the harness setup.
-    let replicated_foo_dir_name = harness.dir_foo.path().file_name().unwrap();
-    let replicated_foo_dir_path = empty_harness.root.child_path(replicated_foo_dir_name);
-    std::fs::create_dir_all(&replicated_foo_dir_path)?;
-    // End of setup, we have now pre-copied a single file to test our overwriting options.
-
-
-    empty_harness.root.assert_is_not_empty();
-
-    let copy_result = fs_more::directory::copy_directory_with_progress(
-        harness.root.path(),
-        empty_harness.root.path(),
-        CopyDirectoryWithProgressOptions {
-            destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
-                existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
-                existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
-            },
-            ..Default::default()
-        },
-        |_| {},
-    );
-
-    assert!(
-        copy_result.is_err(),
-        "copy_directory_with_progress should have errored due to existing destination file"
-    );
-
-
-    assert_matches!(
-        copy_result.unwrap_err(),
-        CopyDirectoryError::PreparationError(
-            CopyDirectoryPreparationError::CopyPlanningError(
-                CopyDirectoryPlanError::DestinationItemAlreadyExists { path }
-            )
-        )
-        if path == replicated_foo_dir_path
-    );
-
-
-    harness.destroy()?;
-    empty_harness.destroy()?;
-    Ok(())
-}
-
-
-
-#[test]
-pub fn disallow_copy_directory_with_progress_into_itself() -> TestResult {
+pub fn copy_directory_with_progress_errors_when_source_and_destination_are_the_same() -> TestResult
+{
     let harness = DeepTreeHarness::new()?;
 
     let copy_result = fs_more::directory::copy_directory_with_progress(
@@ -358,7 +308,7 @@ pub fn disallow_copy_directory_with_progress_into_itself() -> TestResult {
 
 
 #[test]
-pub fn disallow_copy_directory_with_progress_into_subdirectory_of_itself() -> TestResult {
+pub fn copy_directory_with_progress_errors_when_destination_is_inside_source_path() -> TestResult {
     let harness = DeepTreeHarness::new()?;
 
     let copy_result = fs_more::directory::copy_directory_with_progress(
@@ -385,6 +335,154 @@ pub fn disallow_copy_directory_with_progress_into_subdirectory_of_itself() -> Te
     );
 
     harness.destroy()?;
+    Ok(())
+}
+
+
+
+#[test]
+pub fn copy_directory_with_progress_errors_when_destination_directory_already_exists_and_rule_is_disallow_existing(
+) -> TestResult {
+    let harness = DeepTreeHarness::new()?;
+    let empty_harness = EmptyTreeHarness::new()?;
+
+    empty_harness.root.assert_is_empty();
+
+    let copy_result = fs_more::directory::copy_directory_with_progress(
+        harness.root.path(),
+        empty_harness.root.path(),
+        CopyDirectoryWithProgressOptions {
+            destination_directory_rule: DestinationDirectoryRule::DisallowExisting,
+            ..Default::default()
+        },
+        |_| {},
+    );
+
+    assert_matches!(
+        copy_result.unwrap_err(),
+        CopyDirectoryError::PreparationError(
+            CopyDirectoryPreparationError::DestinationDirectoryValidationError(
+                DestinationDirectoryPathValidationError::AlreadyExists { path, .. }
+            )
+        ) if path == empty_harness.root.path()
+    );
+
+    empty_harness.root.assert_is_empty();
+
+    harness.destroy()?;
+    empty_harness.destroy()?;
+    Ok(())
+}
+
+
+
+
+#[test]
+pub fn copy_directory_with_progress_errors_when_destination_file_collides_and_its_behaviour_is_abort(
+) -> TestResult {
+    let harness = DeepTreeHarness::new()?;
+    let empty_harness = EmptyTreeHarness::new()?;
+
+    // Still the harness setup.
+    let file_a_filename = harness.file_a.path().file_name().unwrap();
+    let test_file_path = empty_harness.root.child_path(file_a_filename);
+    fs_more::file::copy_file(
+        harness.file_a.path(),
+        &test_file_path,
+        CopyFileOptions {
+            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+        },
+    )
+    .unwrap();
+
+    let test_file = AssertableFilePath::from_path_with_captured_content(&test_file_path)?;
+
+    test_file.assert_exists();
+    test_file.assert_content_unchanged();
+    // End of setup, we have now pre-copied a single file to test our overwriting options.
+
+
+    empty_harness.root.assert_is_not_empty();
+
+    let copy_result = fs_more::directory::copy_directory_with_progress(
+        harness.root.path(),
+        empty_harness.root.path(),
+        CopyDirectoryWithProgressOptions {
+            destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
+                existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+                existing_destination_subdirectory_behaviour:
+                    ExistingSubDirectoryBehaviour::Continue,
+            },
+            ..Default::default()
+        },
+        |_| {},
+    );
+
+    assert_matches!(
+        copy_result.unwrap_err(),
+        CopyDirectoryError::PreparationError(
+            CopyDirectoryPreparationError::CopyPlanningError(
+                CopyDirectoryPlanError::DestinationItemAlreadyExists { path }
+            )
+        ) if path == test_file_path
+    );
+
+    empty_harness.root.assert_is_not_empty();
+
+    harness.destroy()?;
+    empty_harness.destroy()?;
+    Ok(())
+}
+
+
+
+#[test]
+pub fn copy_directory_with_progress_errors_when_destination_subdirectory_collides_and_its_behaviour_is_abort(
+) -> TestResult {
+    let harness = DeepTreeHarness::new()?;
+    let empty_harness = EmptyTreeHarness::new()?;
+
+    // Still the harness setup.
+    let replicated_foo_dir_name = harness.dir_foo.path().file_name().unwrap();
+    let replicated_foo_dir_path = empty_harness.root.child_path(replicated_foo_dir_name);
+    std::fs::create_dir_all(&replicated_foo_dir_path)?;
+    // End of setup, we have now pre-copied a single file to test our overwriting options.
+
+
+    empty_harness.root.assert_is_not_empty();
+
+    let copy_result = fs_more::directory::copy_directory_with_progress(
+        harness.root.path(),
+        empty_harness.root.path(),
+        CopyDirectoryWithProgressOptions {
+            destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
+                existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
+                existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
+            },
+            ..Default::default()
+        },
+        |_| {},
+    );
+
+    assert!(
+        copy_result.is_err(),
+        "copy_directory_with_progress should have errored due to existing destination directory"
+    );
+
+
+    assert_matches!(
+        copy_result.unwrap_err(),
+        CopyDirectoryError::PreparationError(
+            CopyDirectoryPreparationError::CopyPlanningError(
+                CopyDirectoryPlanError::DestinationItemAlreadyExists { path }
+            )
+        )
+        if path == replicated_foo_dir_path
+    );
+
+
+    harness.destroy()?;
+    empty_harness.destroy()?;
     Ok(())
 }
 
@@ -428,45 +526,7 @@ pub fn copy_directory_with_progress_does_not_preserve_file_symlinks() -> TestRes
 
 
 #[test]
-pub fn copy_directory_does_not_preserve_directory_symlinks() -> TestResult {
-    let harness = DeepTreeHarness::new()?;
-    let empty_harness = EmptyTreeHarness::new()?;
-
-
-    let symlinked_dir =
-        AssertableDirectoryPath::from_path(harness.root.child_path("symlinked-directory"));
-
-    symlinked_dir.assert_not_exists();
-    symlinked_dir.symlink_to_directory(harness.dir_foo.path())?;
-    symlinked_dir.assert_is_symlink_to_directory();
-
-
-    fs_more::directory::copy_directory(
-        harness.root.path(),
-        empty_harness.root.path(),
-        CopyDirectoryOptions::default(),
-    )
-    .unwrap();
-
-
-    let previously_symlinked_dir_in_target =
-        AssertableDirectoryPath::from_path(empty_harness.root.child_path("symlinked-directory"));
-
-    previously_symlinked_dir_in_target.assert_exists();
-    previously_symlinked_dir_in_target.assert_is_directory();
-    previously_symlinked_dir_in_target
-        .assert_directory_contents_match_directory(harness.dir_foo.path());
-
-
-    empty_harness.destroy()?;
-    harness.destroy()?;
-    Ok(())
-}
-
-
-
-#[test]
-pub fn copy_directory_with_progress_does_not_preserve_directory_symlink() -> TestResult {
+pub fn copy_directory_with_progress_does_not_preserve_directory_symlinks() -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
 
@@ -482,7 +542,9 @@ pub fn copy_directory_with_progress_does_not_preserve_directory_symlink() -> Tes
     fs_more::directory::copy_directory_with_progress(
         harness.root.path(),
         empty_harness.root.path(),
-        CopyDirectoryWithProgressOptions::default(),
+        CopyDirectoryWithProgressOptions {
+            ..Default::default()
+        },
         |_| {},
     )
     .unwrap();
@@ -494,7 +556,7 @@ pub fn copy_directory_with_progress_does_not_preserve_directory_symlink() -> Tes
     previously_symlinked_dir_in_target.assert_exists();
     previously_symlinked_dir_in_target.assert_is_directory();
     previously_symlinked_dir_in_target
-        .assert_directory_contents_match_directory(harness.dir_foo.path());
+        .assert_directory_contents_fully_match_directory(harness.dir_foo.path());
 
 
     empty_harness.destroy()?;
@@ -505,7 +567,7 @@ pub fn copy_directory_with_progress_does_not_preserve_directory_symlink() -> Tes
 
 
 #[test]
-pub fn copy_directory_with_progress_containing_symbolic_link_to_directory_and_respects_depth_limit(
+pub fn copy_directory_with_progress_respects_copy_depth_limit_even_if_source_contains_symlink(
 ) -> TestResult {
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
@@ -734,7 +796,7 @@ pub fn copy_directory_with_progress_preemptively_checks_for_file_collisions() ->
 
 
 #[test]
-pub fn disallow_copy_directory_with_progress_when_source_is_symlink_to_target() -> TestResult {
+pub fn copy_directory_with_progress_errors_when_source_is_symlink_to_destination() -> TestResult {
     // Tests behaviour when copying "symlink to directory A" to "A".
     // This should fail.
 

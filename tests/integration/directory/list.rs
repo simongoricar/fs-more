@@ -19,7 +19,7 @@ where
 
 
 #[test]
-pub fn scan_directory() -> TestResult {
+pub fn directory_scan_produces_correct_information() -> TestResult {
     let harness = SimpleTreeHarness::new()?;
 
     let scan_result = fs_more::directory::DirectoryScan::scan_with_options(
@@ -75,7 +75,7 @@ pub fn scan_directory() -> TestResult {
 
 
 #[test]
-pub fn scan_directory_with_limited_depth() -> TestResult {
+pub fn directory_scan_respects_limited_depth_option() -> TestResult {
     let harness = SimpleTreeHarness::new()?;
 
     let scan_result = fs_more::directory::DirectoryScan::scan_with_options(
@@ -131,7 +131,7 @@ pub fn scan_directory_with_limited_depth() -> TestResult {
 
 
 #[test]
-pub fn directory_size_via_directory_scan() -> TestResult {
+pub fn directory_scan_calculates_correct_size() -> TestResult {
     let harness = SimpleTreeHarness::new()?;
 
     let actual_size_in_bytes = harness.binary_file_a.path().metadata().unwrap().len()
@@ -173,7 +173,7 @@ pub fn directory_size_via_directory_scan() -> TestResult {
 
 
 #[test]
-pub fn directory_size_via_directory_scan_with_depth_limit() -> TestResult<()> {
+pub fn directory_scan_calculates_correct_size_with_depth_limit() -> TestResult<()> {
     let harness = SimpleTreeHarness::new()?;
 
     let actual_size_in_bytes = harness.binary_file_a.path().metadata().unwrap().len()
@@ -214,7 +214,7 @@ pub fn directory_size_via_directory_scan_with_depth_limit() -> TestResult<()> {
 
 
 #[test]
-pub fn directory_size_via_size_function() -> TestResult {
+pub fn directory_size_in_bytes_produces_correct_information() -> TestResult {
     let harness = SimpleTreeHarness::new()?;
 
     let actual_size_in_bytes = harness.binary_file_a.path().metadata().unwrap().len()

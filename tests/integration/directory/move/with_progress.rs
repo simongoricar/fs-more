@@ -26,7 +26,7 @@ use fs_more_test_harness::{
 
 
 #[test]
-pub fn move_directory_with_progress() -> TestResult {
+pub fn move_directory_with_progress_moves_all_files_and_subdirectories() -> TestResult {
     let harness_for_comparison = DeepTreeHarness::new()?;
     let harness = DeepTreeHarness::new()?;
     let empty_harness = EmptyTreeHarness::new()?;
@@ -124,7 +124,7 @@ pub fn move_directory_with_progress() -> TestResult {
 
 
 #[test]
-pub fn error_on_move_directory_with_progress_using_source_symlink_to_destination_directory(
+pub fn move_directory_with_progress_errors_when_source_is_symlink_to_destination_directory(
 ) -> TestResult {
     let target_harness = DeepTreeHarness::new()?;
     let target_harness_untouched = DeepTreeHarness::new()?;
@@ -184,9 +184,10 @@ pub fn error_on_move_directory_with_progress_using_source_symlink_to_destination
 
 
 #[test]
-pub fn move_directory_with_progress_source_directory_symlink_behaviour_with_existing_empty_destination_directory(
+pub fn move_directory_with_progress_does_not_preserve_symlinks_when_destination_directory_already_exists_and_is_not_empty(
 ) -> TestResult {
     let symlink_source_harness = EmptyTreeHarness::new()?;
+    let symlink_source_harness_untouched_copy = EmptyTreeHarness::new()?;
     symlink_source_harness.root.assert_is_empty();
 
     let symlink_target_harness = DeepTreeHarness::new()?;
@@ -198,8 +199,7 @@ pub fn move_directory_with_progress_source_directory_symlink_behaviour_with_exis
         .root
         .assert_is_not_empty();
 
-    let directory_copy_destination_harness = EmptyTreeHarness::new()?;
-    directory_copy_destination_harness.root.assert_is_empty();
+    let directory_copy_destination_harness = SimpleTreeHarness::new()?;
 
 
     let symlink_target_harness_total_size_bytes =
@@ -221,10 +221,6 @@ pub fn move_directory_with_progress_source_directory_symlink_behaviour_with_exis
         );
     }
 
-    untouched_copy_of_symlink_target_harness
-        .root
-        .assert_directory_contents_fully_match_directory(symlink_target.path());
-
 
     let move_destination =
         AssertableDirectoryPath::from_path(directory_copy_destination_harness.root.path());
@@ -235,7 +231,10 @@ pub fn move_directory_with_progress_source_directory_symlink_behaviour_with_exis
         symlink.path(),
         move_destination.path(),
         MoveDirectoryWithProgressOptions {
-            destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
+            destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
+                existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+                existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
+            },
             ..Default::default()
         },
         |_| {},
@@ -246,9 +245,13 @@ pub fn move_directory_with_progress_source_directory_symlink_behaviour_with_exis
     println!("{:?}", directory_move_result);
 
     symlink_target.assert_is_directory();
-    untouched_copy_of_symlink_target_harness
-        .root
-        .assert_directory_contents_fully_match_directory(symlink_target.path());
+
+    move_destination.assert_directory_has_contents_of_other_directory(
+        untouched_copy_of_symlink_target_harness.root.path(),
+    );
+    move_destination.assert_directory_has_contents_of_other_directory(
+        symlink_source_harness_untouched_copy.root.path(),
+    );
 
     assert_eq!(
         directory_move_result.total_bytes_moved,
@@ -258,12 +261,7 @@ pub fn move_directory_with_progress_source_directory_symlink_behaviour_with_exis
 
     match directory_move_result.strategy_used {
         DirectoryMoveStrategy::Rename => {
-            // Destination will be a symlink.
-            move_destination.assert_is_symlink_to_directory();
-
-            let resolved_path = move_destination.resolve_target_symlink_path();
-
-            assert_eq!(resolved_path.as_path(), symlink_target.path());
+            panic!("Directory was renamed, even though the destination contained some contents.");
         }
         DirectoryMoveStrategy::CopyAndDelete => {
             // Copy and delete will not preserve the symlink.
@@ -281,8 +279,9 @@ pub fn move_directory_with_progress_source_directory_symlink_behaviour_with_exis
 
 
 
+
 #[test]
-pub fn move_directory_with_progress_source_directory_symlink_behaviour_without_existing_destination_directory(
+pub fn move_directory_with_progress_may_preserve_symlinks_when_destination_directory_exists_and_is_empty(
 ) -> TestResult {
     let symlink_source_harness = EmptyTreeHarness::new()?;
     symlink_source_harness.root.assert_is_empty();
@@ -369,7 +368,7 @@ pub fn move_directory_with_progress_source_directory_symlink_behaviour_without_e
 
 
 #[test]
-pub fn move_directory_with_progress_to_non_empty_destination_without_overwrite_performs_merge(
+pub fn move_directory_with_progress_performs_merge_without_overwrite_when_copying_to_non_empty_destination_with_correct_options(
 ) -> TestResult {
     let move_source_harness = SimpleTreeHarness::new()?;
     let source_harness_for_comparison = SimpleTreeHarness::new()?;
