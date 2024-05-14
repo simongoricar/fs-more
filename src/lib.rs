@@ -16,14 +16,22 @@
 //!
 //! # Feature flags
 //! The following feature flags enable optional functionality (none are included by default):
-//! - `fs-err`: enables the optional [`fs-err`](../fs_err) support, enabling more helpful underlying IO error messages
-//!   (though `fs-more` already provides many on its own).
-//! - `miette`: derives [`miette::Diagnostic`](../miette/derive.Diagnostic.html) on all
-//!   [error types](crate::error),
-//!   allowing users to conveniently call e.g. [`wrap_err`](../miette/trait.Context.html#tymethod.wrap_err) on the error.
+//! - `dunce` (*enabled by default*): enables the optional [`dunce`](../dunce) support:
+//!   This automatically strips Windows' UNC paths if they can be represented
+//!   using the usual type of path (e.g. `\\?\C:\foo -> C:\foo`) both internally
+//!   and in e.g. `DirectoryScan`'s file and directory paths (this is recommended because path canonicalization
+//!   very commonly returns UNC paths).
+//!   This only has an effect when compiling for Windows targets.
+//! - `fs-err` (*disabled by default*): enables the optional [`fs-err`](../fs_err) support.
+//!   While `fs-more` already provides quite extensive [error types](crate::error),
+//!   this does enable more helpful error messages for underlying IO errors.
+//! - `miette` (*disabled by default*): derives [`miette::Diagnostic`](../miette/derive.Diagnostic.html) on all
+//!   [error types](crate::error), allowing users to conveniently
+//!   use e.g. [`wrap_err`](../miette/trait.Context.html#tymethod.wrap_err) on the errors returned by this crate.
 //!
-//! // TODO update feature flags: miette is now disabled by default, dunce is optional, camino has been added (but is not implemented yet).
-//! // (also update this in the README)
+//! // TODO update feature flags: camino has been added (but is not implemented yet)
+//! // TODO either use advanced miette diagnostic features, or remove the feature flag
+//! // TODO (also update this in the README)
 //!
 //! <br>
 //!
@@ -116,6 +124,7 @@
 //!
 //! <br>
 //!
+//! // TODO The library has changed significantly since its inception, I think it's time I remove this.
 //! # Inspirations
 //!
 //! <details>
