@@ -14,7 +14,7 @@ use fs_more_test_harness::{
 
 
 #[test]
-pub fn copy_file_creates_an_indentical_copy() -> TestResult {
+pub fn copy_file_creates_an_identical_copy() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     let target_file =

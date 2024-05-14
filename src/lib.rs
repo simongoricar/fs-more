@@ -3,10 +3,11 @@
 //!
 //!
 //! # Main features
-//! - copying and moving files or directories with in-depth configuration options (including IO buffering settings, copying depth, etc.)
-//! - copying and moving files or directories **with progress reporting**, if needed,
-//! - scanning directories with depth and other options, and
-//! - calculating file or directory sizes.
+//! - copy and move files or directories with:
+//!     - in-depth configuration options (including IO buffering settings, copying depth, etc.), and
+//!     - **progress reporting**, if needed,
+//! - scan directories (with options such as scan depth), and
+//! - calculate file or directory sizes.
 //!
 //! To start off, visit the [`directory`] and [`file`][mod@file] modules
 //! for more information and a list of functions.
@@ -15,14 +16,14 @@
 //! <br>
 //!
 //! # Feature flags
-//! The following feature flags enable optional functionality (none are included by default):
-//! - `dunce` (*enabled by default*): enables the optional [`dunce`](../dunce) support:
+//! The following feature flags enable optional functionality:
+//! - `dunce` (*enabled by default*): enables the optional [`dunce`](../dunce/index.html) support:
 //!   This automatically strips Windows' UNC paths if they can be represented
 //!   using the usual type of path (e.g. `\\?\C:\foo -> C:\foo`) both internally
 //!   and in e.g. `DirectoryScan`'s file and directory paths (this is recommended because path canonicalization
 //!   very commonly returns UNC paths).
 //!   This only has an effect when compiling for Windows targets.
-//! - `fs-err` (*disabled by default*): enables the optional [`fs-err`](../fs_err) support.
+//! - `fs-err` (*disabled by default*): enables the optional [`fs-err`](../fs_err/index.html) support.
 //!   While `fs-more` already provides quite extensive [error types](crate::error),
 //!   this does enable more helpful error messages for underlying IO errors.
 //! - `miette` (*disabled by default*): derives [`miette::Diagnostic`](../miette/derive.Diagnostic.html) on all
@@ -120,20 +121,6 @@
 //! # Ok(())
 //! # }
 //! ```
-//!
-//!
-//! <br>
-//!
-//! // TODO The library has changed significantly since its inception, I think it's time I remove this.
-//! # Inspirations
-//!
-//! <details>
-//! <summary>Inspired by <code>fs_extra</code></summary>
-//!
-//! `fs-more` is very much not a fork, but its API surface has been partially inspired by
-//! parts of the [`fs_extra`](https://github.com/webdesus/fs_extra) library - thank you!
-//!
-//! </details>
 //!
 
 #![warn(missing_docs)]

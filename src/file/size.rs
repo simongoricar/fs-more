@@ -18,7 +18,7 @@ use crate::{error::FileSizeError, use_enabled_fs_module};
 ///
 ///
 /// # Errors
-/// If the file cannot be removed, a [`FileSizeError`] is returned;
+/// If the size of the file cannot be retrieved, a [`FileSizeError`] is returned;
 /// see its documentation for more details.
 /// Here is a non-exhaustive list of error causes:
 /// - If the file does not exist, a [`NotFound`] variant is returned.

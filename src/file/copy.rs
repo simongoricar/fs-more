@@ -123,6 +123,8 @@ pub enum CopyFileFinished {
 /// see [`copy_file_with_progress`].
 ///
 ///
+/// <br>
+///
 /// <details>
 /// <summary><h4>Implementation details</h4></summary>
 ///
@@ -410,6 +412,8 @@ where
 /// If you are looking for a file copying function that does not report progress,
 /// see [`copy_file`].
 ///
+///
+/// <br>
 ///
 /// <details>
 /// <summary><h4>Implementation details</h4></summary>

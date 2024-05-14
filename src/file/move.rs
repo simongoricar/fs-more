@@ -53,7 +53,7 @@ pub enum MoveFileFinished {
         method: MoveFileMethod,
     },
 
-    /// Destination file existed, but was overwritten with the contents of
+    /// Destination file existed, and was overwritten with the contents of
     /// the source file.
     Overwritten {
         /// The number of bytes transferred in the move (i.e. the file size).
@@ -120,7 +120,7 @@ pub enum MoveFileMethod {
 ///
 /// # Errors
 /// If the file cannot be moved to the destination, a [`FileError`] is returned;
-/// see its documentatio for more details. Here is a non-exhaustive list of error causes:
+/// see its documentation for more details. Here is a non-exhaustive list of error causes:
 /// - If the source path has issues (does not exist, does not have the correct permissions, etc.),
 ///   one of [`SourceFileNotFound`], [`SourcePathNotAFile`], [`UnableToAccessSourceFile`],
 ///   or [`UnableToCanonicalizeSourceFilePath`] variants will be returned.
@@ -145,6 +145,8 @@ pub enum MoveFileMethod {
 /// If you are looking for a file moving function that reports progress,
 /// see [`move_file_with_progress`].
 ///
+///
+/// <br>
 ///
 /// <details>
 /// <summary><h4>Implementation details</h4></summary>
@@ -388,7 +390,7 @@ impl Default for MoveFileWithProgressOptions {
 ///
 /// # Errors
 /// If the file cannot be moved to the destination, a [`FileError`] is returned;
-/// see its documentatio for more details. Here is a non-exhaustive list of error causes:
+/// see its documentation for more details. Here is a non-exhaustive list of error causes:
 /// - If the source path has issues (does not exist, does not have the correct permissions, etc.),
 ///   one of [`SourceFileNotFound`], [`SourcePathNotAFile`], [`UnableToAccessSourceFile`],
 ///   or [`UnableToCanonicalizeSourceFilePath`] variants will be returned.
@@ -413,6 +415,8 @@ impl Default for MoveFileWithProgressOptions {
 /// If you are looking for a file moving function that does not report progress,
 /// see [`move_file`].
 ///
+///
+/// <br>
 ///
 /// <details>
 /// <summary><h4>Implementation details</h4></summary>

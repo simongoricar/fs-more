@@ -7,10 +7,12 @@ use crate::{error::FileRemoveError, use_enabled_fs_module};
 /// Removes a single file.
 ///
 ///
-/// # Symbolic links
-/// If `source_file_path` is a valid symbolic link to a file, the link will be removed
-/// (not the file it points to). If the symlink is broken or points to something
-/// other than a file, an error is returned.
+/// # Symbolic link behaviour
+/// Symbolic links are not followed.
+///
+/// This means that, if `source_file_path` is a valid symbolic link to a file,
+/// the *link* at the source file path will be removed, not the target file the link points to.
+/// If the symlink is broken, or points to something other than a file, an error is returned.
 ///
 ///
 /// # Errors

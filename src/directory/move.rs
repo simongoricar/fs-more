@@ -232,7 +232,7 @@ fn attempt_directory_move_by_rename(
 /// by performing a directory copy, after which the symlink will be removed.
 ///
 /// For symlinks *inside* the source directory, the behaviour is different depending on the move strategy:
-/// - If a move by rename suceeds, any symbolic links inside the source directory, valid or not, will be preserved.
+/// - If a move by rename succeeds, any symbolic links inside the source directory, valid or not, will be preserved.
 /// - If the copy-and-delete fallback is used, all symbolic links are followed and not preserved
 ///   (see details in [`copy_directory`]).
 ///
@@ -486,7 +486,7 @@ pub struct DirectoryMoveProgress {
 /// by performing a directory copy, after which the symlink will be removed.
 ///
 /// For symlinks *inside* the source directory, the behaviour is different depending on the move strategy:
-/// - If a move by rename suceeds, any symbolic links inside the source directory, valid or not, will be preserved.
+/// - If a move by rename succeeds, any symbolic links inside the source directory, valid or not, will be preserved.
 /// - If the copy-and-delete fallback is used, all symbolic links are followed and not preserved
 ///   (see details in [`copy_directory_with_progress`]).
 ///
