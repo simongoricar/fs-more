@@ -2,7 +2,6 @@ use assert_matches::assert_matches;
 use fs_more::{
     directory::{
         CopyDirectoryDepthLimit,
-        CopyDirectoryOptions,
         CopyDirectoryProgress,
         CopyDirectoryWithProgressOptions,
         DestinationDirectoryRule,
