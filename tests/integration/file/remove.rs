@@ -9,7 +9,7 @@ use fs_more_test_harness::{
 
 
 #[test]
-pub fn remove_file() -> TestResult {
+pub fn remove_file_deletes_file() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     let removal_result = fs_more::file::remove_file(harness.test_file.path());
@@ -58,7 +58,7 @@ pub fn remove_file_does_not_follow_symlinks() -> TestResult {
 
 
 #[test]
-pub fn fail_file_removal_when_it_doesnt_exist() -> TestResult {
+pub fn remove_file_errors_on_non_existent_file() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     let non_existent_file = AssertableFilePath::from_path(

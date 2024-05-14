@@ -51,22 +51,22 @@ fn symlink_to_directory(
 }
 
 #[track_caller]
-fn assert_directory_contents_match_other_directory<P1, P2>(
-    self_directory_path: P1,
-    other_directory_path: P2,
+fn assert_primary_directory_contents_exist_in_secondary_directory<P1, P2>(
+    primary_directory_path: P1,
+    secondary_directory_path: P2,
 ) where
     P1: Into<PathBuf>,
     P2: Into<PathBuf>,
 {
     // TODO add support for symlnks (will need to compare destinations' contents too)
 
-    let self_directory_path: PathBuf = self_directory_path.into();
-    let other_directory_path: PathBuf = other_directory_path.into();
+    let primary_directory_path: PathBuf = primary_directory_path.into();
+    let secondary_directory_path: PathBuf = secondary_directory_path.into();
 
     // The process is as follows:
     // - we construct a scan queue containing directory paths (`self_directory_path` or subdirectories),
     // - we process the queue (FIFO), comparing files and directories (and ignoring symbolic links or any file metadata).
-    let mut directory_scan_queue = vec![self_directory_path.clone()];
+    let mut directory_scan_queue = vec![primary_directory_path.clone()];
 
     while let Some(next_directory_to_scan) = directory_scan_queue.pop() {
         let directory_scan = std::fs::read_dir(&next_directory_to_scan).unwrap_or_else(|error| {
@@ -94,10 +94,10 @@ fn assert_directory_contents_match_other_directory<P1, P2>(
 
 
             let subpath_of_self = entry_path
-                .strip_prefix(&self_directory_path)
+                .strip_prefix(&primary_directory_path)
                 .expect("scanned path should be a subdirectory of the base `self_directory_path`");
 
-            let expected_path_on_other = other_directory_path.join(subpath_of_self);
+            let expected_path_on_other = secondary_directory_path.join(subpath_of_self);
 
 
             if entry_type.is_file() {
@@ -362,11 +362,32 @@ impl AssertableRootDirectory {
     /// Assert contents of directory `self` and `other_directory_path` perfectly match.
     /// Structure and exact file contents are compared, but **symlinks and metadata are ignored**.
     #[track_caller]
-    pub fn assert_directory_contents_match_directory<P>(&self, other_directory_path: P)
+    pub fn assert_directory_contents_fully_match_directory<P>(&self, other_directory_path: P)
     where
         P: Into<PathBuf>,
     {
-        assert_directory_contents_match_other_directory(self.path(), other_directory_path);
+        let other_directory_path: PathBuf = other_directory_path.into();
+
+        assert_primary_directory_contents_exist_in_secondary_directory(
+            self.path(),
+            other_directory_path.clone(),
+        );
+
+        assert_primary_directory_contents_exist_in_secondary_directory(
+            other_directory_path,
+            self.path(),
+        );
+    }
+
+    #[track_caller]
+    pub fn assert_directory_has_contents_of_other_directory<P>(&self, other_directory_path: P)
+    where
+        P: Into<PathBuf>,
+    {
+        assert_primary_directory_contents_exist_in_secondary_directory(
+            other_directory_path,
+            self.path(),
+        );
     }
 
     /// Asserts that this path leads to a symbolic link to a directory.
@@ -568,7 +589,10 @@ impl AssertableDirectoryPath {
     where
         P: Into<PathBuf>,
     {
-        assert_directory_contents_match_other_directory(self.path(), other_directory_path);
+        assert_primary_directory_contents_exist_in_secondary_directory(
+            self.path(),
+            other_directory_path,
+        );
     }
 }
 

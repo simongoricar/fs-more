@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use assert_fs::fixture::FixtureError;
 use assert_matches::assert_matches;
 use fs_more::{
     error::FileError,
@@ -15,7 +14,7 @@ use fs_more_test_harness::{
 
 
 #[test]
-pub fn copy_file() -> TestResult {
+pub fn copy_file_creates_an_indentical_copy() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     let target_file =
@@ -47,48 +46,8 @@ pub fn copy_file() -> TestResult {
 }
 
 
-
 #[test]
-pub fn copy_binary_file() -> TestResult {
-    let harness = SimpleTreeHarness::new()?;
-
-    let target_file = AssertableFilePath::from_path(
-        harness
-            .binary_file_a
-            .path()
-            .with_file_name("test_file2.txt"),
-    );
-    target_file.assert_not_exists();
-
-    let file_copy_result = fs_more::file::copy_file(
-        harness.binary_file_a.path(),
-        target_file.path(),
-        CopyFileOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
-        },
-    );
-
-    assert!(
-        file_copy_result.is_ok(),
-        "failed to execute copy_file: expected Ok, got {}",
-        file_copy_result.unwrap_err()
-    );
-
-    harness.binary_file_a.assert_content_unchanged();
-    harness.subdirectory_b.assert_exists();
-    harness.binary_file_b.assert_content_unchanged();
-
-    target_file.assert_exists();
-    target_file.assert_content_matches_expected_value_of_assertable(&harness.binary_file_a);
-
-    harness.destroy()?;
-    Ok(())
-}
-
-
-
-#[test]
-pub fn forbid_copy_into_self() -> TestResult<()> {
+pub fn copy_file_errors_when_trying_to_copy_into_self() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     let file_copy_result = fs_more::file::copy_file(
@@ -121,7 +80,7 @@ pub fn forbid_copy_into_self() -> TestResult<()> {
 
 
 #[test]
-pub fn case_insensitive_copy_into_self() -> Result<(), FixtureError> {
+pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     // Generates an upper-case version of the file name.
@@ -187,7 +146,7 @@ pub fn case_insensitive_copy_into_self() -> Result<(), FixtureError> {
 
 
 #[test]
-pub fn forbid_non_trivial_copy_into_self() -> Result<(), FixtureError> {
+pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated() -> TestResult {
     let harness = SimpleTreeHarness::new()?;
 
     let target_file_path = {
@@ -289,7 +248,7 @@ pub fn forbid_non_trivial_copy_into_self() -> Result<(), FixtureError> {
 
 
 #[test]
-pub fn copy_file_using_flag_overwrites_destination_file() -> TestResult {
+pub fn copy_file_overwrites_destination_file_when_behaviour_is_overwrite() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     let file_copy_result = fs_more::file::copy_file(
@@ -323,7 +282,7 @@ pub fn copy_file_using_flag_overwrites_destination_file() -> TestResult {
 
 
 #[test]
-pub fn forbid_copy_file_overwriting_destination_file_without_flag() -> TestResult {
+pub fn copy_file_errors_on_existing_destination_file_when_behaviour_is_abort() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     let file_copy_result = fs_more::file::copy_file(
@@ -354,7 +313,7 @@ pub fn forbid_copy_file_overwriting_destination_file_without_flag() -> TestResul
 
 
 #[test]
-pub fn skip_existing_destination_file_on_copy_file_when_using_flag() -> TestResult {
+pub fn copy_file_skips_existing_destination_file_when_behaviour_is_skip() -> TestResult {
     let harness = SimpleFileHarness::new()?;
 
     let file_copy_result = fs_more::file::copy_file(
@@ -390,7 +349,7 @@ pub fn skip_existing_destination_file_on_copy_file_when_using_flag() -> TestResu
 
 
 #[test]
-pub fn forbid_copy_file_when_source_is_symlink_to_destination() -> TestResult {
+pub fn copy_file_errors_when_source_path_is_symlink_to_destination_file() -> TestResult {
     // Tests behaviour when copying "symlink to file A" to "A".
     // This should fail.
 

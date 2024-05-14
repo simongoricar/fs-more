@@ -687,8 +687,10 @@ fn generate_impl(
 
         quote! {
             pub fn destroy(self) -> std::result::Result<(), assert_fs::fixture::FixtureError> {
-                let temporary_directory = self.#root_field_ident.into_temp_dir();
-                temporary_directory.close()?;
+                if self.#root_field_ident.path().exists() {
+                    let temporary_directory = self.#root_field_ident.into_temp_dir();
+                    temporary_directory.close()?;
+                }
 
                 Ok(())
             }

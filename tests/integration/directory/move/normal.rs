@@ -19,7 +19,7 @@ use fs_more::{
 use fs_more_test_harness::{
     assertable::AssertableDirectoryPath,
     error::TestResult,
-    trees::{DeepTreeHarness, EmptyTreeHarness},
+    trees::{DeepTreeHarness, EmptyTreeHarness, SimpleTreeHarness},
 };
 
 
@@ -61,7 +61,7 @@ pub fn move_directory() -> TestResult {
 
     harness_for_comparison
         .root
-        .assert_directory_contents_match_directory(empty_harness.root.path());
+        .assert_directory_contents_fully_match_directory(empty_harness.root.path());
 
     empty_harness.destroy()?;
     // No need to destroy `harness` as the directory no longer exists due to being moved.
@@ -115,7 +115,7 @@ pub fn error_on_move_directory_using_source_symlink_to_destination_directory() -
 
     target_harness_untouched
         .root
-        .assert_directory_contents_match_directory(target_harness.root.path());
+        .assert_directory_contents_fully_match_directory(target_harness.root.path());
 
     source_symlink_harness.destroy()?;
     target_harness.destroy()?;
@@ -166,7 +166,7 @@ pub fn move_directory_source_directory_symlink_behaviour_with_existing_empty_des
 
     untouched_copy_of_symlink_target_harness
         .root
-        .assert_directory_contents_match_directory(symlink_target.path());
+        .assert_directory_contents_fully_match_directory(symlink_target.path());
 
 
     let move_destination =
@@ -189,7 +189,7 @@ pub fn move_directory_source_directory_symlink_behaviour_with_existing_empty_des
     symlink_target.assert_is_directory();
     untouched_copy_of_symlink_target_harness
         .root
-        .assert_directory_contents_match_directory(symlink_target.path());
+        .assert_directory_contents_fully_match_directory(symlink_target.path());
 
     assert_eq!(
         directory_move_result.total_bytes_moved,
@@ -275,7 +275,7 @@ pub fn move_directory_source_directory_symlink_behaviour_without_existing_destin
     symlink.assert_not_exists();
     untouched_copy_of_target_harness
         .root
-        .assert_directory_contents_match_directory(symlink_target.path());
+        .assert_directory_contents_fully_match_directory(symlink_target.path());
 
     assert_eq!(
         directory_move_result.total_bytes_moved,
@@ -303,5 +303,56 @@ pub fn move_directory_source_directory_symlink_behaviour_without_existing_destin
     symlink_target_harness.destroy()?;
     untouched_copy_of_target_harness.destroy()?;
     directory_copy_destination_harness.destroy()?;
+    Ok(())
+}
+
+
+
+#[test]
+pub fn move_directory_to_non_empty_destination_without_overwrite_performs_merge() -> TestResult {
+    let move_source_harness = SimpleTreeHarness::new()?;
+    let source_harness_for_comparison = SimpleTreeHarness::new()?;
+
+    let move_destination_harness = DeepTreeHarness::new()?;
+    let destination_harness_for_comparison = DeepTreeHarness::new()?;
+
+
+    move_source_harness.root.assert_is_directory();
+
+
+    let directory_move_result = fs_more::directory::move_directory(
+        move_source_harness.root.path(),
+        move_destination_harness.root.path(),
+        MoveDirectoryOptions {
+            destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
+                existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+                existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
+            },
+        },
+    )
+    .unwrap();
+
+
+    move_source_harness.root.assert_not_exists();
+
+    move_destination_harness
+        .root
+        .assert_directory_has_contents_of_other_directory(
+            source_harness_for_comparison.root.path(),
+        );
+
+    move_destination_harness
+        .root
+        .assert_directory_has_contents_of_other_directory(
+            destination_harness_for_comparison.root.path(),
+        );
+
+    assert!(directory_move_result.strategy_used == DirectoryMoveStrategy::CopyAndDelete);
+
+
+    move_destination_harness.destroy()?;
+    source_harness_for_comparison.destroy()?;
+    destination_harness_for_comparison.destroy()?;
+    move_source_harness.destroy()?;
     Ok(())
 }

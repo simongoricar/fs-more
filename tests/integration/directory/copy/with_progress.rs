@@ -137,7 +137,7 @@ pub fn copy_directory_with_progress() -> TestResult {
 
     harness
         .root
-        .assert_directory_contents_match_directory(empty_harness.root.path());
+        .assert_directory_contents_fully_match_directory(empty_harness.root.path());
 
 
     harness.destroy()?;
@@ -784,7 +784,7 @@ pub fn disallow_copy_directory_with_progress_when_source_is_symlink_to_target() 
 
     harness
         .root
-        .assert_directory_contents_match_directory(harness_for_comparison.root.path());
+        .assert_directory_contents_fully_match_directory(harness_for_comparison.root.path());
 
 
     harness_for_comparison.destroy()?;
