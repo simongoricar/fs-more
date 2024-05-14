@@ -298,6 +298,12 @@ pub(crate) fn copy_directory_unchecked(
 /// # Options
 /// See [`CopyDirectoryOptions`] for a full set of available directory copying options.
 ///
+/// If you allow the destination directory to exist and be non-empty,
+/// source directory contents will be merged into the destination directory.
+/// Note that this is not the default, and you should probably consider the consequences
+/// very carefully before setting the corresponding [`options.destination_directory_rule`]
+/// option to anything other than [`DisallowExisting`] or [`AllowEmpty`].
+///
 ///
 /// # Return value
 /// Upon success, the function returns information about the files and directories that were copied or created
@@ -832,6 +838,12 @@ where
 /// # Options
 /// See [`CopyDirectoryWithProgressOptions`] for a full set of available directory copying options.
 ///
+/// If you allow the destination directory to exist and be non-empty,
+/// source directory contents will be merged into the destination directory.
+/// Note that this is not the default, and you should probably consider the consequences
+/// very carefully before setting the corresponding [`options.destination_directory_rule`]
+/// option to anything other than [`DisallowExisting`] or [`AllowEmpty`].
+///
 ///
 /// # Return value
 /// Upon success, the function returns information about the files and directories that were copied or created
@@ -845,7 +857,7 @@ where
 ///
 /// You can control the progress reporting frequency by setting the
 /// [`options.progress_update_byte_interval`] option to a sufficiently small or large value,
-/// but note that smaller intervals are likely to have an impact on performance.
+/// but note that smaller intervals are likely to have an additional impact on performance.
 /// The value of this option is the minimum amount of bytes written to a file between
 /// two calls to the provided `progress_handler`.
 ///

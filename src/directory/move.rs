@@ -55,11 +55,9 @@ impl Default for MoveDirectoryOptions {
 
 /// Describes a strategy for performing a directory move.
 ///
-/// Included in [`MoveDirectoryFinished`] to allow callers
-/// to understand how the directory was moved.
-///
-/// Note: *the caller can not request that a specific move strategy be used*.
-/// This enum is simply included in the return value to help the caller understand how the move was performed.
+/// This is included in [`MoveDirectoryFinished`] to allow
+/// callers to understand how the directory was moved.
+/// Note that *the caller can not request that a specific move strategy be used*.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum DirectoryMoveStrategy {
     /// The source directory was simply renamed from the source path to the target path.
@@ -71,7 +69,7 @@ pub enum DirectoryMoveStrategy {
     /// The source directory was recursively copied to the target directory,
     /// and the source directory was deleted afterwards.
     ///
-    /// Out of the three methods given, this is the slowest -- it is as fast as a normal recursive copy.
+    /// This method is as fast as a normal recursive copy.
     /// It is also unavoidable if the directory can't renamed, which can happen when the source and destination
     /// directory exist on different mount points or drives.
     CopyAndDelete,
@@ -225,6 +223,7 @@ fn attempt_directory_move_by_rename(
 
 /// Moves a directory from the source to the destination directory.
 ///
+/// `source_directory_path` must point to an existing directory.
 ///
 /// # Symbolic links
 /// If `source_directory_path` is itself a symlink to a directory,
@@ -237,11 +236,15 @@ fn attempt_directory_move_by_rename(
 /// - If the copy-and-delete fallback is used, all symbolic links are followed and not preserved
 ///   (see details in [`copy_directory`]).
 ///
-/// TODO what happens when the destination directory is not empty? is that even valid?
-///
 ///
 /// # Options
 /// See [`MoveDirectoryOptions`] for a full set of available directory moving options.
+///
+/// If you allow the destination directory to exist and be non-empty,
+/// source directory contents will be merged into the destination directory.
+/// Note that this is not the default, and you should probably consider the consequences
+/// very carefully before setting the corresponding [`options.destination_directory_rule`]
+/// option to anything other than [`DisallowExisting`] or [`AllowEmpty`].
 ///
 ///
 /// # Move strategies
@@ -250,7 +253,7 @@ fn attempt_directory_move_by_rename(
 ///   This is the preferred (and fastest) method, and will preserve
 ///   the `source_directory_path` symlink, if it is one.
 ///   In addition to some other platform-specifics<sup>*</sup>,
-///   this strategy requires that the destination directory is empty.
+///   this strategy requires that the destination directory is empty or doesn't exist.
 /// - If the directory can't be renamed, the function will fall back to a copy-and-rename strategy.
 ///
 /// For more information, see [`DirectoryMoveStrategy`].
@@ -259,13 +262,24 @@ fn attempt_directory_move_by_rename(
 /// *even if it is empty*, the rename strategy will fail.</sup>
 ///
 ///
-/// ### Return value
+/// # Return value
 /// Upon success, the function returns the number of files and directories that were moved
 /// as well as the total amount of bytes moved and how the move was performed
 /// (see [`MoveDirectoryFinished`]).
 ///
 ///
+///
+/// <br>
+///
+/// #### See also
+/// If you are looking for a directory moving function function that reports progress,
+/// see [`move_directory_with_progress`].
+///
+///
 /// [`copy_directory`]: super::copy_directory
+/// [`options.destination_directory_rule`]: MoveDirectoryOptions::destination_directory_rule
+/// [`DisallowExisting`]: DestinationDirectoryRule::DisallowExisting
+/// [`AllowEmpty`]: DestinationDirectoryRule::AllowEmpty
 pub fn move_directory<S, T>(
     source_directory_path: S,
     destination_directory_path: T,
@@ -461,69 +475,84 @@ pub struct DirectoryMoveProgress {
 }
 
 
-/// Moves a directory from `source_directory_path` to `target_directory_path`
-/// (with progress reporting).
+/// Moves a directory from the source to the destination directory, with progress reporting.
 ///
-/// Things to consider:
-/// - `source_directory_path` must point to an existing directory path.
-/// - `target_directory_path` represents a path to the directory that will contain `source_directory_path`'s contents.
-///   If needed, `target_directory_path` will be created.
+/// `source_directory_path` must point to an existing directory.
 ///
+/// # Symbolic links
+/// If `source_directory_path` is itself a symlink to a directory,
+/// we'll try to move the link itself by renaming it to the destination.
+/// If the rename fails, the link will be followed and not preserved
+/// by performing a directory copy, after which the symlink will be removed.
 ///
-/// ### Warnings
-/// *This function does not follow or move symbolic links in the source directory.*
-///
-/// It does, however, support `source_directory_path` itself being a symbolic link to a directory
-/// (it will not copy the symbolic link itself, but the contents of the link destination).
-///
-///
-/// ### Target directory
-/// Depending on the [`options.destination_directory_rule`][DirectoryMoveOptions::destination_directory_rule] option,
-/// the `target_directory_path` must:
-/// - with [`DisallowExisting`][DestinationDirectoryRule::DisallowExisting]: not exist,
-/// - with [`AllowEmpty`][DestinationDirectoryRule::AllowEmpty]: either not exist or be empty, or,
-/// - with [`AllowNonEmpty`][DestinationDirectoryRule::AllowNonEmpty]: either not exist, be empty, or be non-empty. Additionally,
-///   the specified overwriting rules are respected (see [variant fields][DestinationDirectoryRule::AllowNonEmpty]).
+/// For symlinks *inside* the source directory, the behaviour is different depending on the move strategy:
+/// - If a move by rename suceeds, any symbolic links inside the source directory, valid or not, will be preserved.
+/// - If the copy-and-delete fallback is used, all symbolic links are followed and not preserved
+///   (see details in [`copy_directory_with_progress`]).
 ///
 ///
-/// ### Move strategies
-/// Depending on the situation, the move will be performed one of two ways:
-/// - The source directory can be simply renamed to the target directory.
-///   *This is the fastest method,* but in addition to some platform-specifics<sup>*</sup> requires that the target directory is empty.
+///
+/// # Options
+/// See [`MoveDirectoryWithProgressOptions`] for a full set of available directory moving options.
+///
+/// If you allow the destination directory to exist and be non-empty,
+/// source directory contents will be merged into the destination directory.
+/// Note that this is not the default, and you should probably consider the consequences
+/// very carefully before setting the corresponding [`options.destination_directory_rule`]
+/// option to anything other than [`DisallowExisting`] or [`AllowEmpty`].
+///
+///
+/// # Move strategies
+/// Depending on the situation, the move can be performed one of two ways:
+/// - The source directory can be simply renamed to the destination directory.
+///   This is the preferred (and fastest) method, and will preserve
+///   the `source_directory_path` symlink, if it is one.
+///   In addition to some other platform-specifics<sup>*</sup>,
+///   this strategy requires that the destination directory is empty or doesn't exist.
 /// - If the directory can't be renamed, the function will fall back to a copy-and-rename strategy.
 ///
 /// For more information, see [`DirectoryMoveStrategy`].
 ///
-/// <sup>* On Windows: if the target directory already exists – even if it is empty – this function will instead
-/// attempt to rename the <i>contents</i> of the source directory, see [`std::fs::rename`].
-/// This will be reflected in the returned [`DirectoryMoveStrategy`], but should otherwise not be externally visible.</sup>
+/// <sup>* Windows: the destination directory must not exist; if it does,
+/// *even if it is empty*, the rename strategy will fail.</sup>
 ///
 ///
-/// ### Progress reporting
-/// Using the `progress_handler` you can provide a progress handler closure that
-/// will receive a [`&DirectoryMoveProgress`][DirectoryMoveProgress] containing
-/// the progress of the move.
-///
-/// As moving a directory can involve two distinct strategies (see above),
-/// this method can only guarantee *a single progress report*:
-/// - When using the [`DirectoryMoveStrategy::RenameSourceDirectory`] or [`DirectoryMoveStrategy::RenameSourceDirectoryContents`],
-///   there will only be one progress report — the final one that reports a move being complete.
-/// - When using the [`DirectoryMoveStrategy::CopyAndDelete`] strategy, the progress reporting will be the same
-///   as described in the [`copy_directory_with_progress`][super::copy_directory_with_progress] function,
-///   which is much more frequent.
-///   
-/// If the [`DirectoryMoveStrategy::CopyAndDelete`] strategy is used, the
-/// [`options.progress_update_byte_interval`][DirectoryMoveWithProgressOptions::progress_update_byte_interval]
-/// option controls the progress update frequency.
-/// The value of that option is the *minimum* amount of bytes written to a single file
-/// between two progress reports (defaults to 64 KiB).
-/// As such, this function does not guarantee a fixed amount of progress reports per file size.
-///
-///
-/// ### Return value
+/// # Return value
 /// Upon success, the function returns the number of files and directories that were moved
 /// as well as the total amount of bytes moved and how the move was performed
 /// (see [`MoveDirectoryFinished`]).
+///
+///
+/// ### Progress reporting
+/// This function allows you to receive progress reports by providing
+/// a `progress_handler` closure. It will be called with
+/// a reference to [`DirectoryMoveProgress`] regularly.
+///
+/// You can control the progress reporting frequency by setting the
+/// [`options.progress_update_byte_interval`] option to a sufficiencly small or large value,
+/// but note that smaller intervals are likely to have an additional impact on performance.
+/// The value of this option if the minimum amount of bytes written to a file between
+/// two calls to the provided `progress_handler`.
+///
+/// This function does not guarantee a precise amount of progress reports;
+/// it does, however, guarantee at least one progress report per file and directory operation.
+/// It also guarantees one final progress report, when the state indicates the move has been completed.
+///
+/// If the move can be performed by renaming the directory, only one progress report will be emitted.
+///
+///
+/// <br>
+///
+/// #### See also
+/// If you are looking for a directory moving function function that does not report progress,
+/// see [`move_directory`].
+///
+///
+/// [`copy_directory_with_progress`]: super::copy_directory_with_progress
+/// [`options.destination_directory_rule`]: MoveDirectoryWithProgressOptions::destination_directory_rule
+/// [`options.progress_update_byte_interval`]: MoveDirectoryWithProgressOptions::progress_update_byte_interval
+/// [`DisallowExisting`]: DestinationDirectoryRule::DisallowExisting
+/// [`AllowEmpty`]: DestinationDirectoryRule::AllowEmpty
 pub fn move_directory_with_progress<S, T, F>(
     source_directory_path: S,
     target_directory_path: T,
