@@ -221,8 +221,8 @@ pub fn move_directory_does_not_preserve_symlinks_when_destination_directory_alre
 
 
 #[test]
-pub fn move_directory_may_preserve_symlinks_when_destination_directory_does_not_exist() -> TestResult
-{
+pub fn move_directory_may_preserve_symlinks_when_destination_directory_exists_and_is_empty(
+) -> TestResult {
     let symlink_source_harness = EmptyTreeHarness::new()?;
     symlink_source_harness.root.assert_is_empty();
 
