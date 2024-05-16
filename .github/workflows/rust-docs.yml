@@ -1,4 +1,4 @@
-name: Publish documentation on release
+name: Publish documentation
 
 on:
   release:
