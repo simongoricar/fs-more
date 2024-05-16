@@ -1,7 +1,7 @@
 fs-more
 =======
 [![Crates.io Version](https://img.shields.io/crates/v/fs-more?style=flat-square)](https://crates.io/crates/fs-more)
-[![Minimum Supported Rust Version](https://img.shields.io/badge/MSRV-1.63.0-brightgreen?style=flat-square)](https://github.com/simongoricar/fs-more/blob/master/Cargo.toml)
+[![Minimum Supported Rust Version is 1.70.0](https://img.shields.io/badge/MSRV-1.70.0-brightgreen?style=flat-square)](https://github.com/simongoricar/fs-more/blob/master/Cargo.toml)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](https://github.com/simongoricar/fs-more/blob/master/LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-on%20docs.rs-green?style=flat-square)](https://docs.rs/fs-more)
 
