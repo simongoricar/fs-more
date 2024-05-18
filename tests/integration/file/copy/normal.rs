@@ -8,6 +8,7 @@ use fs_more::{
 use fs_more_test_harness::{
     assertable::AssertableFilePath,
     error::TestResult,
+    is_temporary_directory_case_sensitive,
     trees::{SimpleFileHarness, SimpleTreeHarness},
 };
 
@@ -82,6 +83,7 @@ pub fn copy_file_errors_when_trying_to_copy_into_self() -> TestResult {
 #[test]
 pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
     let harness = SimpleFileHarness::new()?;
+    let is_filesystem_case_sensitive = is_temporary_directory_case_sensitive();
 
     // Generates an upper-case version of the file name.
     let target_file_name = harness
@@ -104,12 +106,11 @@ pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
         },
     );
 
-    // TODO detect case-sensitivity instead of using platform flags
-    #[cfg(unix)]
-    {
+
+    if is_filesystem_case_sensitive {
         assert!(
             file_copy_result.is_ok(),
-            "copy_file should have ok-ed (on unix) when trying to copy a file into itself, \
+            "copy_file should have ok-ed (on case-sensitive filesystem) when trying to copy a file into itself, \
             even when the case is different"
         );
 
@@ -118,13 +119,10 @@ pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
             CopyFileFinished::Created { bytes_copied }
             if bytes_copied == harness.test_file.path().metadata().unwrap().len()
         );
-    }
-
-    #[cfg(windows)]
-    {
+    } else {
         assert!(
             file_copy_result.is_err(),
-            "copy_file should have errored (on windows) when trying to copy a file into itself, \
+            "copy_file should have errored (on case-insensitive filesystem) when trying to copy a file into itself, \
             even when the case is different"
         );
 
@@ -134,7 +132,6 @@ pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
             if path == target_file.path() || path == harness.test_file.path()
         );
     }
-
 
     harness.test_file.assert_exists();
     harness.test_file.assert_content_unchanged();
@@ -148,6 +145,7 @@ pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
 #[test]
 pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated() -> TestResult {
     let harness = SimpleTreeHarness::new()?;
+    let is_filesystem_case_sensitive = is_temporary_directory_case_sensitive();
 
     let target_file_path = {
         // Generates an upper-case version of the file name.
@@ -186,12 +184,12 @@ pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated
 
     let target_file = AssertableFilePath::from_path(target_file_path);
 
-    // TODO detect case-sensitivity instead of using platform flags
-    #[cfg(unix)]
-    target_file.assert_not_exists();
 
-    #[cfg(windows)]
-    target_file.assert_exists();
+    if is_filesystem_case_sensitive {
+        target_file.assert_not_exists();
+    } else {
+        target_file.assert_exists();
+    }
 
 
     let file_copy_result = fs_more::file::copy_file(
@@ -202,11 +200,11 @@ pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated
         },
     );
 
-    #[cfg(unix)]
-    {
+
+    if is_filesystem_case_sensitive {
         assert!(
             file_copy_result.is_ok(),
-            "copy_file should have ok-ed (on unix) when trying to copy a file into itself \
+            "copy_file should have ok-ed (on case-sensitive filesystem) when trying to copy a file into itself \
             even when the case is different and the path includes .."
         );
 
@@ -217,13 +215,10 @@ pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated
         );
 
         target_file.assert_exists();
-    }
-
-    #[cfg(windows)]
-    {
+    } else {
         assert!(
             file_copy_result.is_err(),
-            "copy_file should have errored when trying to copy a file into itself, \
+            "copy_file should have errored (non case-insensitive filesystem) when trying to copy a file into itself, \
             even when the case is different and the path includes .."
         );
 

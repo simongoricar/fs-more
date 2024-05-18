@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use assert_matches::assert_matches;
 use fs_more::{
     error::FileError,
@@ -6,6 +8,7 @@ use fs_more::{
 use fs_more_test_harness::{
     assertable::AssertableFilePath,
     error::TestResult,
+    is_temporary_directory_case_sensitive,
     trees::{SimpleFileHarness, SimpleTreeHarness},
 };
 
@@ -119,10 +122,170 @@ pub fn copy_file_with_progress_errors_when_trying_to_copy_into_self() -> TestRes
 
 
 
+#[test]
+pub fn copy_file_with_progress_handles_case_insensitivity_properly() -> TestResult {
+    let harness = SimpleFileHarness::new()?;
+    let is_filesystem_case_sensitive = is_temporary_directory_case_sensitive();
 
-// TODO need copy_file_with_progress version of copy_file_handles_case_insensitivity_properly
-// TODO need copy_file_with_progress version of copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated
+    // Generates an upper-case version of the file name.
+    let target_file_name = harness
+        .test_file
+        .path()
+        .file_name()
+        .unwrap()
+        .to_string_lossy()
+        .to_uppercase();
 
+    let target_file =
+        AssertableFilePath::from_path(harness.test_file.path().with_file_name(target_file_name));
+
+
+    let file_copy_result = fs_more::file::copy_file_with_progress(
+        harness.test_file.path(),
+        target_file.path(),
+        CopyFileWithProgressOptions {
+            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+            ..Default::default()
+        },
+        |_| {},
+    );
+
+
+    if is_filesystem_case_sensitive {
+        assert!(
+            file_copy_result.is_ok(),
+            "copy_file_with_progress should have ok-ed (on case-sensitive filesystem) when trying to copy a file into itself, \
+            even when the case is different"
+        );
+
+        assert_matches!(
+            file_copy_result.unwrap(),
+            CopyFileFinished::Created { bytes_copied }
+            if bytes_copied == harness.test_file.path().metadata().unwrap().len()
+        );
+    } else {
+        assert!(
+            file_copy_result.is_err(),
+            "copy_file_with_progress should have errored (on case-insensitive filesystem) when trying to copy a file into itself, \
+            even when the case is different"
+        );
+
+        assert_matches!(
+            file_copy_result.unwrap_err(),
+            FileError::SourceAndDestinationAreTheSame { path }
+            if path == target_file.path() || path == harness.test_file.path()
+        );
+    }
+
+    harness.test_file.assert_exists();
+    harness.test_file.assert_content_unchanged();
+
+    harness.destroy()?;
+    Ok(())
+}
+
+
+
+#[test]
+pub fn copy_file_with_progress_errors_when_trying_to_copy_into_self_even_when_more_complicated(
+) -> TestResult {
+    let harness = SimpleTreeHarness::new()?;
+    let is_filesystem_case_sensitive = is_temporary_directory_case_sensitive();
+
+    let target_file_path = {
+        // Generates an upper-case version of the file name.
+        let target_file_name_uppercase = harness
+            .binary_file_b
+            .path()
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_uppercase();
+
+        let parent_directory = harness
+            .binary_file_b
+            .path()
+            .parent()
+            .expect("Unexpected directory structure.");
+
+        let grandparent_directory = parent_directory
+            .parent()
+            .expect("Unexpected directory structure.");
+
+        let parent_directory_name = parent_directory
+            .file_name()
+            .expect("Unexpected directory structure.")
+            .to_str()
+            .expect("Unexpected directory structure.");
+
+        // Reconstruct a bit more complex version of the same path.
+        let non_trivial_subpath = PathBuf::from(format!(
+            "{}/../{}/{}",
+            parent_directory_name, parent_directory_name, target_file_name_uppercase
+        ));
+
+        grandparent_directory.join(non_trivial_subpath)
+    };
+
+    let target_file = AssertableFilePath::from_path(target_file_path);
+
+
+    if is_filesystem_case_sensitive {
+        target_file.assert_not_exists();
+    } else {
+        target_file.assert_exists();
+    }
+
+
+    let file_copy_result = fs_more::file::copy_file_with_progress(
+        harness.binary_file_b.path(),
+        target_file.path(),
+        CopyFileWithProgressOptions {
+            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+            ..Default::default()
+        },
+        |_| {},
+    );
+
+
+    if is_filesystem_case_sensitive {
+        assert!(
+            file_copy_result.is_ok(),
+            "copy_file should have ok-ed (on case-sensitive filesystem) when trying to copy a file into itself \
+            even when the case is different and the path includes .."
+        );
+
+        assert_matches!(
+            file_copy_result.unwrap(),
+            CopyFileFinished::Created { bytes_copied }
+            if bytes_copied == harness.binary_file_b.path().metadata().unwrap().len()
+        );
+
+        target_file.assert_exists();
+    } else {
+        assert!(
+            file_copy_result.is_err(),
+            "copy_file should have errored (non case-insensitive filesystem) when trying to copy a file into itself, \
+            even when the case is different and the path includes .."
+        );
+
+        assert_matches!(
+            file_copy_result.unwrap_err(),
+            FileError::SourceAndDestinationAreTheSame { path }
+            if path == target_file.path() || path == harness.binary_file_b.path()
+        );
+
+        target_file.assert_exists();
+    }
+
+
+    harness.binary_file_b.assert_exists();
+    harness.binary_file_b.assert_content_unchanged();
+
+
+    harness.destroy()?;
+    Ok(())
+}
 
 
 
