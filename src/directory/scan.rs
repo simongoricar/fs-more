@@ -79,6 +79,11 @@ pub enum DirectoryScanDepthLimit {
 
 
 /// A directory scanner with configurable scan depth and symlink behaviour.
+///
+/// This scanner is able to recursively iterate over the directory
+/// as well as optionally follow symbolic links. If, however, you're
+/// looking for something with a bit more features, such as sorting,
+/// consider the [`walkdir`](https://docs.rs/walkdir) crate.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DirectoryScan {
     /// Path of the directory that was scanned.
