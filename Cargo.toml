@@ -18,7 +18,7 @@ categories = [
     "filesystem"
 ]
 documentation = "https://docs.rs/fs-more"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/simongoricar/fs-more"
 include = [
     "/src",
