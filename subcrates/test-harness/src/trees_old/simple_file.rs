@@ -1,6 +1,6 @@
 use fs_more_test_harness_macros::fs_harness_tree;
 
-use crate::assertable::{AssertableFilePath, AssertableRootDirectory};
+use crate::assertable_old::{AssertableFilePath, AssertableRootDirectory};
 
 const FIRST_FILE_CONTENTS: &str = "This is the first file.";
 const SECOND_FILE_CONTENTS: &str = "This is the second file.";

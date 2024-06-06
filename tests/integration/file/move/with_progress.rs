@@ -10,9 +10,9 @@ use fs_more::{
     },
 };
 use fs_more_test_harness::{
-    assertable::AssertableFilePath,
+    assertable_old::AssertableFilePath,
     error::TestResult,
-    trees::{SimpleFileHarness, SimpleTreeHarness},
+    trees_old::{SimpleFileHarness, SimpleTreeHarness},
 };
 
 

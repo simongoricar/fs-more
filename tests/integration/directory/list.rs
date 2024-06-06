@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use fs_more::directory::DirectoryScanDepthLimit;
-use fs_more_test_harness::{error::TestResult, trees::SimpleTreeHarness};
+use fs_more_test_harness::{error::TestResult, trees_old::SimpleTreeHarness};
 
 /// Returns `true` if the provided `Vec` of `AsRef<Path>`-implementing items
 /// contains at least one path matching the `target_path`.

@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FileSystemHarnessSchema",
+  "type": "object",
+  "required": [
+    "file_name",
+    "name",
+    "structure"
+  ],
+  "properties": {
+    "file_name": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "structure": {
+      "$ref": "#/definitions/FileSystemHarnessStructure"
+    }
+  },
+  "definitions": {
+    "FileDataConfiguration": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "empty"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "content",
+            "type"
+          ],
+          "properties": {
+            "content": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "text"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "file_size_bytes",
+            "seed",
+            "type"
+          ],
+          "properties": {
+            "file_size_bytes": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0.0
+            },
+            "seed": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "seeded-random"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "FileSystemHarnessEntry": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "name",
+            "type"
+          ],
+          "properties": {
+            "data": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/FileDataConfiguration"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "file"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "entries",
+            "name",
+            "type"
+          ],
+          "properties": {
+            "entries": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/FileSystemHarnessEntry"
+              }
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "directory"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "FileSystemHarnessStructure": {
+      "type": "object",
+      "required": [
+        "entries"
+      ],
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FileSystemHarnessEntry"
+          }
+        }
+      }
+    }
+  }
+}

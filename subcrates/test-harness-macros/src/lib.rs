@@ -4,6 +4,9 @@ use proc_macro_error::abort_call_site;
 use quote::{quote, ToTokens};
 use syn::{parse_quote, punctuated::Punctuated, ItemStruct, MetaNameValue, Token};
 
+
+mod harness_v2;
+
 const ASSERTABLE_ROOT_DIRECTORY_TYPE_NAME: &str = "AssertableRootDirectory";
 const ASSERTABLE_FILE_PATH_STRUCT_TYPE_NAME: &str = "AssertableFilePath";
 const ASSERTABLE_DIRECTORY_PATH_STRUCT_TYPE_NAME: &str = "AssertableDirectoryPath";

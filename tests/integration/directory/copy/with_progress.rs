@@ -18,9 +18,9 @@ use fs_more::{
     file::{CopyFileOptions, ExistingFileBehaviour},
 };
 use fs_more_test_harness::{
-    assertable::{AssertableDirectoryPath, AssertableFilePath},
+    assertable_old::{AssertableDirectoryPath, AssertableFilePath},
     error::TestResult,
-    trees::{DeepTreeHarness, EmptyTreeHarness},
+    trees_old::{DeepTreeHarness, EmptyTreeHarness},
 };
 
 

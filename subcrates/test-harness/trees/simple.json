@@ -1,0 +1,38 @@
+{
+  "name": "SimpleTree",
+  "file_name": "simple",
+  "structure": {
+    "entries": [
+      {
+        "type": "file",
+        "name": "empty.txt",
+        "data": {
+          "type": "empty"
+        }
+      },
+      {
+        "type": "directory",
+        "name": "foo",
+        "entries": [
+          {
+            "type": "file",
+            "name": "hello-world.txt",
+            "data": {
+              "type": "text",
+              "content": "Hello world!"
+            }
+          },
+          {
+            "type": "file",
+            "name": "bar.bin",
+            "data": {
+              "type": "seeded-random",
+              "seed": 39581913123,
+              "file_size_bytes": 16384
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

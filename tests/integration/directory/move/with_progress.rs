@@ -18,9 +18,9 @@ use fs_more::{
     file::ExistingFileBehaviour,
 };
 use fs_more_test_harness::{
-    assertable::AssertableDirectoryPath,
+    assertable_old::AssertableDirectoryPath,
     error::TestResult,
-    trees::{DeepTreeHarness, EmptyTreeHarness, SimpleTreeHarness},
+    trees_old::{DeepTreeHarness, EmptyTreeHarness, SimpleTreeHarness},
 };
 
 

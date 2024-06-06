@@ -6,10 +6,10 @@ use fs_more::{
     file::{CopyFileFinished, CopyFileOptions, ExistingFileBehaviour},
 };
 use fs_more_test_harness::{
-    assertable::AssertableFilePath,
+    assertable_old::AssertableFilePath,
     error::TestResult,
     is_temporary_directory_case_sensitive,
-    trees::{SimpleFileHarness, SimpleTreeHarness},
+    trees_old::{SimpleFileHarness, SimpleTreeHarness},
 };
 
 

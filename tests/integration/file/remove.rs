@@ -1,18 +1,23 @@
 use assert_matches::assert_matches;
 use fs_more::error::FileRemoveError;
 use fs_more_test_harness::{
-    assertable::AssertableFilePath,
+    assertable::{
+        r#trait::{AssertablePath, CaptureableFilePath, ManageablePath},
+        AsPath,
+    },
     error::TestResult,
-    trees::SimpleFileHarness,
+    tree_framework::FileSystemHarness,
+    trees::{empty::EmptyTree, simple::SimpleTree},
 };
+
 
 
 
 #[test]
 pub fn remove_file_deletes_file() -> TestResult {
-    let harness = SimpleFileHarness::new()?;
+    let harness = SimpleTree::initialize();
 
-    let removal_result = fs_more::file::remove_file(harness.test_file.path());
+    let removal_result = fs_more::file::remove_file(harness.foo.hello_world_txt.as_path());
 
 
     assert!(
@@ -21,10 +26,10 @@ pub fn remove_file_deletes_file() -> TestResult {
         removal_result.unwrap_err()
     );
 
-    harness.test_file.assert_not_exists();
-    harness.foo_bar.assert_exists();
+    harness.empty_txt.assert_exists();
+    harness.foo.hello_world_txt.assert_not_exists();
 
-    harness.destroy()?;
+    harness.destroy();
     Ok(())
 }
 
@@ -32,26 +37,31 @@ pub fn remove_file_deletes_file() -> TestResult {
 
 #[test]
 pub fn remove_file_does_not_follow_symlinks() -> TestResult {
-    let harness = SimpleFileHarness::new()?;
-    let second_harness = SimpleFileHarness::new()?;
+    let harness = SimpleTree::initialize();
+    let secondary_harness = SimpleTree::initialize();
 
-    harness.test_file.remove()?;
-    harness.test_file.assert_not_exists();
+    harness.empty_txt.assert_is_file_and_remove();
+    harness.empty_txt.assert_not_exists();
 
-    second_harness.test_file.assert_is_file();
+    secondary_harness.empty_txt.assert_is_file_and_not_symlink();
     harness
-        .test_file
-        .symlink_to_file(second_harness.test_file.path())?;
+        .empty_txt
+        .symlink_to_file(secondary_harness.empty_txt.as_path());
+    harness
+        .empty_txt
+        .assert_is_symlink_to_file_and_destination_matches(secondary_harness.empty_txt.as_path());
 
-    harness.test_file.assert_is_symlink_to_file();
+    let captured_symlink_destination_file = secondary_harness.empty_txt.capture_with_content();
 
 
-    fs_more::file::remove_file(harness.test_file.path()).unwrap();
+    fs_more::file::remove_file(harness.empty_txt.as_path()).unwrap();
 
-    harness.test_file.assert_not_exists();
-    second_harness.test_file.assert_is_file();
 
-    harness.destroy()?;
+    harness.empty_txt.assert_not_exists();
+    captured_symlink_destination_file.assert_unchanged();
+
+
+    harness.destroy();
     Ok(())
 }
 
@@ -59,17 +69,13 @@ pub fn remove_file_does_not_follow_symlinks() -> TestResult {
 
 #[test]
 pub fn remove_file_errors_on_non_existent_file() -> TestResult {
-    let harness = SimpleFileHarness::new()?;
+    let harness = EmptyTree::initialize();
 
-    let non_existent_file = AssertableFilePath::from_path(
-        harness
-            .foo_bar
-            .path()
-            .with_file_name("random_nonexistent_file.md"),
-    );
+    let non_existent_file = harness.child_path("hello-world.txt");
     non_existent_file.assert_not_exists();
 
-    let removal_result = fs_more::file::remove_file(non_existent_file.path());
+
+    let removal_result = fs_more::file::remove_file(&non_existent_file);
 
 
     assert!(
@@ -80,10 +86,10 @@ pub fn remove_file_errors_on_non_existent_file() -> TestResult {
     assert_matches!(
         removal_result.unwrap_err(),
         FileRemoveError::NotFound { path }
-        if path == non_existent_file.path()
+        if path == non_existent_file
     );
 
 
-    harness.destroy()?;
+    harness.destroy();
     Ok(())
 }

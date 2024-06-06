@@ -2,7 +2,7 @@ use fs_more_test_harness_macros::fs_harness_tree;
 use once_cell::sync::Lazy;
 
 use crate::{
-    assertable::{AssertableDirectoryPath, AssertableFilePath, AssertableRootDirectory},
+    assertable_old::{AssertableDirectoryPath, AssertableFilePath, AssertableRootDirectory},
     lazy_generate_seeded_binary_data,
 };
 

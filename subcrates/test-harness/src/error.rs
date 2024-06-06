@@ -1,7 +1,7 @@
 use assert_fs::fixture::FixtureError;
 use thiserror::Error;
 
-use crate::assertable::AssertableFilePathError;
+use crate::assertable_old::AssertableFilePathError;
 
 /// Main `Error` for use in unit and integration tests.
 ///
@@ -10,6 +10,7 @@ use crate::assertable::AssertableFilePathError;
 /// - [`std::io::Error`].
 #[derive(Error, Debug)]
 pub enum TestError {
+    #[deprecated]
     #[error("assert_fs' FixtureError")]
     FixtureError(
         #[from]
@@ -17,6 +18,7 @@ pub enum TestError {
         FixtureError,
     ),
 
+    #[deprecated]
     #[error("assertable file path error")]
     AssertableFilePathError(
         #[from]
