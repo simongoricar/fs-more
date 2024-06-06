@@ -1,9 +1,14 @@
 mod name_collision;
-use std::{fs::OpenOptions, io::{prelude::Write, BufWriter}, path::Path};
+use std::{
+    fs::OpenOptions,
+    io::{prelude::Write, BufWriter},
+    path::Path,
+};
 
 use directory_codegen::codegen_harness_directory_entry;
 use file_codegen::codegen_harness_file_entry;
 use heck::ToUpperCamelCase;
+use itertools::Itertools;
 use miette::{Context, IntoDiagnostic, Result};
 pub use name_collision::*;
 use proc_macro2::TokenStream;
@@ -12,7 +17,6 @@ use quote::{format_ident, quote};
 use crate::schema::{FileSystemHarnessEntry, FileSystemHarnessSchema};
 mod directory_codegen;
 mod file_codegen;
-
 
 
 
@@ -37,9 +41,16 @@ pub fn generate_rust_source_file_for_schema(
     let mut struct_field_name_collision_avoider = NameCollisionAvoider::new_empty();
     let mut token_stream_to_prepend = TokenStream::new();
 
+
+    struct AnnotatedField {
+        struct_field_name: String,
+        struct_field_type: String,
+    }
+
     let mut generated_struct_fields = Vec::with_capacity(schema.structure.entries.len());
     let mut generated_field_names = Vec::with_capacity(schema.structure.entries.len());
     let mut generated_field_initializers = Vec::with_capacity(schema.structure.entries.len());
+    let mut generated_annotated_fields = Vec::with_capacity(schema.structure.entries.len());
 
     for entry in schema.structure.entries {
         match entry {
@@ -67,12 +78,20 @@ pub fn generate_rust_source_file_for_schema(
                 let field_type = generated_file_entry.struct_type_name;
                 let field_type_ident = format_ident!("{}", field_type);
 
+                let field_comment = generated_file_entry.parent_field_documentation;
+
 
                 generated_struct_fields.push(quote! {
+                    #[doc = #field_comment]
                     pub #field_name_ident: #field_type_ident
                 });
 
                 generated_field_names.push(quote! { #field_name_ident });
+
+                generated_annotated_fields.push(AnnotatedField {
+                    struct_field_name: field_name,
+                    struct_field_type: field_type,
+                });
 
 
                 let file_name = &file_entry.name;
@@ -105,12 +124,20 @@ pub fn generate_rust_source_file_for_schema(
                 let field_type = generated_dir_entry.struct_type_name;
                 let field_type_ident = format_ident!("{}", field_type);
 
+                let field_comment = generated_dir_entry.parent_field_documentation;
+
 
                 generated_struct_fields.push(quote! {
+                    #[doc = #field_comment]
                     pub #field_name_ident: #field_type_ident
                 });
 
                 generated_field_names.push(quote! { #field_name_ident });
+
+                generated_annotated_fields.push(AnnotatedField {
+                    struct_field_name: field_name,
+                    struct_field_type: field_type,
+                });
 
 
                 let dir_name = &dir_entry.name;
@@ -121,6 +148,7 @@ pub fn generate_rust_source_file_for_schema(
             }
         }
     }
+
 
 
     let generated_description = if let Some(description) = schema.description {
@@ -139,10 +167,11 @@ pub fn generate_rust_source_file_for_schema(
 //! @generated
 //! 
 //! This code was automatically generated from \"{}\",
-//! describing a filesystem tree harness for testing.
+//! a file that describes this filesystem tree harness for testing.
 {}
-//! DO NOT MODIFY THIS FILE, MODIFY THE JSON DATA FILE AND
-//! REGENERATE THIS FILE INSTEAD (see test-harness-schema crate).
+//! DO NOT MODIFY THIS FILE. INSTEAD, MODIFY THE SOURCE JSON DATA FILE,
+//! AND REGENERATE THIS FILE (see the CLI provided by the 
+//! test-harness-schema crate).
     
 #![allow(unused_imports)]
 #![allow(clippy::disallowed_names)]
@@ -151,14 +180,38 @@ pub fn generate_rust_source_file_for_schema(
         input_schema_file_name, generated_description
     );
 
+    let root_tree_struct_fields_list = {
+        let field_list = generated_annotated_fields
+            .iter()
+            .map(|field| {
+                format!(
+                    "- `{}` (see [`{}`])",
+                    field.struct_field_name, field.struct_field_type
+                )
+            })
+            .join("\n");
+
+        format!(
+            "This harness has the following entries at the top level:\n\
+            {}",
+            field_list
+        )
+    };
+
     let root_tree_struct_comment = format!(
         "A fs-more filesystem testing harness. Upon calling [`Self::initialize`],\n\
         it sets up a temporary directory and initializes the entire configured file tree.\n\
         When it's dropped or when [`Self::destroy`] is called, the temporary directory is removed.\n\
         \n\
-        This tree and related code was automatically generated from the structure described in `{}`.",
+        {}\n\
+        \n\
+        <br>\n\n\
+        <sup>This tree and related code was automatically generated from the structure described in `{}`.</sup>",
+        root_tree_struct_fields_list,
         input_schema_file_name
     );
+
+
 
     let generated_code = quote! {
         use std::fs;
@@ -263,5 +316,3 @@ pub fn generate_rust_source_file_for_schema(
 
     Ok(())
 }
-
-

@@ -10,6 +10,7 @@ mod seeded_data;
 #[path = "generated_trees/mod.rs"]
 pub mod trees;
 
+pub mod case_sensitivity;
 #[deprecated]
 pub mod trees_old;
 

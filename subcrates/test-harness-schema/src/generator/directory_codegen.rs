@@ -7,15 +7,16 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::Ident;
 
-use crate::schema::{FileSystemHarnessDirectoryEntry, FileSystemHarnessEntry};
-
 use super::{file_codegen::codegen_harness_file_entry, NameCollisionAvoider};
+use crate::schema::{FileSystemHarnessDirectoryEntry, FileSystemHarnessEntry};
 
 
 pub(crate) struct GeneratedHarnessDirectoryEntry {
     pub(crate) struct_type_name: String,
 
     pub(crate) preferred_parent_field_name: String,
+
+    pub(crate) parent_field_documentation: String,
 
     /// Includes the concatenated code from all descendant entries.
     pub(crate) generated_code: TokenStream,
@@ -59,20 +60,27 @@ pub(crate) fn codegen_harness_directory_entry(
 
     let directory_entries = directory.entries.clone().unwrap_or_default();
 
+
+
+    struct AnnotatedField {
+        struct_field_name: String,
+        struct_field_type: String,
+    }
+
     let mut generated_struct_fields = Vec::with_capacity(directory_entries.len());
     let mut generated_field_names = Vec::with_capacity(directory_entries.len());
     let mut generated_field_initializers = Vec::with_capacity(directory_entries.len());
+    let mut generated_annotated_fields = Vec::with_capacity(directory_entries.len());
 
     for entry in &directory_entries {
         match entry {
             FileSystemHarnessEntry::File(file_entry) => {
-                let generated_file_entry =
-                    codegen_harness_file_entry(
-                        struct_name_collision_avoider,
-                        root_harness_struct_ident,
-                        &directory_relative_path,
-                        file_entry,
-                    );
+                let generated_file_entry = codegen_harness_file_entry(
+                    struct_name_collision_avoider,
+                    root_harness_struct_ident,
+                    &directory_relative_path,
+                    file_entry,
+                );
 
                 let generated_code = generated_file_entry.generated_code;
 
@@ -89,12 +97,20 @@ pub(crate) fn codegen_harness_directory_entry(
                 let field_type = generated_file_entry.struct_type_name;
                 let field_type_ident = format_ident!("{}", field_type);
 
+                let field_comment = generated_file_entry.parent_field_documentation;
+
 
                 generated_struct_fields.push(quote! {
+                    #[doc = #field_comment]
                     pub #field_name_ident: #field_type_ident
                 });
 
                 generated_field_names.push(quote! { #field_name_ident });
+
+                generated_annotated_fields.push(AnnotatedField {
+                    struct_field_name: field_name,
+                    struct_field_type: field_type,
+                });
 
 
                 let file_name = &file_entry.name;
@@ -104,13 +120,12 @@ pub(crate) fn codegen_harness_directory_entry(
                 });
             }
             FileSystemHarnessEntry::Directory(directory_entry) => {
-                let generated_dir_entry =
-                    codegen_harness_directory_entry(
-                        struct_name_collision_avoider,
-                        root_harness_struct_ident,
-                        &directory_relative_path,
-                        directory_entry
-                    );
+                let generated_dir_entry = codegen_harness_directory_entry(
+                    struct_name_collision_avoider,
+                    root_harness_struct_ident,
+                    &directory_relative_path,
+                    directory_entry,
+                );
 
                 let generated_code = generated_dir_entry.generated_code;
 
@@ -127,12 +142,20 @@ pub(crate) fn codegen_harness_directory_entry(
                 let field_type = generated_dir_entry.struct_type_name;
                 let field_type_ident = format_ident!("{}", field_type);
 
+                let field_comment = generated_dir_entry.parent_field_documentation;
+
 
                 generated_struct_fields.push(quote! {
+                    #[doc = #field_comment]
                     pub #field_name_ident: #field_type_ident
                 });
 
                 generated_field_names.push(quote! { #field_name_ident });
+
+                generated_annotated_fields.push(AnnotatedField {
+                    struct_field_name: field_name,
+                    struct_field_type: field_type,
+                });
 
 
                 let dir_name = &directory_entry.name;
@@ -144,13 +167,37 @@ pub(crate) fn codegen_harness_directory_entry(
         }
     }
 
+
+    let generated_directory_struct_fields_list = {
+        let field_list = generated_annotated_fields
+            .iter()
+            .map(|field| {
+                format!(
+                    "- `{}` (see [`{}`])",
+                    field.struct_field_name, field.struct_field_type
+                )
+            })
+            .join("\n");
+
+        format!(
+            "This directory has the following entries:\n\
+            {}",
+            field_list
+        )
+    };
+
     let generated_directory_entry_comment = format!(
         "This is a sub-directory residing at `{}` (relative to the root of the test harness).\n\
         \n\
-        Part of the [`{}`] test harness tree.",
+        {}\n\
+        \n\
+        <br>\n\n\
+        <sup>This entry is part of the [`{}`] test harness tree.</sup>",
         parent_relative_path.join(&directory.name).to_slash_lossy(),
+        generated_directory_struct_fields_list,
         root_harness_struct_ident
     );
+
 
     let generated_directory_entry_code = quote! {
         #token_stream_to_prepend
@@ -194,7 +241,7 @@ pub(crate) fn codegen_harness_directory_entry(
     GeneratedHarnessDirectoryEntry {
         struct_type_name: directory_struct_name,
         preferred_parent_field_name: friendly_snake_case_directory_name,
+        parent_field_documentation: generated_directory_entry_comment,
         generated_code: generated_directory_entry_code,
     }
 }
-

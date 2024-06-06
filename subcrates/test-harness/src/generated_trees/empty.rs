@@ -1,10 +1,11 @@
 //! @generated
 //! 
 //! This code was automatically generated from "empty.json",
-//! describing a filesystem tree harness for testing.
+//! a file that describes this filesystem tree harness for testing.
 //!
-//! DO NOT MODIFY THIS FILE, MODIFY THE JSON DATA FILE AND
-//! REGENERATE THIS FILE INSTEAD (see test-harness-schema crate).
+//! DO NOT MODIFY THIS FILE. INSTEAD, MODIFY THE SOURCE JSON DATA FILE,
+//! AND REGENERATE THIS FILE (see the CLI provided by the 
+//! test-harness-schema crate).
     
 #![allow(unused_imports)]
 #![allow(clippy::disallowed_names)]
@@ -27,7 +28,12 @@ use fs_more_test_harness_schema::schema::FileDataConfiguration;
 it sets up a temporary directory and initializes the entire configured file tree.
 When it's dropped or when [`Self::destroy`] is called, the temporary directory is removed.
 
-This tree and related code was automatically generated from the structure described in `empty.json`.*/
+This harness has the following entries at the top level:
+
+
+<br>
+
+<sup>This tree and related code was automatically generated from the structure described in `empty.json`.</sup>*/
 pub struct EmptyTree {
     temporary_directory: TempDir,
 }

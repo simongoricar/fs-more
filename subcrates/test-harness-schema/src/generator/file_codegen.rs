@@ -7,15 +7,16 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::Ident;
 
-use crate::schema::{FileDataConfiguration, FileSystemHarnessFileEntry};
-
 use super::NameCollisionAvoider;
+use crate::schema::{FileDataConfiguration, FileSystemHarnessFileEntry};
 
 
 pub(crate) struct GeneratedHarnessFileEntry {
     pub(crate) struct_type_name: String,
 
     pub(crate) preferred_parent_field_name: String,
+
+    pub(crate) parent_field_documentation: String,
 
     pub(crate) generated_code: TokenStream,
 }
@@ -68,7 +69,8 @@ pub(crate) fn codegen_harness_file_entry(
     let generated_file_entry_comment = format!(
         "This is a file residing at `{}` (relative to the root of the test harness).\n\
         \n\
-        Part of the [`{}`] test harness tree.",
+        <br>\n\n\
+        <sup>This entry is part of the [`{}`] test harness tree.</sup>",
         parent_relative_path.join(&file.name).to_slash_lossy(),
         root_harness_struct_ident
     );
@@ -110,6 +112,7 @@ pub(crate) fn codegen_harness_file_entry(
     GeneratedHarnessFileEntry {
         struct_type_name: file_struct_name,
         preferred_parent_field_name: friendly_snake_case_field_name,
+        parent_field_documentation: generated_file_entry_comment,
         generated_code: generated_file_entry_code,
     }
 }

@@ -1,10 +1,11 @@
 //! @generated
 //! 
 //! This code was automatically generated from "simple.json",
-//! describing a filesystem tree harness for testing.
+//! a file that describes this filesystem tree harness for testing.
 //!
-//! DO NOT MODIFY THIS FILE, MODIFY THE JSON DATA FILE AND
-//! REGENERATE THIS FILE INSTEAD (see test-harness-schema crate).
+//! DO NOT MODIFY THIS FILE. INSTEAD, MODIFY THE SOURCE JSON DATA FILE,
+//! AND REGENERATE THIS FILE (see the CLI provided by the 
+//! test-harness-schema crate).
     
 #![allow(unused_imports)]
 #![allow(clippy::disallowed_names)]
@@ -25,7 +26,9 @@ use crate::assertable::file_capture::CapturedFileState;
 use fs_more_test_harness_schema::schema::FileDataConfiguration;
 /**This is a file residing at `./empty.txt` (relative to the root of the test harness).
 
-Part of the [`SimpleTree`] test harness tree.*/
+<br>
+
+<sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
 pub struct EmptyTxt {
     path: PathBuf,
 }
@@ -49,7 +52,9 @@ impl AsPath for EmptyTxt {
 impl CaptureableFilePath for EmptyTxt {}
 /**This is a file residing at `./foo/hello-world.txt` (relative to the root of the test harness).
 
-Part of the [`SimpleTree`] test harness tree.*/
+<br>
+
+<sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
 pub struct HelloWorldTxt {
     path: PathBuf,
 }
@@ -73,7 +78,9 @@ impl AsPath for HelloWorldTxt {
 impl CaptureableFilePath for HelloWorldTxt {}
 /**This is a file residing at `./foo/bar.bin` (relative to the root of the test harness).
 
-Part of the [`SimpleTree`] test harness tree.*/
+<br>
+
+<sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
 pub struct BarBin {
     path: PathBuf,
 }
@@ -97,10 +104,26 @@ impl AsPath for BarBin {
 impl CaptureableFilePath for BarBin {}
 /**This is a sub-directory residing at `./foo` (relative to the root of the test harness).
 
-Part of the [`SimpleTree`] test harness tree.*/
+This directory has the following entries:
+- `hello_world_txt` (see [`HelloWorldTxt`])
+- `bar_bin` (see [`BarBin`])
+
+<br>
+
+<sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
 pub struct Foo {
     directory_path: PathBuf,
+    /**This is a file residing at `./foo/hello-world.txt` (relative to the root of the test harness).
+
+<br>
+
+<sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
     pub hello_world_txt: HelloWorldTxt,
+    /**This is a file residing at `./foo/bar.bin` (relative to the root of the test harness).
+
+<br>
+
+<sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
     pub bar_bin: BarBin,
 }
 impl Foo {
@@ -133,10 +156,30 @@ impl AsPath for Foo {
 it sets up a temporary directory and initializes the entire configured file tree.
 When it's dropped or when [`Self::destroy`] is called, the temporary directory is removed.
 
-This tree and related code was automatically generated from the structure described in `simple.json`.*/
+This harness has the following entries at the top level:
+- `empty_txt` (see [`EmptyTxt`])
+- `foo` (see [`Foo`])
+
+<br>
+
+<sup>This tree and related code was automatically generated from the structure described in `simple.json`.</sup>*/
 pub struct SimpleTree {
     temporary_directory: TempDir,
+    /**This is a file residing at `./empty.txt` (relative to the root of the test harness).
+
+<br>
+
+<sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
     pub empty_txt: EmptyTxt,
+    /**This is a sub-directory residing at `./foo` (relative to the root of the test harness).
+
+This directory has the following entries:
+- `hello_world_txt` (see [`HelloWorldTxt`])
+- `bar_bin` (see [`BarBin`])
+
+<br>
+
+<sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
     pub foo: Foo,
 }
 impl FileSystemHarness for SimpleTree {

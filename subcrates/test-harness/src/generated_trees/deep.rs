@@ -1,10 +1,11 @@
 //! @generated
 //! 
 //! This code was automatically generated from "deep.json",
-//! describing a filesystem tree harness for testing.
+//! a file that describes this filesystem tree harness for testing.
 //!
-//! DO NOT MODIFY THIS FILE, MODIFY THE JSON DATA FILE AND
-//! REGENERATE THIS FILE INSTEAD (see test-harness-schema crate).
+//! DO NOT MODIFY THIS FILE. INSTEAD, MODIFY THE SOURCE JSON DATA FILE,
+//! AND REGENERATE THIS FILE (see the CLI provided by the 
+//! test-harness-schema crate).
     
 #![allow(unused_imports)]
 #![allow(clippy::disallowed_names)]
@@ -25,7 +26,9 @@ use crate::assertable::file_capture::CapturedFileState;
 use fs_more_test_harness_schema::schema::FileDataConfiguration;
 /**This is a file residing at `./a.bin` (relative to the root of the test harness).
 
-Part of the [`DeepTree`] test harness tree.*/
+<br>
+
+<sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
 pub struct ABin {
     path: PathBuf,
 }
@@ -49,7 +52,9 @@ impl AsPath for ABin {
 impl CaptureableFilePath for ABin {}
 /**This is a file residing at `./foo/b.bin` (relative to the root of the test harness).
 
-Part of the [`DeepTree`] test harness tree.*/
+<br>
+
+<sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
 pub struct BBin {
     path: PathBuf,
 }
@@ -73,7 +78,9 @@ impl AsPath for BBin {
 impl CaptureableFilePath for BBin {}
 /**This is a file residing at `./foo/bar/c.bin` (relative to the root of the test harness).
 
-Part of the [`DeepTree`] test harness tree.*/
+<br>
+
+<sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
 pub struct CBin {
     path: PathBuf,
 }
@@ -97,7 +104,9 @@ impl AsPath for CBin {
 impl CaptureableFilePath for CBin {}
 /**This is a file residing at `./foo/bar/hello/world/d.bin` (relative to the root of the test harness).
 
-Part of the [`DeepTree`] test harness tree.*/
+<br>
+
+<sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
 pub struct DBin {
     path: PathBuf,
 }
@@ -121,9 +130,19 @@ impl AsPath for DBin {
 impl CaptureableFilePath for DBin {}
 /**This is a sub-directory residing at `./foo/bar/hello/world` (relative to the root of the test harness).
 
-Part of the [`DeepTree`] test harness tree.*/
+This directory has the following entries:
+- `d_bin` (see [`DBin`])
+
+<br>
+
+<sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
 pub struct World {
     directory_path: PathBuf,
+    /**This is a file residing at `./foo/bar/hello/world/d.bin` (relative to the root of the test harness).
+
+<br>
+
+<sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
     pub d_bin: DBin,
 }
 impl World {
@@ -146,9 +165,22 @@ impl AsPath for World {
 }
 /**This is a sub-directory residing at `./foo/bar/hello` (relative to the root of the test harness).
 
-Part of the [`DeepTree`] test harness tree.*/
+This directory has the following entries:
+- `world` (see [`World`])
+
+<br>
+
+<sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
 pub struct Hello {
     directory_path: PathBuf,
+    /**This is a sub-directory residing at `./foo/bar/hello/world` (relative to the root of the test harness).
+
+This directory has the following entries:
+- `d_bin` (see [`DBin`])
+
+<br>
+
+<sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
     pub world: World,
 }
 impl Hello {
@@ -171,10 +203,29 @@ impl AsPath for Hello {
 }
 /**This is a sub-directory residing at `./foo/bar` (relative to the root of the test harness).
 
-Part of the [`DeepTree`] test harness tree.*/
+This directory has the following entries:
+- `c_bin` (see [`CBin`])
+- `hello` (see [`Hello`])
+
+<br>
+
+<sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
 pub struct Bar {
     directory_path: PathBuf,
+    /**This is a file residing at `./foo/bar/c.bin` (relative to the root of the test harness).
+
+<br>
+
+<sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
     pub c_bin: CBin,
+    /**This is a sub-directory residing at `./foo/bar/hello` (relative to the root of the test harness).
+
+This directory has the following entries:
+- `world` (see [`World`])
+
+<br>
+
+<sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
     pub hello: Hello,
 }
 impl Bar {
@@ -202,10 +253,30 @@ impl AsPath for Bar {
 }
 /**This is a sub-directory residing at `./foo` (relative to the root of the test harness).
 
-Part of the [`DeepTree`] test harness tree.*/
+This directory has the following entries:
+- `b_bin` (see [`BBin`])
+- `bar` (see [`Bar`])
+
+<br>
+
+<sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
 pub struct Foo {
     directory_path: PathBuf,
+    /**This is a file residing at `./foo/b.bin` (relative to the root of the test harness).
+
+<br>
+
+<sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
     pub b_bin: BBin,
+    /**This is a sub-directory residing at `./foo/bar` (relative to the root of the test harness).
+
+This directory has the following entries:
+- `c_bin` (see [`CBin`])
+- `hello` (see [`Hello`])
+
+<br>
+
+<sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
     pub bar: Bar,
 }
 impl Foo {
@@ -231,10 +302,30 @@ impl AsPath for Foo {
 it sets up a temporary directory and initializes the entire configured file tree.
 When it's dropped or when [`Self::destroy`] is called, the temporary directory is removed.
 
-This tree and related code was automatically generated from the structure described in `deep.json`.*/
+This harness has the following entries at the top level:
+- `a_bin` (see [`ABin`])
+- `foo` (see [`Foo`])
+
+<br>
+
+<sup>This tree and related code was automatically generated from the structure described in `deep.json`.</sup>*/
 pub struct DeepTree {
     temporary_directory: TempDir,
+    /**This is a file residing at `./a.bin` (relative to the root of the test harness).
+
+<br>
+
+<sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
     pub a_bin: ABin,
+    /**This is a sub-directory residing at `./foo` (relative to the root of the test harness).
+
+This directory has the following entries:
+- `b_bin` (see [`BBin`])
+- `bar` (see [`Bar`])
+
+<br>
+
+<sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
     pub foo: Foo,
 }
 impl FileSystemHarness for DeepTree {
