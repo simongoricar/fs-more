@@ -51,7 +51,7 @@ pub(crate) fn initialize_file_with_random_data(
     file_path: &Path,
     seed: u64,
     file_size_bytes: usize,
-) {
+) -> Vec<u8> {
     let random_generator = rand_chacha::ChaCha20Rng::seed_from_u64(seed);
 
     let mut random_data: Vec<u8> = Vec::with_capacity(file_size_bytes);
@@ -83,4 +83,6 @@ pub(crate) fn initialize_file_with_random_data(
         .expect("failed to flush buffered writer");
 
     file.flush().expect("failed to flush file");
+
+    random_data
 }

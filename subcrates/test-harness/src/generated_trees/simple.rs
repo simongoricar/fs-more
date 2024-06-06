@@ -16,6 +16,8 @@ use std::fs;
 use std::path::{PathBuf, Path};
 use tempfile::TempDir;
 use crate::tree_framework::FileSystemHarness;
+use crate::tree_framework::AsInitialFileStateRef;
+use crate::tree_framework::AssertableInitialFileCapture;
 use crate::tree_framework::initialize_empty_file;
 use crate::tree_framework::initialize_file_with_string;
 use crate::tree_framework::initialize_file_with_random_data;
@@ -23,6 +25,7 @@ use crate::assertable::AsPath;
 use crate::assertable::r#trait::AssertablePath;
 use crate::assertable::r#trait::CaptureableFilePath;
 use crate::assertable::file_capture::CapturedFileState;
+use crate::assertable::file_capture::FileState;
 use fs_more_test_harness_schema::schema::FileDataConfiguration;
 /**This is a file residing at `./empty.txt` (relative to the root of the test harness).
 
@@ -31,6 +34,7 @@ use fs_more_test_harness_schema::schema::FileDataConfiguration;
 <sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
 pub struct EmptyTxt {
     path: PathBuf,
+    initial_state: FileState,
 }
 impl EmptyTxt {
     fn new<S>(parent_path: PathBuf, file_name: S) -> Self
@@ -40,8 +44,9 @@ impl EmptyTxt {
         let path = parent_path.join(file_name.into());
         path.assert_not_exists();
         initialize_empty_file(&path);
+        let initial_state = FileState::Empty;
         path.assert_is_file();
-        Self { path }
+        Self { path, initial_state }
     }
 }
 impl AsPath for EmptyTxt {
@@ -50,6 +55,12 @@ impl AsPath for EmptyTxt {
     }
 }
 impl CaptureableFilePath for EmptyTxt {}
+impl AsInitialFileStateRef for EmptyTxt {
+    fn initial_state(&self) -> &FileState {
+        &self.initial_state
+    }
+}
+impl AssertableInitialFileCapture for EmptyTxt {}
 /**This is a file residing at `./foo/hello-world.txt` (relative to the root of the test harness).
 
 <br>
@@ -57,6 +68,7 @@ impl CaptureableFilePath for EmptyTxt {}
 <sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
 pub struct HelloWorldTxt {
     path: PathBuf,
+    initial_state: FileState,
 }
 impl HelloWorldTxt {
     fn new<S>(parent_path: PathBuf, file_name: S) -> Self
@@ -66,8 +78,11 @@ impl HelloWorldTxt {
         let path = parent_path.join(file_name.into());
         path.assert_not_exists();
         initialize_file_with_string(&path, "Hello world!");
+        let initial_state = FileState::NonEmpty {
+            content: Vec::from("Hello world!".as_bytes()),
+        };
         path.assert_is_file();
-        Self { path }
+        Self { path, initial_state }
     }
 }
 impl AsPath for HelloWorldTxt {
@@ -76,6 +91,12 @@ impl AsPath for HelloWorldTxt {
     }
 }
 impl CaptureableFilePath for HelloWorldTxt {}
+impl AsInitialFileStateRef for HelloWorldTxt {
+    fn initial_state(&self) -> &FileState {
+        &self.initial_state
+    }
+}
+impl AssertableInitialFileCapture for HelloWorldTxt {}
 /**This is a file residing at `./foo/bar.bin` (relative to the root of the test harness).
 
 <br>
@@ -83,6 +104,7 @@ impl CaptureableFilePath for HelloWorldTxt {}
 <sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
 pub struct BarBin {
     path: PathBuf,
+    initial_state: FileState,
 }
 impl BarBin {
     fn new<S>(parent_path: PathBuf, file_name: S) -> Self
@@ -91,9 +113,16 @@ impl BarBin {
     {
         let path = parent_path.join(file_name.into());
         path.assert_not_exists();
-        initialize_file_with_random_data(&path, 39581913123u64, 16384usize);
+        let binary_file_data = initialize_file_with_random_data(
+            &path,
+            39581913123u64,
+            16384usize,
+        );
+        let initial_state = FileState::NonEmpty {
+            content: binary_file_data,
+        };
         path.assert_is_file();
-        Self { path }
+        Self { path, initial_state }
     }
 }
 impl AsPath for BarBin {
@@ -102,6 +131,12 @@ impl AsPath for BarBin {
     }
 }
 impl CaptureableFilePath for BarBin {}
+impl AsInitialFileStateRef for BarBin {
+    fn initial_state(&self) -> &FileState {
+        &self.initial_state
+    }
+}
+impl AssertableInitialFileCapture for BarBin {}
 /**This is a sub-directory residing at `./foo` (relative to the root of the test harness).
 
 This directory has the following entries:
@@ -155,6 +190,9 @@ impl AsPath for Foo {
 /**A fs-more filesystem testing harness. Upon calling [`Self::initialize`],
 it sets up a temporary directory and initializes the entire configured file tree.
 When it's dropped or when [`Self::destroy`] is called, the temporary directory is removed.
+
+In addition to initializing the configured files and directories, a snapshot ("capture")
+is created for each file. This is the same as [`CaptureableFilePath::capture_with_content`],but the snapshot is created as tree initialization
 
 This harness has the following entries at the top level:
 - `empty_txt` (see [`EmptyTxt`])

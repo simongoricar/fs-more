@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum FileState {
     NonExistent,
@@ -11,50 +12,60 @@ pub enum FileState {
     NonEmpty { content: Vec<u8> },
 }
 
+impl FileState {
+    pub fn capture_from_file_path<P>(file_path: P) -> Self
+    where
+        P: AsRef<Path>,
+    {
+        if !file_path
+            .as_ref()
+            .try_exists()
+            .expect("failed to read file metadata")
+        {
+            return Self::NonExistent;
+        }
+
+        if !file_path.as_ref().is_file() {
+            panic!(
+                "expected the provided path \"{}\" to lead to a file",
+                file_path.as_ref().display()
+            );
+        }
+
+
+        let file_contents = fs::read(file_path.as_ref()).expect("failed to read file contents");
+
+        if file_contents.is_empty() {
+            return Self::Empty;
+        }
+
+        Self::NonEmpty {
+            content: file_contents,
+        }
+    }
+
+    #[inline]
+    pub fn equals_other_file_state(&self, other: &Self) -> bool {
+        self == other
+    }
+}
+
+
 pub struct CapturedFileState {
     file_path: PathBuf,
 
     captured_state: FileState,
 }
 
+
 impl CapturedFileState {
     pub fn new_with_content_capture<P>(path: P) -> Self
     where
         P: AsRef<Path>,
     {
-        if !path
-            .as_ref()
-            .try_exists()
-            .expect("failed to read file metadata")
-        {
-            return Self {
-                file_path: path.as_ref().to_path_buf(),
-                captured_state: FileState::NonExistent,
-            };
-        }
-
-        if !path.as_ref().is_file() {
-            panic!(
-                "expected the provided path \"{}\" to lead to a file",
-                path.as_ref().display()
-            );
-        }
-
-
-        let file_contents = fs::read(path.as_ref()).expect("failed to read file contents");
-
-        if file_contents.is_empty() {
-            return Self {
-                file_path: path.as_ref().to_path_buf(),
-                captured_state: FileState::Empty,
-            };
-        }
-
         Self {
             file_path: path.as_ref().to_path_buf(),
-            captured_state: FileState::NonEmpty {
-                content: file_contents,
-            },
+            captured_state: FileState::capture_from_file_path(path),
         }
     }
 
@@ -72,10 +83,10 @@ impl CapturedFileState {
         &self.file_path
     }
 
-    pub fn assert_captured_state_equals_other(&self, other: &Self) {
-        assert_eq!(
-            self.captured_state,
-            other.captured_state,
+    pub fn assert_captured_states_equal(&self, other: &Self) {
+        assert!(
+            self.captured_state
+                .equals_other_file_state(&other.captured_state),
             "files \"{}\" and \"{}\" don't have equal states",
             self.file_path.display(),
             other.file_path.display(),
@@ -87,7 +98,7 @@ impl CapturedFileState {
         P: AsRef<Path>,
     {
         let captured_other_file = Self::new_with_content_capture(other);
-        self.assert_captured_state_equals_other(&captured_other_file);
+        self.assert_captured_states_equal(&captured_other_file);
     }
 
     pub fn assert_unchanged(&self) {

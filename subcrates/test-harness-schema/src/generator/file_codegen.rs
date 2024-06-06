@@ -54,15 +54,26 @@ pub(crate) fn codegen_harness_file_entry(
         match file.data.clone().unwrap_or(FileDataConfiguration::Empty) {
             FileDataConfiguration::Empty => quote! {
                 initialize_empty_file(&path);
+
+                let initial_state = FileState::Empty;
             },
             FileDataConfiguration::Text { content } => quote! {
                 initialize_file_with_string(&path, #content);
+
+                let initial_state = FileState::NonEmpty {
+                    content: Vec::from(#content.as_bytes())
+                };
             },
             FileDataConfiguration::DeterministicRandom {
                 seed,
                 file_size_bytes,
             } => quote! {
-                initialize_file_with_random_data(&path, #seed, #file_size_bytes);
+                let binary_file_data =
+                    initialize_file_with_random_data(&path, #seed, #file_size_bytes);
+
+                let initial_state = FileState::NonEmpty {
+                    content: binary_file_data
+                };
             },
         };
 
@@ -78,7 +89,8 @@ pub(crate) fn codegen_harness_file_entry(
     let generated_file_entry_code = quote! {
         #[doc = #generated_file_entry_comment]
         pub struct #file_struct_ident {
-            path: PathBuf
+            path: PathBuf,
+            initial_state: FileState,
         }
 
         impl #file_struct_ident {
@@ -95,9 +107,11 @@ pub(crate) fn codegen_harness_file_entry(
 
                 Self {
                     path,
+                    initial_state,
                 }
             }
         }
+
 
         impl AsPath for #file_struct_ident {
             fn as_path(&self) -> &Path {
@@ -106,6 +120,15 @@ pub(crate) fn codegen_harness_file_entry(
         }
 
         impl CaptureableFilePath for #file_struct_ident {}
+
+
+        impl AsInitialFileStateRef for #file_struct_ident {
+            fn initial_state(&self) -> &FileState {
+                &self.initial_state
+            }
+        }
+
+        impl AssertableInitialFileCapture for #file_struct_ident {}
     };
 
 

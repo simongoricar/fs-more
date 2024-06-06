@@ -16,6 +16,8 @@ use std::fs;
 use std::path::{PathBuf, Path};
 use tempfile::TempDir;
 use crate::tree_framework::FileSystemHarness;
+use crate::tree_framework::AsInitialFileStateRef;
+use crate::tree_framework::AssertableInitialFileCapture;
 use crate::tree_framework::initialize_empty_file;
 use crate::tree_framework::initialize_file_with_string;
 use crate::tree_framework::initialize_file_with_random_data;
@@ -23,6 +25,7 @@ use crate::assertable::AsPath;
 use crate::assertable::r#trait::AssertablePath;
 use crate::assertable::r#trait::CaptureableFilePath;
 use crate::assertable::file_capture::CapturedFileState;
+use crate::assertable::file_capture::FileState;
 use fs_more_test_harness_schema::schema::FileDataConfiguration;
 /**This is a file residing at `./a.bin` (relative to the root of the test harness).
 
@@ -31,6 +34,7 @@ use fs_more_test_harness_schema::schema::FileDataConfiguration;
 <sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
 pub struct ABin {
     path: PathBuf,
+    initial_state: FileState,
 }
 impl ABin {
     fn new<S>(parent_path: PathBuf, file_name: S) -> Self
@@ -39,9 +43,16 @@ impl ABin {
     {
         let path = parent_path.join(file_name.into());
         path.assert_not_exists();
-        initialize_file_with_random_data(&path, 12345u64, 32768usize);
+        let binary_file_data = initialize_file_with_random_data(
+            &path,
+            12345u64,
+            32768usize,
+        );
+        let initial_state = FileState::NonEmpty {
+            content: binary_file_data,
+        };
         path.assert_is_file();
-        Self { path }
+        Self { path, initial_state }
     }
 }
 impl AsPath for ABin {
@@ -50,6 +61,12 @@ impl AsPath for ABin {
     }
 }
 impl CaptureableFilePath for ABin {}
+impl AsInitialFileStateRef for ABin {
+    fn initial_state(&self) -> &FileState {
+        &self.initial_state
+    }
+}
+impl AssertableInitialFileCapture for ABin {}
 /**This is a file residing at `./foo/b.bin` (relative to the root of the test harness).
 
 <br>
@@ -57,6 +74,7 @@ impl CaptureableFilePath for ABin {}
 <sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
 pub struct BBin {
     path: PathBuf,
+    initial_state: FileState,
 }
 impl BBin {
     fn new<S>(parent_path: PathBuf, file_name: S) -> Self
@@ -65,9 +83,16 @@ impl BBin {
     {
         let path = parent_path.join(file_name.into());
         path.assert_not_exists();
-        initialize_file_with_random_data(&path, 54321u64, 65536usize);
+        let binary_file_data = initialize_file_with_random_data(
+            &path,
+            54321u64,
+            65536usize,
+        );
+        let initial_state = FileState::NonEmpty {
+            content: binary_file_data,
+        };
         path.assert_is_file();
-        Self { path }
+        Self { path, initial_state }
     }
 }
 impl AsPath for BBin {
@@ -76,6 +101,12 @@ impl AsPath for BBin {
     }
 }
 impl CaptureableFilePath for BBin {}
+impl AsInitialFileStateRef for BBin {
+    fn initial_state(&self) -> &FileState {
+        &self.initial_state
+    }
+}
+impl AssertableInitialFileCapture for BBin {}
 /**This is a file residing at `./foo/bar/c.bin` (relative to the root of the test harness).
 
 <br>
@@ -83,6 +114,7 @@ impl CaptureableFilePath for BBin {}
 <sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
 pub struct CBin {
     path: PathBuf,
+    initial_state: FileState,
 }
 impl CBin {
     fn new<S>(parent_path: PathBuf, file_name: S) -> Self
@@ -91,9 +123,16 @@ impl CBin {
     {
         let path = parent_path.join(file_name.into());
         path.assert_not_exists();
-        initialize_file_with_random_data(&path, 54321u64, 131072usize);
+        let binary_file_data = initialize_file_with_random_data(
+            &path,
+            54321u64,
+            131072usize,
+        );
+        let initial_state = FileState::NonEmpty {
+            content: binary_file_data,
+        };
         path.assert_is_file();
-        Self { path }
+        Self { path, initial_state }
     }
 }
 impl AsPath for CBin {
@@ -102,6 +141,12 @@ impl AsPath for CBin {
     }
 }
 impl CaptureableFilePath for CBin {}
+impl AsInitialFileStateRef for CBin {
+    fn initial_state(&self) -> &FileState {
+        &self.initial_state
+    }
+}
+impl AssertableInitialFileCapture for CBin {}
 /**This is a file residing at `./foo/bar/hello/world/d.bin` (relative to the root of the test harness).
 
 <br>
@@ -109,6 +154,7 @@ impl CaptureableFilePath for CBin {}
 <sup>This entry is part of the [`DeepTree`] test harness tree.</sup>*/
 pub struct DBin {
     path: PathBuf,
+    initial_state: FileState,
 }
 impl DBin {
     fn new<S>(parent_path: PathBuf, file_name: S) -> Self
@@ -117,9 +163,16 @@ impl DBin {
     {
         let path = parent_path.join(file_name.into());
         path.assert_not_exists();
-        initialize_file_with_random_data(&path, 54321u64, 262144usize);
+        let binary_file_data = initialize_file_with_random_data(
+            &path,
+            54321u64,
+            262144usize,
+        );
+        let initial_state = FileState::NonEmpty {
+            content: binary_file_data,
+        };
         path.assert_is_file();
-        Self { path }
+        Self { path, initial_state }
     }
 }
 impl AsPath for DBin {
@@ -128,6 +181,12 @@ impl AsPath for DBin {
     }
 }
 impl CaptureableFilePath for DBin {}
+impl AsInitialFileStateRef for DBin {
+    fn initial_state(&self) -> &FileState {
+        &self.initial_state
+    }
+}
+impl AssertableInitialFileCapture for DBin {}
 /**This is a sub-directory residing at `./foo/bar/hello/world` (relative to the root of the test harness).
 
 This directory has the following entries:
@@ -301,6 +360,9 @@ impl AsPath for Foo {
 /**A fs-more filesystem testing harness. Upon calling [`Self::initialize`],
 it sets up a temporary directory and initializes the entire configured file tree.
 When it's dropped or when [`Self::destroy`] is called, the temporary directory is removed.
+
+In addition to initializing the configured files and directories, a snapshot ("capture")
+is created for each file. This is the same as [`CaptureableFilePath::capture_with_content`],but the snapshot is created as tree initialization
 
 This harness has the following entries at the top level:
 - `a_bin` (see [`ABin`])

@@ -16,6 +16,8 @@ use std::fs;
 use std::path::{PathBuf, Path};
 use tempfile::TempDir;
 use crate::tree_framework::FileSystemHarness;
+use crate::tree_framework::AsInitialFileStateRef;
+use crate::tree_framework::AssertableInitialFileCapture;
 use crate::tree_framework::initialize_empty_file;
 use crate::tree_framework::initialize_file_with_string;
 use crate::tree_framework::initialize_file_with_random_data;
@@ -23,10 +25,14 @@ use crate::assertable::AsPath;
 use crate::assertable::r#trait::AssertablePath;
 use crate::assertable::r#trait::CaptureableFilePath;
 use crate::assertable::file_capture::CapturedFileState;
+use crate::assertable::file_capture::FileState;
 use fs_more_test_harness_schema::schema::FileDataConfiguration;
 /**A fs-more filesystem testing harness. Upon calling [`Self::initialize`],
 it sets up a temporary directory and initializes the entire configured file tree.
 When it's dropped or when [`Self::destroy`] is called, the temporary directory is removed.
+
+In addition to initializing the configured files and directories, a snapshot ("capture")
+is created for each file. This is the same as [`CaptureableFilePath::capture_with_content`],but the snapshot is created as tree initialization
 
 This harness has the following entries at the top level:
 

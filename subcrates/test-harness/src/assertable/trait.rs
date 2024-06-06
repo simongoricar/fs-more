@@ -15,6 +15,7 @@ use super::{
 use crate::assertable::dir_comparison::assert_primary_directory_fully_matches_secondary_directory;
 
 
+
 pub trait AssertablePath {
     /*
      * General assertions.
@@ -32,10 +33,10 @@ pub trait AssertablePath {
      * Directory-related assertions.
      */
 
-    /// Asserts the path points to a direcory, or a symlink to one.
+    /// Asserts the path points to a directory, or a symlink to one.
     fn assert_is_directory(&self);
 
-    /// Asserts the path points to a direcory;
+    /// Asserts the path points to a directory;
     /// a symlink to a directory is treated as a failure.
     fn assert_is_directory_and_not_symlink(&self);
 
@@ -70,10 +71,12 @@ pub trait AssertablePath {
      * File-related assertions.
      */
 
+    /// Asserts the path points to a file, or a symlink to one.
     fn assert_is_file(&self);
 
+    /// Asserts the path points to a file;
+    /// a symlink to a file is treated as a failure.
     fn assert_is_file_and_not_symlink(&self);
-
 
 
 
@@ -81,46 +84,140 @@ pub trait AssertablePath {
      * Symlink-related assertions.
      */
 
+    /// Asserts the path points to a symlink.
+    ///
+    /// This method does not ensure that the link destination is valid.
     fn assert_is_any_symlink(&self);
 
+
+    /// Asserts the path points to a symlink to a directory.
+    ///
+    /// This method does not ensure that the link destination is valid.
     fn assert_is_symlink_to_directory(&self);
 
-    fn assert_is_symlink_to_directory_and_destination_matches<P>(&self, expected_destination_path: P) where P: AsRef<Path>;
+    /// Asserts the path points to a symlink to a directory,
+    /// and that the destination of the symlink matches the provided `expected_destination_path`.
+    fn assert_is_symlink_to_directory_and_destination_matches<P>(
+        &self,
+        expected_destination_path: P,
+    ) where
+        P: AsRef<Path>;
 
+    /// Asserts the path points to a symlink to a directory,
+    /// and returns the symlink destination.
     fn assert_is_symlink_to_directory_and_resolve_destination(&self) -> PathBuf;
 
+
+    /// Asserts the path points to a symlink to a file.
+    ///
+    /// This method does not ensure that the link destination is valid.
     fn assert_is_symlink_to_file(&self);
 
-    fn assert_is_symlink_to_file_and_destination_matches<P>(&self, expected_destination_path: P) where P: AsRef<Path>;
+    /// Asserts the path points to a symlink to a file,
+    /// and that the destination of the symlink matches the provided `expected_destination_path`.
+    fn assert_is_symlink_to_file_and_destination_matches<P>(&self, expected_destination_path: P)
+    where
+        P: AsRef<Path>;
 
+    /// Asserts the path points to a symlink to a file,
+    /// and returns the symlink destination.
     fn assert_is_symlink_to_file_and_resolve_destination(&self) -> PathBuf;
 }
 
 
+
 pub trait ManageablePath {
+    /// Given a `destination_file_path`, this method will create a symlink at `self`
+    /// that points to the destination file path.
+    ///
+    ///
+    /// # Panic
+    /// This will panic if the symlink cannot be created, or if the destination
+    /// path is not a file.
+    ///
+    /// This is fine only because we *should fail on errors anyway*,
+    /// since this is part of `fs-more`'s testing harness.
     fn symlink_to_file<P>(&self, destination_file_path: P)
     where
         P: AsRef<Path>;
 
+    /// Given a `destination_directory_path`, this method will create a symlink at `self`
+    /// that points to the destination directory path.
+    ///
+    ///
+    /// # Panic
+    /// This will panic if the symlink cannot be created, or if the destination
+    /// path is not a directory.
+    ///
+    /// This is fine only because we *should fail on errors anyway*,
+    /// since this is part of `fs-more`'s testing harness.
     fn symlink_to_directory<P>(&self, destination_directory_path: P)
     where
         P: AsRef<Path>;
 
+    /// This method will create an empty file at `self`,
+    /// if a file doesn't already exist. It will not truncate the
+    /// file if it exists.
+    ///
+    /// Additionally, if the parent directory is missing, it will be created.
+    ///
+    ///
+    /// # Panic
+    /// This will panic if the file or parent directory cannot be created.
+    ///
+    /// This is fine only because we *should fail on errors anyway*,
+    /// since this is part of `fs-more`'s testing harness.
     fn touch_if_missing(&self);
 
+    /// Returns the size of the file at `self`, in bytes.
+    ///
+    ///
+    /// # Panic
+    /// This will panic if the path does not point to a file.
+    ///
+    /// This is fine only because we *should fail on errors anyway*,
+    /// since this is part of `fs-more`'s testing harness.
     fn file_size_in_bytes(&self) -> u64;
 
+    /// Asserts the path at `self` points to a file,
+    /// after which the file is removed.
+    ///
+    ///
+    /// # Panic
+    /// This will panic if the path does not point to a file,
+    /// or if file removal fails.
+    ///
+    /// This is fine only because we *should fail on errors anyway*,
+    /// since this is part of `fs-more`'s testing harness.
     fn assert_is_file_and_remove(&self);
 }
 
+
+
 pub trait CaptureableFilePath: AsPath {
+    /// Creates a snapshot of the given file path's state.
+    /// This includes information about whether the file exists, and additionally, its content.
+    ///
+    /// After capture, you may use e.g. [`CapturedFileState::assert_unchanged`]
+    /// to assert that the current state of the file has not deviated from this snapshot.
+    ///
+    ///
+    /// # Panic
+    /// Just like [`CapturedFileState::new_with_content_capture`]
+    /// and [`FileState::capture_from_file_path`],
+    /// this will panic if the provided path exists, but is not a file,
+    /// or if the path cannot be accessed (due to permission or other IO errors).
+    ///
+    /// This is fine only because we *should fail on errors anyway*,
+    /// since this is part of `fs-more`'s testing harness.
     fn capture_with_content(&self) -> CapturedFileState {
         CapturedFileState::new_with_content_capture(self.as_path())
     }
 }
 
 
-
+/// Given an [`AsPath`]-implementing type, this function
+///
 fn obtain_path_type<P>(path: &P) -> PathType
 where
     P: AsPath,
@@ -338,12 +435,21 @@ where
     }
 
     #[track_caller]
-    fn assert_is_symlink_to_directory_and_destination_matches<P>(&self, expected_destination_path: P) where P: AsRef<Path> {
-        let canonical_expected_path = expected_destination_path.as_ref().canonicalize()
+    fn assert_is_symlink_to_directory_and_destination_matches<P>(
+        &self,
+        expected_destination_path: P,
+    ) where
+        P: AsRef<Path>,
+    {
+        let canonical_expected_path = expected_destination_path
+            .as_ref()
+            .canonicalize()
             .expect("failed to canonicalize expected destination path");
 
         let destination = self.assert_is_symlink_to_directory_and_resolve_destination();
-        let canonical_actual_destination_path = destination.canonicalize().expect("failed to canonicalize symlink destination path");
+        let canonical_actual_destination_path = destination
+            .canonicalize()
+            .expect("failed to canonicalize symlink destination path");
 
         assert_eq!(
             canonical_expected_path,
@@ -377,12 +483,19 @@ where
         }
     }
 
-    fn assert_is_symlink_to_file_and_destination_matches<P>(&self, expected_destination_path: P) where P: AsRef<Path> {
-        let canonical_expected_path = expected_destination_path.as_ref().canonicalize()
+    fn assert_is_symlink_to_file_and_destination_matches<P>(&self, expected_destination_path: P)
+    where
+        P: AsRef<Path>,
+    {
+        let canonical_expected_path = expected_destination_path
+            .as_ref()
+            .canonicalize()
             .expect("failed to canonicalize expected destination path");
 
         let destination = self.assert_is_symlink_to_file_and_resolve_destination();
-        let canonical_actual_destination_path = destination.canonicalize().expect("failed to canonicalize symlink destination path");
+        let canonical_actual_destination_path = destination
+            .canonicalize()
+            .expect("failed to canonicalize symlink destination path");
 
         assert_eq!(
             canonical_expected_path,

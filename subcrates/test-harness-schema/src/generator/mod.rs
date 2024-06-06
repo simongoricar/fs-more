@@ -203,6 +203,10 @@ pub fn generate_rust_source_file_for_schema(
         it sets up a temporary directory and initializes the entire configured file tree.\n\
         When it's dropped or when [`Self::destroy`] is called, the temporary directory is removed.\n\
         \n\
+        In addition to initializing the configured files and directories, a snapshot (\"capture\")\n\
+        is created for each file. This is the same as [`CaptureableFilePath::capture_with_content`],\
+        but the snapshot is created as tree initialization\n\
+        \n\
         {}\n\
         \n\
         <br>\n\n\
@@ -219,6 +223,8 @@ pub fn generate_rust_source_file_for_schema(
         use tempfile::TempDir;
 
         use crate::tree_framework::FileSystemHarness;
+        use crate::tree_framework::AsInitialFileStateRef;
+        use crate::tree_framework::AssertableInitialFileCapture;
         use crate::tree_framework::initialize_empty_file;
         use crate::tree_framework::initialize_file_with_string;
         use crate::tree_framework::initialize_file_with_random_data;
@@ -227,6 +233,7 @@ pub fn generate_rust_source_file_for_schema(
         use crate::assertable::r#trait::AssertablePath;
         use crate::assertable::r#trait::CaptureableFilePath;
         use crate::assertable::file_capture::CapturedFileState;
+        use crate::assertable::file_capture::FileState;
 
         use fs_more_test_harness_schema::schema::FileDataConfiguration;
 
