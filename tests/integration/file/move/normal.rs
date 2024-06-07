@@ -241,7 +241,7 @@ pub fn move_file_overwrites_destination_file_when_behaviour_is_overwrite() -> Te
     let harness = SimpleTree::initialize();
 
     let captured_source_file = harness.foo.hello_world_txt.capture_with_content();
-    let source_file_size = harness.foo.hello_world_txt.file_size_in_bytes();
+    let source_file_size = harness.foo.hello_world_txt.size_in_bytes();
 
 
     let move_result = fs_more::file::move_file(
@@ -310,7 +310,7 @@ pub fn move_file_may_preserve_symlinks_when_moving_by_rename() -> TestResult {
     let harness = SimpleTree::initialize();
 
 
-    let symlink_destination_file_size_bytes = harness.foo.hello_world_txt.file_size_in_bytes();
+    let symlink_destination_file_size_bytes = harness.foo.hello_world_txt.size_in_bytes();
     let captured_symlink_destination_file = harness.foo.hello_world_txt.capture_with_content();
 
 

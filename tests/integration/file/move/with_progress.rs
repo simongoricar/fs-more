@@ -33,7 +33,7 @@ pub fn move_file_with_progress_correctly_moves_the_file() -> TestResult {
     harness.foo.bar_bin.assert_is_file();
     let captured_before_move = harness.foo.bar_bin.capture_with_content();
 
-    let file_source_size_bytes = harness.foo.bar_bin.file_size_in_bytes();
+    let file_source_size_bytes = harness.foo.bar_bin.size_in_bytes();
 
 
 
@@ -295,7 +295,7 @@ pub fn move_file_with_progress_overwrites_destination_file_when_behaviour_is_ove
     let harness = SimpleTree::initialize();
 
     let captured_source_file = harness.foo.hello_world_txt.capture_with_content();
-    let source_file_size = harness.foo.hello_world_txt.file_size_in_bytes();
+    let source_file_size = harness.foo.hello_world_txt.size_in_bytes();
 
 
     let move_result = fs_more::file::move_file_with_progress(
@@ -368,7 +368,7 @@ pub fn move_file_with_progress_may_preserve_symlinks_when_moving_by_rename() -> 
     let harness = SimpleTree::initialize();
 
 
-    let symlink_destination_file_size_bytes = harness.foo.hello_world_txt.file_size_in_bytes();
+    let symlink_destination_file_size_bytes = harness.foo.hello_world_txt.size_in_bytes();
     let captured_symlink_destination_file = harness.foo.hello_world_txt.capture_with_content();
 
 

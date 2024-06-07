@@ -82,8 +82,8 @@ pub enum DirectoryScanDepthLimit {
 ///
 /// This scanner is able to recursively iterate over the directory
 /// as well as optionally follow symbolic links. If, however, you're
-/// looking for something with a bit more features, such as sorting,
-/// consider the [`walkdir`](https://docs.rs/walkdir) crate.
+/// looking for something with a bit more features, such as lazy iteration
+/// and sorting, consider the [`walkdir`](https://docs.rs/walkdir) crate.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DirectoryScan {
     /// Path of the directory that was scanned.
@@ -435,6 +435,8 @@ impl DirectoryScan {
     /// of the directory structure, see [`Self::covers_entire_directory_tree`].
     pub fn total_size_in_bytes(&self) -> Result<u64, DirectorySizeScanError> {
         let mut total_bytes = 0;
+
+        // TODO what about base directory? include that one as well
 
         for file_path in &self.files {
             let file_size_bytes = file_size_in_bytes(file_path).map_err(|error| match error {

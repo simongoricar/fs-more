@@ -47,21 +47,9 @@ pub trait AsInitialFileStateRef: AsPath {
 
 
 pub trait AssertableInitialFileCapture: AsInitialFileStateRef {
-    /// Assert that the initial [`FileState`] (captured at test harness initialization)
-    /// matches a reference to the same type.
-    fn assert_initial_captured_state_equals_other(&self, other: &Self) {
-        assert!(
-            self.initial_state()
-                .equals_other_file_state(other.initial_state()),
-            "files \"{}\" and \"{}\" don't have equal states",
-            self.as_path().display(),
-            other.as_path().display(),
-        );
-    }
-
-    /// Assert that the *initial* [`FileState`] (captured at test harness initialization)
+    /// Assert that the *initial* [`FileState`] (captured for each file at test harness initialization)
     /// matches the *current* state of the file `other`.
-    fn assert_initial_captured_state_matches_other_file<P>(&self, other: P)
+    fn assert_initial_state_matches_other_file<P>(&self, other: P)
     where
         P: AsRef<Path>,
     {
@@ -76,9 +64,9 @@ pub trait AssertableInitialFileCapture: AsInitialFileStateRef {
         );
     }
 
-    /// Assert that the *initial* [`FileState`] (captured at test harness initialization)
+    /// Assert that the *initial* [`FileState`] (captured for each file at test harness initialization)
     /// matches the current state of the same file on disk.
-    fn assert_unchanged_from_initial_capture(&self) {
+    fn assert_unchanged_from_initial_state(&self) {
         let file_now_exists = self
             .as_path()
             .try_exists()

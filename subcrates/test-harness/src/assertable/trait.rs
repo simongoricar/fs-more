@@ -170,14 +170,7 @@ pub trait ManageablePath {
     fn touch_if_missing(&self);
 
     /// Returns the size of the file at `self`, in bytes.
-    ///
-    ///
-    /// # Panic
-    /// This will panic if the path does not point to a file.
-    ///
-    /// This is fine only because we *should fail on errors anyway*,
-    /// since this is part of `fs-more`'s testing harness.
-    fn file_size_in_bytes(&self) -> u64;
+    fn size_in_bytes(&self) -> u64;
 
     /// Asserts the path at `self` points to a file,
     /// after which the file is removed.
@@ -588,6 +581,8 @@ where
         self.assert_not_exists();
 
         symlink_to_file(self.as_path(), destination_file_path.as_ref());
+
+        self.assert_is_symlink_to_file_and_destination_matches(destination_file_path);
     }
 
     #[track_caller]
@@ -601,6 +596,8 @@ where
             self.as_path(),
             destination_directory_path.as_ref(),
         );
+
+        self.assert_is_symlink_to_directory_and_destination_matches(destination_directory_path);
     }
 
     #[track_caller]
@@ -617,11 +614,15 @@ where
             }
 
             fs::File::create_new(self.as_path()).expect("failed to create empty file");
+
+            self.assert_is_file_and_not_symlink();
         }
     }
 
     #[track_caller]
-    fn file_size_in_bytes(&self) -> u64 {
+    fn size_in_bytes(&self) -> u64 {
+        self.assert_exists();
+
         let file_metadata = self
             .as_path()
             .metadata()
