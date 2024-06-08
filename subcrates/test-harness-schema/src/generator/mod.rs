@@ -1,5 +1,6 @@
 mod name_collision;
 use std::{
+    collections::VecDeque,
     fs::OpenOptions,
     io::{prelude::Write, BufWriter},
     path::Path,
@@ -14,9 +15,104 @@ pub use name_collision::*;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
-use crate::schema::{FileSystemHarnessEntry, FileSystemHarnessSchema};
+use crate::schema::{FileDataConfiguration, FileSystemHarnessEntry, FileSystemHarnessSchema};
 mod directory_codegen;
 mod file_codegen;
+
+
+fn prepend_lines_with_inner_line_comments(content: &str) -> String {
+    content
+        .lines()
+        .map(|line| format!("//! {}", line))
+        .join("\n")
+}
+
+
+fn format_tree_structure_as_string(schema: &FileSystemHarnessSchema) -> String {
+    let mut formatted_lines = vec![".".to_string()];
+
+
+    struct PendingEntry<'s> {
+        entry: &'s FileSystemHarnessEntry,
+        depth: usize,
+    }
+
+    let mut depth_first_queue = VecDeque::new();
+    depth_first_queue.extend(
+        schema
+            .structure
+            .entries
+            .iter()
+            .map(|first_level_entry| PendingEntry {
+                entry: first_level_entry,
+                depth: 1,
+            }),
+    );
+
+
+    while let Some(next_item) = depth_first_queue.pop_front() {
+        let mut formatted_line = String::new();
+
+        for _ in 0..(next_item.depth.saturating_sub(1)) {
+            formatted_line.push_str("|   ");
+        }
+
+        if next_item.depth > 0 {
+            formatted_line.push_str("|-- ");
+        }
+
+        formatted_line.push_str(
+            match next_item.entry {
+                FileSystemHarnessEntry::File(file) => {
+                    let file_description =
+                        match file.data.as_ref().unwrap_or(&FileDataConfiguration::Empty) {
+                            FileDataConfiguration::Empty => "empty".to_string(),
+                            FileDataConfiguration::Text { content } => {
+                                let human_size =
+                                    humansize::format_size(content.len(), humansize::BINARY);
+
+                                format!("text data, {}", human_size)
+                            }
+                            FileDataConfiguration::DeterministicRandom {
+                                file_size_bytes, ..
+                            } => {
+                                let human_size =
+                                    humansize::format_size(*file_size_bytes, humansize::BINARY);
+
+                                format!("random data, {}", human_size)
+                            }
+                        };
+
+                    format!("{} ({})", file.name.as_str(), file_description)
+                }
+                FileSystemHarnessEntry::Directory(directory) => directory.name.to_string(),
+            }
+            .as_str(),
+        );
+
+        formatted_lines.push(formatted_line);
+
+
+        if let FileSystemHarnessEntry::Directory(directory_entry) = next_item.entry {
+            if let Some(directory_entries) = directory_entry.entries.as_ref() {
+                for sub_entry in directory_entries {
+                    depth_first_queue.push_front(PendingEntry {
+                        entry: sub_entry,
+                        depth: next_item.depth + 1,
+                    });
+                }
+            }
+        }
+    }
+
+
+    format!(
+        "```md\n\
+        {}\n\
+        ```",
+        formatted_lines.join("\n")
+    )
+}
 
 
 
@@ -31,6 +127,9 @@ pub fn generate_rust_source_file_for_schema(
         .file_name()
         .and_then(|name| name.to_str())
         .unwrap_or("UNKNOWN");
+
+    let formatted_file_tree = format_tree_structure_as_string(&schema);
+
 
     let root_tree_struct_name = schema.name.as_str().to_upper_camel_case();
     let root_tree_struct_ident = format_ident!("{}", root_tree_struct_name);
@@ -169,6 +268,10 @@ pub fn generate_rust_source_file_for_schema(
 //! This code was automatically generated from \"{}\",
 //! a file that describes this filesystem tree harness for testing.
 {}
+//!
+//! The full file tree is as follows:
+{}
+//!
 //! DO NOT MODIFY THIS FILE. INSTEAD, MODIFY THE SOURCE JSON DATA FILE,
 //! AND REGENERATE THIS FILE (see the CLI provided by the 
 //! test-harness-schema crate).
@@ -177,7 +280,9 @@ pub fn generate_rust_source_file_for_schema(
 #![allow(clippy::disallowed_names)]
 #![allow(dead_code)]\
         ",
-        input_schema_file_name, generated_description
+        input_schema_file_name,
+        generated_description,
+        prepend_lines_with_inner_line_comments(&formatted_file_tree)
     );
 
     let root_tree_struct_fields_list = {
@@ -208,10 +313,14 @@ pub fn generate_rust_source_file_for_schema(
         but the snapshot is created as tree initialization\n\
         \n\
         {}\n\
-        \n\
+        \n\n\
+        The full file tree is as follows:\n\
+        {}\n\
+        \n\n\
         <br>\n\n\
         <sup>This tree and related code was automatically generated from the structure described in `{}`.</sup>",
         root_tree_struct_fields_list,
+        formatted_file_tree,
         input_schema_file_name
     );
 

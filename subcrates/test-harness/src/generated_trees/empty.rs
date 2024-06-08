@@ -3,6 +3,12 @@
 //! This code was automatically generated from "empty.json",
 //! a file that describes this filesystem tree harness for testing.
 //!
+//!
+//! The full file tree is as follows:
+//! ```md
+//! .
+//! ```
+//!
 //! DO NOT MODIFY THIS FILE. INSTEAD, MODIFY THE SOURCE JSON DATA FILE,
 //! AND REGENERATE THIS FILE (see the CLI provided by the 
 //! test-harness-schema crate).
@@ -35,6 +41,13 @@ In addition to initializing the configured files and directories, a snapshot ("c
 is created for each file. This is the same as [`CaptureableFilePath::capture_with_content`],but the snapshot is created as tree initialization
 
 This harness has the following entries at the top level:
+
+
+
+The full file tree is as follows:
+```md
+.
+```
 
 
 <br>

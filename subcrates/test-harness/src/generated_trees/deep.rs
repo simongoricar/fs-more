@@ -3,6 +3,20 @@
 //! This code was automatically generated from "deep.json",
 //! a file that describes this filesystem tree harness for testing.
 //!
+//!
+//! The full file tree is as follows:
+//! ```md
+//! .
+//! |-- a.bin (random data, 32 KiB)
+//! |-- foo
+//! |   |-- bar
+//! |   |   |-- hello
+//! |   |   |   |-- world
+//! |   |   |   |   |-- d.bin (random data, 256 KiB)
+//! |   |   |-- c.bin (random data, 128 KiB)
+//! |   |-- b.bin (random data, 64 KiB)
+//! ```
+//!
 //! DO NOT MODIFY THIS FILE. INSTEAD, MODIFY THE SOURCE JSON DATA FILE,
 //! AND REGENERATE THIS FILE (see the CLI provided by the 
 //! test-harness-schema crate).
@@ -367,6 +381,21 @@ is created for each file. This is the same as [`CaptureableFilePath::capture_wit
 This harness has the following entries at the top level:
 - `a_bin` (see [`ABin`])
 - `foo` (see [`Foo`])
+
+
+The full file tree is as follows:
+```md
+.
+|-- a.bin (random data, 32 KiB)
+|-- foo
+|   |-- bar
+|   |   |-- hello
+|   |   |   |-- world
+|   |   |   |   |-- d.bin (random data, 256 KiB)
+|   |   |-- c.bin (random data, 128 KiB)
+|   |-- b.bin (random data, 64 KiB)
+```
+
 
 <br>
 

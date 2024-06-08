@@ -3,6 +3,16 @@
 //! This code was automatically generated from "simple.json",
 //! a file that describes this filesystem tree harness for testing.
 //!
+//!
+//! The full file tree is as follows:
+//! ```md
+//! .
+//! |-- empty.txt (empty)
+//! |-- foo
+//! |   |-- bar.bin (random data, 16 KiB)
+//! |   |-- hello-world.txt (text data, 12 B)
+//! ```
+//!
 //! DO NOT MODIFY THIS FILE. INSTEAD, MODIFY THE SOURCE JSON DATA FILE,
 //! AND REGENERATE THIS FILE (see the CLI provided by the 
 //! test-harness-schema crate).
@@ -197,6 +207,17 @@ is created for each file. This is the same as [`CaptureableFilePath::capture_wit
 This harness has the following entries at the top level:
 - `empty_txt` (see [`EmptyTxt`])
 - `foo` (see [`Foo`])
+
+
+The full file tree is as follows:
+```md
+.
+|-- empty.txt (empty)
+|-- foo
+|   |-- bar.bin (random data, 16 KiB)
+|   |-- hello-world.txt (text data, 12 B)
+```
+
 
 <br>
 
