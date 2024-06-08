@@ -188,11 +188,16 @@ pub trait ManageablePath {
 
 
 pub trait CaptureableFilePath: AsPath {
-    /// Creates a snapshot of the given file path's state.
+    /// Explicitly creates a snapshot of the given file path's state.
     /// This includes information about whether the file exists, and additionally, its content.
     ///
     /// After capture, you may use e.g. [`CapturedFileState::assert_unchanged`]
     /// to assert that the current state of the file has not deviated from this snapshot.
+    ///
+    /// **Important: if you wish to compare a file with its state at test harness initialization,
+    /// you do not need to create a manual snapshot! Each file in the test harness is automatically
+    /// captured at the harness' [`initialize`] call. See methods in [`AssertableInitialFileCapture`],
+    /// e.g. [`assert_unchanged_from_initial_state`]**
     ///
     ///
     /// # Panic
@@ -203,6 +208,11 @@ pub trait CaptureableFilePath: AsPath {
     ///
     /// This is fine only because we *should fail on errors anyway*,
     /// since this is part of `fs-more`'s testing harness.
+    ///
+    ///
+    /// [`AssertableInitialFileCapture`]: crate::tree_framework::AssertableInitialFileCapture
+    /// [`assert_unchanged_from_initial_state`]: crate::tree_framework::AssertableInitialFileCapture::assert_unchanged_from_initial_state
+    /// [`initialize`]: crate::tree_framework::FileSystemHarness::initialize
     fn capture_with_content(&self) -> CapturedFileState {
         CapturedFileState::new_with_content_capture(self.as_path())
     }

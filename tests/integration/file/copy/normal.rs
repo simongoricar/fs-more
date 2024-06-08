@@ -108,8 +108,6 @@ pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
         .with_file_name(hello_world_uppercased_file_name);
 
 
-    let captured_hello_world = harness.foo.hello_world_txt.capture_with_content();
-
 
     if is_fs_case_sensitive {
         hello_world_uppercased_file_path.assert_not_exists();
@@ -134,21 +132,24 @@ pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
             "copy_file should have created a file (on case-sensitive filesystem) \
             when trying to copy a file into itself, even when the case is different"
         );
-
-        captured_hello_world.assert_unchanged();
-        hello_world_uppercased_file_path.assert_is_file_and_not_symlink();
-
-        captured_hello_world
-            .assert_captured_state_matches_other_file(&hello_world_uppercased_file_path);
     } else {
         assert_matches!(
             copy_result.unwrap_err(),
             FileError::SourceAndDestinationAreTheSame { path }
             if path == hello_world_uppercased_file_path.as_path() || path == harness.foo.hello_world_txt.as_path()
         );
-
-        captured_hello_world.assert_unchanged();
     }
+
+    harness
+        .foo
+        .hello_world_txt
+        .assert_unchanged_from_initial_state();
+
+    hello_world_uppercased_file_path.assert_is_file_and_not_symlink();
+    harness
+        .foo
+        .hello_world_txt
+        .assert_initial_state_matches_other_file(&hello_world_uppercased_file_path);
 
 
     harness.destroy();
@@ -162,8 +163,6 @@ pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated
     let harness = SimpleTree::initialize();
     let is_fs_case_sensitive = is_temporary_directory_case_sensitive();
 
-
-    let captured_source_file = harness.foo.hello_world_txt.capture_with_content();
 
     let destination_file_path = {
         let hello_world_uppercased_file_name = harness
@@ -205,19 +204,24 @@ pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated
             copy_result.unwrap(),
             CopyFileFinished::Created { .. }
         );
-
-        captured_source_file.assert_unchanged();
-        captured_source_file.assert_captured_state_matches_other_file(&destination_file_path);
     } else {
         assert_matches!(
             copy_result.unwrap_err(),
             FileError::SourceAndDestinationAreTheSame { path }
             if path == harness.foo.hello_world_txt.as_path() || path == destination_file_path
         );
-
-        captured_source_file.assert_unchanged();
-        captured_source_file.assert_captured_state_matches_other_file(&destination_file_path);
     }
+
+
+    harness
+        .foo
+        .hello_world_txt
+        .assert_unchanged_from_initial_state();
+
+    harness
+        .foo
+        .hello_world_txt
+        .assert_initial_state_matches_other_file(&destination_file_path);
 
 
     harness.destroy();
@@ -231,7 +235,6 @@ pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated
 pub fn copy_file_overwrites_destination_file_when_behaviour_is_overwrite() -> TestResult {
     let harness = SimpleTree::initialize();
 
-    let captured_source_file = harness.foo.bar_bin.capture_with_content();
     let source_file_size_bytes = harness.foo.bar_bin.size_in_bytes();
 
 
@@ -251,10 +254,13 @@ pub fn copy_file_overwrites_destination_file_when_behaviour_is_overwrite() -> Te
     );
 
 
-    captured_source_file.assert_unchanged();
+    harness.foo.bar_bin.assert_unchanged_from_initial_state();
+
     harness.foo.hello_world_txt.assert_is_file_and_not_symlink();
-    captured_source_file
-        .assert_captured_state_matches_other_file(harness.foo.hello_world_txt.as_path());
+    harness
+        .foo
+        .bar_bin
+        .assert_initial_state_matches_other_file(harness.foo.hello_world_txt.as_path());
 
 
     harness.destroy();
@@ -265,9 +271,6 @@ pub fn copy_file_overwrites_destination_file_when_behaviour_is_overwrite() -> Te
 #[test]
 pub fn copy_file_errors_on_existing_destination_file_when_behaviour_is_abort() -> TestResult {
     let harness = SimpleTree::initialize();
-
-    let captured_source_file = harness.foo.bar_bin.capture_with_content();
-    let captured_destination_file = harness.foo.hello_world_txt.capture_with_content();
 
 
     let copy_result = fs_more::file::copy_file(
@@ -285,8 +288,11 @@ pub fn copy_file_errors_on_existing_destination_file_when_behaviour_is_abort() -
     );
 
 
-    captured_source_file.assert_unchanged();
-    captured_destination_file.assert_unchanged();
+    harness.foo.bar_bin.assert_unchanged_from_initial_state();
+    harness
+        .foo
+        .hello_world_txt
+        .assert_unchanged_from_initial_state();
 
 
     harness.destroy();
