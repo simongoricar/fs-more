@@ -28,6 +28,8 @@ use tempfile::TempDir;
 use crate::tree_framework::FileSystemHarness;
 use crate::tree_framework::AsInitialFileStateRef;
 use crate::tree_framework::AssertableInitialFileCapture;
+use crate::tree_framework::FileSystemHarnessDirectory;
+use crate::tree_framework::AsRelativePath;
 use crate::tree_framework::initialize_empty_file;
 use crate::tree_framework::initialize_file_with_string;
 use crate::tree_framework::initialize_file_with_random_data;
@@ -71,6 +73,11 @@ impl AsInitialFileStateRef for EmptyTxt {
     }
 }
 impl AssertableInitialFileCapture for EmptyTxt {}
+impl AsRelativePath for EmptyTxt {
+    fn as_path_relative_to_harness_root(&self) -> &Path {
+        Path::new(".\\empty.txt")
+    }
+}
 /**This is a file residing at `./foo/hello-world.txt` (relative to the root of the test harness).
 
 <br>
@@ -107,6 +114,11 @@ impl AsInitialFileStateRef for HelloWorldTxt {
     }
 }
 impl AssertableInitialFileCapture for HelloWorldTxt {}
+impl AsRelativePath for HelloWorldTxt {
+    fn as_path_relative_to_harness_root(&self) -> &Path {
+        Path::new(".\\foo\\hello-world.txt")
+    }
+}
 /**This is a file residing at `./foo/bar.bin` (relative to the root of the test harness).
 
 <br>
@@ -147,6 +159,11 @@ impl AsInitialFileStateRef for BarBin {
     }
 }
 impl AssertableInitialFileCapture for BarBin {}
+impl AsRelativePath for BarBin {
+    fn as_path_relative_to_harness_root(&self) -> &Path {
+        Path::new(".\\foo\\bar.bin")
+    }
+}
 /**This is a sub-directory residing at `./foo` (relative to the root of the test harness).
 
 This directory has the following entries:
@@ -195,6 +212,12 @@ impl Foo {
 impl AsPath for Foo {
     fn as_path(&self) -> &Path {
         &self.directory_path
+    }
+}
+impl FileSystemHarnessDirectory for Foo {}
+impl AsRelativePath for Foo {
+    fn as_path_relative_to_harness_root(&self) -> &Path {
+        Path::new(".\\foo")
     }
 }
 /**A fs-more filesystem testing harness. Upon calling [`Self::initialize`],
@@ -267,5 +290,11 @@ impl FileSystemHarness for SimpleTree {
 impl AsPath for SimpleTree {
     fn as_path(&self) -> &Path {
         self.temporary_directory.path()
+    }
+}
+impl FileSystemHarnessDirectory for SimpleTree {}
+impl AsRelativePath for SimpleTree {
+    fn as_path_relative_to_harness_root(&self) -> &Path {
+        Path::new(".")
     }
 }

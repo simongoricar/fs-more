@@ -38,16 +38,12 @@ fn format_tree_structure_as_string(schema: &FileSystemHarnessSchema) -> String {
     }
 
     let mut depth_first_queue = VecDeque::new();
-    depth_first_queue.extend(
-        schema
-            .structure
-            .entries
-            .iter()
-            .map(|first_level_entry| PendingEntry {
-                entry: first_level_entry,
-                depth: 1,
-            }),
-    );
+    depth_first_queue.extend(schema.structure.entries.iter().map(|first_level_entry| {
+        PendingEntry {
+            entry: first_level_entry,
+            depth: 1,
+        }
+    }));
 
 
     while let Some(next_item) = depth_first_queue.pop_front() {
@@ -334,6 +330,8 @@ pub fn generate_rust_source_file_for_schema(
         use crate::tree_framework::FileSystemHarness;
         use crate::tree_framework::AsInitialFileStateRef;
         use crate::tree_framework::AssertableInitialFileCapture;
+        use crate::tree_framework::FileSystemHarnessDirectory;
+        use crate::tree_framework::AsRelativePath;
         use crate::tree_framework::initialize_empty_file;
         use crate::tree_framework::initialize_file_with_string;
         use crate::tree_framework::initialize_file_with_random_data;
@@ -384,6 +382,14 @@ pub fn generate_rust_source_file_for_schema(
         impl AsPath for #root_tree_struct_ident {
             fn as_path(&self) -> &Path {
                 self.temporary_directory.path()
+            }
+        }
+
+        impl FileSystemHarnessDirectory for #root_tree_struct_ident {}
+
+        impl AsRelativePath for #root_tree_struct_ident {
+            fn as_path_relative_to_harness_root(&self) -> &Path {
+                Path::new(".")
             }
         }
     };

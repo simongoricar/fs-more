@@ -15,7 +15,9 @@ pub trait FileSystemHarness: AsPath {
 
     /// Consume `self` and remove the entire testing temporary directory.
     fn destroy(self);
+}
 
+pub trait FileSystemHarnessDirectory: AsPath {
     /// Obtain a custom sub-path, by providing a relative `sub_path`.
     fn child_path<P>(&self, sub_path: P) -> PathBuf
     where
@@ -25,18 +27,8 @@ pub trait FileSystemHarness: AsPath {
     }
 }
 
-pub trait FileSystemHarnessSubDirectory: AsPath {
-    /*
-    fn new<S>(parent_path: PathBuf, directory_name: S) -> Self
-    where
-        S: Into<String>; */
-
-    fn child_path<P>(&self, sub_path: P) -> PathBuf
-    where
-        P: AsRef<Path>,
-    {
-        self.as_path().join(sub_path)
-    }
+pub trait AsRelativePath {
+    fn as_path_relative_to_harness_root(&self) -> &Path;
 }
 
 

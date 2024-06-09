@@ -24,6 +24,8 @@ use tempfile::TempDir;
 use crate::tree_framework::FileSystemHarness;
 use crate::tree_framework::AsInitialFileStateRef;
 use crate::tree_framework::AssertableInitialFileCapture;
+use crate::tree_framework::FileSystemHarnessDirectory;
+use crate::tree_framework::AsRelativePath;
 use crate::tree_framework::initialize_empty_file;
 use crate::tree_framework::initialize_file_with_string;
 use crate::tree_framework::initialize_file_with_random_data;
@@ -73,5 +75,11 @@ impl FileSystemHarness for EmptyTree {
 impl AsPath for EmptyTree {
     fn as_path(&self) -> &Path {
         self.temporary_directory.path()
+    }
+}
+impl FileSystemHarnessDirectory for EmptyTree {}
+impl AsRelativePath for EmptyTree {
+    fn as_path_relative_to_harness_root(&self) -> &Path {
+        Path::new(".")
     }
 }

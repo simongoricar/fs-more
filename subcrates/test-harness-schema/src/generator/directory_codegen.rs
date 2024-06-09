@@ -52,6 +52,9 @@ pub(crate) fn codegen_harness_directory_entry(
 
 
     let directory_relative_path = parent_relative_path.join(&directory.name);
+    let directory_relative_path_string = directory_relative_path
+        .to_str()
+        .expect("invalid relative directory path: not UTF-8!");
 
 
     let mut struct_field_name_collision_avoider = NameCollisionAvoider::new_empty();
@@ -233,6 +236,14 @@ pub(crate) fn codegen_harness_directory_entry(
         impl AsPath for #directory_struct_name_ident {
             fn as_path(&self) -> &Path {
                 &self.directory_path
+            }
+        }
+
+        impl FileSystemHarnessDirectory for #directory_struct_name_ident {}
+
+        impl AsRelativePath for #directory_struct_name_ident {
+            fn as_path_relative_to_harness_root(&self) -> &Path {
+                Path::new(#directory_relative_path_string)
             }
         }
     };

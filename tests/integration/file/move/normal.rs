@@ -10,7 +10,7 @@ use fs_more_test_harness::{
     },
     case_sensitivity::detect_case_sensitivity_for_temp_dir,
     error::TestResult,
-    tree_framework::FileSystemHarness,
+    tree_framework::{FileSystemHarness, FileSystemHarnessDirectory},
     trees::simple::SimpleTree,
 };
 

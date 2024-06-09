@@ -10,7 +10,7 @@ use fs_more_test_harness::{
     },
     error::TestResult,
     is_temporary_directory_case_sensitive,
-    tree_framework::{AssertableInitialFileCapture, FileSystemHarness},
+    tree_framework::{AssertableInitialFileCapture, FileSystemHarness, FileSystemHarnessDirectory},
     trees::simple::SimpleTree,
 };
 
@@ -200,10 +200,7 @@ pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated
 
 
     if is_fs_case_sensitive {
-        assert_matches!(
-            copy_result.unwrap(),
-            CopyFileFinished::Created { .. }
-        );
+        assert_matches!(copy_result.unwrap(), CopyFileFinished::Created { .. });
     } else {
         assert_matches!(
             copy_result.unwrap_err(),

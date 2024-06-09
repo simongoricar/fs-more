@@ -155,6 +155,18 @@ pub trait ManageablePath {
     where
         P: AsRef<Path>;
 
+
+    /// This method will create an empty directory at `self`.
+    /// Additionally, if the parent directory is missing, it will be created.
+    ///
+    ///
+    /// # Panic
+    /// This will panic if the path exists, or if directory cannot be created.
+    ///
+    /// This is fine only because we *should fail on errors anyway*,
+    /// since this is part of `fs-more`'s testing harness.
+    fn assert_not_exists_and_create_empty_directory(&self);
+
     /// This method will create an empty file at `self`,
     /// if a file doesn't already exist. It will not truncate the
     /// file if it exists.
@@ -163,11 +175,12 @@ pub trait ManageablePath {
     ///
     ///
     /// # Panic
-    /// This will panic if the file or parent directory cannot be created.
+    /// This will panic if the path exists, or if file or parent directory
+    /// cannot be created.
     ///
     /// This is fine only because we *should fail on errors anyway*,
     /// since this is part of `fs-more`'s testing harness.
-    fn touch_if_missing(&self);
+    fn assert_not_exists_and_create_empty_file(&self);
 
     /// Returns the size of the file at `self`, in bytes.
     fn size_in_bytes(&self) -> u64;
@@ -183,6 +196,29 @@ pub trait ManageablePath {
     /// This is fine only because we *should fail on errors anyway*,
     /// since this is part of `fs-more`'s testing harness.
     fn assert_is_file_and_remove(&self);
+
+    /// Asserts the path at `self` points to an empty directory
+    /// (and not a symlink to one), and removes the directory.
+    ///
+    ///
+    /// # Panic
+    /// This will panic if the path does not point to a directory,
+    /// if the path points to a symlink, or if deletion fails.
+    ///
+    /// This is fine only because we *should fail on errors anyway*,
+    /// since this is part of `fs-more`'s testing harness.
+    fn assert_is_empty_directory_and_remove(&self);
+
+    /// Asserts the path at `self` is a symlink, and removes it.
+    ///
+    ///
+    /// # Panic
+    /// This will panic if the path does not point to a symlink,
+    /// or if deletion fails.
+    ///
+    /// This is fine only because we *should fail on errors anyway*,
+    /// since this is part of `fs-more`'s testing harness.
+    fn assert_is_symlink_and_remove(&self);
 }
 
 
@@ -235,10 +271,7 @@ where
         .metadata()
         .expect("unable to read file metadata (with follow)");
 
-    PathType::from_path_types(
-        metadata_no_follow.file_type(),
-        metadata_with_follow.file_type(),
-    )
+    PathType::from_path_types(metadata_no_follow.file_type(), metadata_with_follow.file_type())
 }
 
 
@@ -251,11 +284,7 @@ where
     #[track_caller]
     fn assert_exists(&self) {
         match self.as_path().try_exists() {
-            Ok(exists) => assert!(
-                exists,
-                "path does not exist: {}",
-                self.as_path().display()
-            ),
+            Ok(exists) => assert!(exists, "path does not exist: {}", self.as_path().display()),
             Err(error) => panic!(
                 "failed to determine whether the path exists or not (IO error): {}",
                 error
@@ -266,15 +295,8 @@ where
     #[track_caller]
     fn assert_not_exists(&self) {
         match self.as_path().try_exists() {
-            Ok(exists) => assert!(
-                !exists,
-                "path exists: {}",
-                self.as_path().display()
-            ),
-            Err(error) => panic!(
-                "failed to determine whether path exists or not: {}",
-                error
-            ),
+            Ok(exists) => assert!(!exists, "path exists: {}", self.as_path().display()),
+            Err(error) => panic!("failed to determine whether path exists or not: {}", error),
         }
     }
 
@@ -602,31 +624,37 @@ where
     {
         self.assert_not_exists();
 
-        symlink_to_directory(
-            self.as_path(),
-            destination_directory_path.as_ref(),
-        );
+        symlink_to_directory(self.as_path(), destination_directory_path.as_ref());
 
         self.assert_is_symlink_to_directory_and_destination_matches(destination_directory_path);
     }
 
     #[track_caller]
-    fn touch_if_missing(&self) {
-        if !self.as_path().exists() {
-            let parent_directory = self
-                .as_path()
-                .parent()
-                .expect("path does not have a parent directory");
+    fn assert_not_exists_and_create_empty_directory(&self) {
+        self.assert_not_exists();
 
-            if !parent_directory.exists() {
-                fs::create_dir_all(parent_directory)
-                    .expect("failed to create missing parent directory");
-            }
+        fs::create_dir_all(self.as_path()).expect("failed to create empty directory");
 
-            fs::File::create_new(self.as_path()).expect("failed to create empty file");
+        self.assert_is_directory_and_empty();
+    }
 
-            self.assert_is_file_and_not_symlink();
+    #[track_caller]
+    fn assert_not_exists_and_create_empty_file(&self) {
+        self.assert_not_exists();
+
+        let parent_directory = self
+            .as_path()
+            .parent()
+            .expect("path does not have a parent directory");
+
+        if !parent_directory.exists() {
+            fs::create_dir_all(parent_directory)
+                .expect("failed to create missing parent directory");
         }
+
+        fs::File::create_new(self.as_path()).expect("failed to create empty file");
+
+        self.assert_is_file_and_not_symlink();
     }
 
     #[track_caller]
@@ -646,5 +674,47 @@ where
         self.assert_is_file();
 
         fs::remove_file(self.as_path()).expect("failed to remove file");
+    }
+
+    #[track_caller]
+    fn assert_is_empty_directory_and_remove(&self) {
+        self.assert_is_directory_and_empty();
+
+        fs::remove_dir(self.as_path()).expect("failed to remove empty directory");
+
+        self.assert_not_exists();
+    }
+
+    #[track_caller]
+    fn assert_is_symlink_and_remove(&self) {
+        self.assert_is_any_symlink();
+
+        let resolved_destination_path =
+            fs::read_link(self.as_path()).expect("failed to follow symlink");
+
+        resolved_destination_path.assert_exists();
+
+
+        #[cfg(unix)]
+        {
+            fs::remove_file(self.as_path()).expect("failed to remove symlink");
+        }
+
+        #[cfg(windows)]
+        {
+            fs::remove_dir(self.as_path()).expect("failed to remove symlink");
+        }
+
+        #[cfg(not(any(unix, windows)))]
+        {
+            compile_error!(
+                "fs-more's test harness supports only the following values of target_family: \
+                unix and windows (notably, wasm is unsupported)."
+            );
+        }
+
+        resolved_destination_path.assert_exists();
+
+        self.assert_not_exists();
     }
 }

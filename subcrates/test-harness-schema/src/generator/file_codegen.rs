@@ -48,6 +48,14 @@ pub(crate) fn codegen_harness_file_entry(
     let file_struct_ident = format_ident!("{}", file_struct_name);
 
 
+
+    let file_relative_path = parent_relative_path.join(&file.name);
+    let file_relative_path_string = file_relative_path
+        .to_str()
+        .expect("invalid relative file path: not UTF-8!");
+
+
+
     // Imports of e.g. `PathBuf` and `FileSystemHarnessFile` must be
     // taken care of at the top level (see `generate_rust_source_file_for_schema`).
     let generated_file_initialization_code =
@@ -129,6 +137,12 @@ pub(crate) fn codegen_harness_file_entry(
         }
 
         impl AssertableInitialFileCapture for #file_struct_ident {}
+
+        impl AsRelativePath for #file_struct_ident {
+            fn as_path_relative_to_harness_root(&self) -> &Path {
+                Path::new(#file_relative_path_string)
+            }
+        }
     };
 
 

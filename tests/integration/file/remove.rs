@@ -6,7 +6,7 @@ use fs_more_test_harness::{
         AsPath,
     },
     error::TestResult,
-    tree_framework::FileSystemHarness,
+    tree_framework::{FileSystemHarness, FileSystemHarnessDirectory},
     trees::{empty::EmptyTree, simple::SimpleTree},
 };
 

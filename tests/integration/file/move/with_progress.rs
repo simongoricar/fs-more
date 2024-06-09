@@ -16,7 +16,7 @@ use fs_more_test_harness::{
     },
     case_sensitivity::detect_case_sensitivity_for_temp_dir,
     error::TestResult,
-    tree_framework::FileSystemHarness,
+    tree_framework::{FileSystemHarness, FileSystemHarnessDirectory},
     trees::simple::SimpleTree,
 };
 
@@ -65,10 +65,7 @@ pub fn move_file_with_progress_correctly_moves_the_file() -> TestResult {
 
     let last_progress = last_progress.unwrap();
 
-    assert_eq!(
-        last_progress.bytes_finished,
-        last_progress.bytes_total,
-    );
+    assert_eq!(last_progress.bytes_finished, last_progress.bytes_total,);
 
     assert_eq!(last_progress.bytes_total, file_source_size_bytes);
 

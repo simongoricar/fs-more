@@ -32,6 +32,8 @@ use tempfile::TempDir;
 use crate::tree_framework::FileSystemHarness;
 use crate::tree_framework::AsInitialFileStateRef;
 use crate::tree_framework::AssertableInitialFileCapture;
+use crate::tree_framework::FileSystemHarnessDirectory;
+use crate::tree_framework::AsRelativePath;
 use crate::tree_framework::initialize_empty_file;
 use crate::tree_framework::initialize_file_with_string;
 use crate::tree_framework::initialize_file_with_random_data;
@@ -81,6 +83,11 @@ impl AsInitialFileStateRef for ABin {
     }
 }
 impl AssertableInitialFileCapture for ABin {}
+impl AsRelativePath for ABin {
+    fn as_path_relative_to_harness_root(&self) -> &Path {
+        Path::new(".\\a.bin")
+    }
+}
 /**This is a file residing at `./foo/b.bin` (relative to the root of the test harness).
 
 <br>
@@ -121,6 +128,11 @@ impl AsInitialFileStateRef for BBin {
     }
 }
 impl AssertableInitialFileCapture for BBin {}
+impl AsRelativePath for BBin {
+    fn as_path_relative_to_harness_root(&self) -> &Path {
+        Path::new(".\\foo\\b.bin")
+    }
+}
 /**This is a file residing at `./foo/bar/c.bin` (relative to the root of the test harness).
 
 <br>
@@ -161,6 +173,11 @@ impl AsInitialFileStateRef for CBin {
     }
 }
 impl AssertableInitialFileCapture for CBin {}
+impl AsRelativePath for CBin {
+    fn as_path_relative_to_harness_root(&self) -> &Path {
+        Path::new(".\\foo\\bar\\c.bin")
+    }
+}
 /**This is a file residing at `./foo/bar/hello/world/d.bin` (relative to the root of the test harness).
 
 <br>
@@ -201,6 +218,11 @@ impl AsInitialFileStateRef for DBin {
     }
 }
 impl AssertableInitialFileCapture for DBin {}
+impl AsRelativePath for DBin {
+    fn as_path_relative_to_harness_root(&self) -> &Path {
+        Path::new(".\\foo\\bar\\hello\\world\\d.bin")
+    }
+}
 /**This is a sub-directory residing at `./foo/bar/hello/world` (relative to the root of the test harness).
 
 This directory has the following entries:
@@ -234,6 +256,12 @@ impl World {
 impl AsPath for World {
     fn as_path(&self) -> &Path {
         &self.directory_path
+    }
+}
+impl FileSystemHarnessDirectory for World {}
+impl AsRelativePath for World {
+    fn as_path_relative_to_harness_root(&self) -> &Path {
+        Path::new(".\\foo\\bar\\hello\\world")
     }
 }
 /**This is a sub-directory residing at `./foo/bar/hello` (relative to the root of the test harness).
@@ -272,6 +300,12 @@ impl Hello {
 impl AsPath for Hello {
     fn as_path(&self) -> &Path {
         &self.directory_path
+    }
+}
+impl FileSystemHarnessDirectory for Hello {}
+impl AsRelativePath for Hello {
+    fn as_path_relative_to_harness_root(&self) -> &Path {
+        Path::new(".\\foo\\bar\\hello")
     }
 }
 /**This is a sub-directory residing at `./foo/bar` (relative to the root of the test harness).
@@ -324,6 +358,12 @@ impl AsPath for Bar {
         &self.directory_path
     }
 }
+impl FileSystemHarnessDirectory for Bar {}
+impl AsRelativePath for Bar {
+    fn as_path_relative_to_harness_root(&self) -> &Path {
+        Path::new(".\\foo\\bar")
+    }
+}
 /**This is a sub-directory residing at `./foo` (relative to the root of the test harness).
 
 This directory has the following entries:
@@ -369,6 +409,12 @@ impl Foo {
 impl AsPath for Foo {
     fn as_path(&self) -> &Path {
         &self.directory_path
+    }
+}
+impl FileSystemHarnessDirectory for Foo {}
+impl AsRelativePath for Foo {
+    fn as_path_relative_to_harness_root(&self) -> &Path {
+        Path::new(".\\foo")
     }
 }
 /**A fs-more filesystem testing harness. Upon calling [`Self::initialize`],
@@ -442,5 +488,11 @@ impl FileSystemHarness for DeepTree {
 impl AsPath for DeepTree {
     fn as_path(&self) -> &Path {
         self.temporary_directory.path()
+    }
+}
+impl FileSystemHarnessDirectory for DeepTree {}
+impl AsRelativePath for DeepTree {
+    fn as_path_relative_to_harness_root(&self) -> &Path {
+        Path::new(".")
     }
 }

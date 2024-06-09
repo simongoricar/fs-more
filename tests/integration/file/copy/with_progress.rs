@@ -10,7 +10,7 @@ use fs_more_test_harness::{
     },
     error::TestResult,
     is_temporary_directory_case_sensitive,
-    tree_framework::{AssertableInitialFileCapture, FileSystemHarness},
+    tree_framework::{AssertableInitialFileCapture, FileSystemHarness, FileSystemHarnessDirectory},
     trees::simple::SimpleTree,
 };
 
@@ -77,15 +77,9 @@ pub fn copy_file_with_progress_creates_an_identical_copy_and_reports_sensible_pr
     let last_bytes_finished_report = last_bytes_finished_report.unwrap();
     let last_bytes_total_report = last_bytes_total_report.unwrap();
 
-    assert_eq!(
-        expected_final_file_size_bytes,
-        last_bytes_finished_report
-    );
+    assert_eq!(expected_final_file_size_bytes, last_bytes_finished_report);
 
-    assert_eq!(
-        expected_final_file_size_bytes,
-        last_bytes_total_report
-    );
+    assert_eq!(expected_final_file_size_bytes, last_bytes_total_report);
 
 
     harness
@@ -103,8 +97,6 @@ pub fn copy_file_with_progress_creates_an_identical_copy_and_reports_sensible_pr
     Ok(())
 }
 
-
-// TODO migrate other tests as well
 
 #[test]
 pub fn copy_file_with_progress_errors_when_trying_to_copy_into_self() -> TestResult {
