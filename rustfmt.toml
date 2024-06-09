@@ -11,7 +11,7 @@ merge_derives = false
 tab_spaces = 4
 use_field_init_shorthand = true
 use_try_shorthand = true
-fn_call_width = 50
+fn_call_width = 70
 
 # Unstable
 unstable_features = true
