@@ -418,7 +418,7 @@ impl DirectoryScan {
     /// ([time-of-check, time-of-use](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use)),
     /// just on a bigger scale.
     ///
-    /// The impact of this is---in most cases---relatively low, but it's worth noting.
+    /// The impact of this is---in most cases---relatively low, but it is worth noting.
     ///
     ///
     /// ## Impacts of scan depth limits
@@ -432,8 +432,6 @@ impl DirectoryScan {
     /// of the directory structure, see [`Self::covers_entire_directory_tree`].
     pub fn total_size_in_bytes(&self) -> Result<u64, DirectorySizeScanError> {
         let mut total_bytes = 0;
-
-        // TODO what about base directory? include that one as well
 
         for file_path in &self.files {
             let file_size_bytes = file_size_in_bytes(file_path).map_err(|error| match error {

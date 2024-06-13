@@ -1,9 +1,9 @@
 fs-more
 =======
 [![Crates.io Version](https://img.shields.io/crates/v/fs-more?style=flat-square)](https://crates.io/crates/fs-more)
-[![Minimum Supported Rust Version is 1.77.0](https://img.shields.io/badge/MSRV-1.77.0-brightgreen?style=flat-square)](https://github.com/simongoricar/fs-more/blob/master/Cargo.toml)
-[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](https://github.com/simongoricar/fs-more/blob/master/LICENSE)
-[![Documentation](https://img.shields.io/badge/docs-on%20docs.rs-green?style=flat-square)](https://docs.rs/fs-more)
+[![Minimum Supported Rust Version is 1.77.0](https://img.shields.io/badge/MSRV-1.77.0-brightgreen?style=flat-square)](https://releases.rs/docs/1.77.0/)
+[![License](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-blue?style=flat-square)](https://github.com/simongoricar/fs-more/blob/master/LICENSE-MIT)
+[![Documentation](https://img.shields.io/badge/docs-published-green?style=flat-square)](https://docs.rs/fs-more)
 
 
 
@@ -24,7 +24,7 @@ Includes copying or moving files and directories with progress reporting.
 ## Usage
 To add `fs-more` into your project, specify it as a dependency in your `Cargo.toml` file:
 ```toml
-fs-more = "0.3.0"
+fs-more = "0.4.0"
 ```
 
 
