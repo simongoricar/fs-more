@@ -216,10 +216,7 @@ impl DirectoryScan {
 
         let mut directory_scan_queue = Vec::new();
 
-        directory_scan_queue.push(PendingDirectoryScan::new(
-            directory_path.clone(),
-            0,
-        ));
+        directory_scan_queue.push(PendingDirectoryScan::new(directory_path.clone(), 0));
 
 
         while let Some(next_directory) = directory_scan_queue.pop() {
@@ -459,11 +456,9 @@ impl DirectoryScan {
 
         for directory_path in &self.directories {
             let directory_size_bytes = fs::metadata(directory_path)
-                .map_err(
-                    |_| DirectorySizeScanError::ScanEntryNoLongerExists {
-                        path: directory_path.to_path_buf(),
-                    },
-                )?
+                .map_err(|_| DirectorySizeScanError::ScanEntryNoLongerExists {
+                    path: directory_path.to_path_buf(),
+                })?
                 .len();
 
             total_bytes += directory_size_bytes;

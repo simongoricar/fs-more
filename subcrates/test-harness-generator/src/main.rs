@@ -26,13 +26,9 @@ fn collect_tree_schemas(
     schema_input_directory_path: &Path,
 ) -> Result<Vec<(PathBuf, FileSystemHarnessSchema)>> {
     if !schema_input_directory_path.exists() {
-        return Err(miette!(
-            "The provided tree schema directory path does not exist."
-        ));
+        return Err(miette!("The provided tree schema directory path does not exist."));
     } else if !schema_input_directory_path.is_dir() {
-        return Err(miette!(
-            "THe provided tree schema directory path is not a directory."
-        ));
+        return Err(miette!("THe provided tree schema directory path is not a directory."));
     }
 
 
@@ -161,12 +157,7 @@ fn generate_trees(options: GenerateTreeSourcesCommandArguments) -> Result<()> {
             &output_file_path,
             options.overwrite_existing_files.unwrap_or(false),
         )
-        .wrap_err_with(|| {
-            miette!(
-                "Failed to generate source file for schema {}.",
-                schema_name
-            )
-        })?;
+        .wrap_err_with(|| miette!("Failed to generate source file for schema {}.", schema_name))?;
     }
 
     Ok(())
@@ -223,4 +214,3 @@ fn main() -> Result<()> {
         CliCommand::GenerateTreeSources(codegen_args) => generate_trees(codegen_args),
     }
 }
-

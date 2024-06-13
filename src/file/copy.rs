@@ -302,18 +302,14 @@ where
         options.progress_update_byte_interval,
         bytes_total,
     );
-    let mut output_file_buffered = BufWriter::with_capacity(
-        options.write_buffer_size,
-        output_file_progress_monitored,
-    );
+    let mut output_file_buffered =
+        BufWriter::with_capacity(options.write_buffer_size, output_file_progress_monitored);
 
 
 
-    let final_number_of_bytes_copied = std::io::copy(
-        &mut input_file_buffered,
-        &mut output_file_buffered,
-    )
-    .map_err(|error| FileError::OtherIoError { error })?;
+    let final_number_of_bytes_copied =
+        std::io::copy(&mut input_file_buffered, &mut output_file_buffered)
+            .map_err(|error| FileError::OtherIoError { error })?;
 
 
 

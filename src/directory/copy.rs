@@ -154,14 +154,12 @@ pub(crate) fn copy_directory_unchecked(
                 .validated_destination_directory
                 .directory_path,
         )
-        .map_err(
-            |error| CopyDirectoryExecutionError::UnableToCreateDirectory {
-                directory_path: prepared_directory_copy
-                    .validated_destination_directory
-                    .directory_path,
-                error,
-            },
-        )?;
+        .map_err(|error| CopyDirectoryExecutionError::UnableToCreateDirectory {
+            directory_path: prepared_directory_copy
+                .validated_destination_directory
+                .directory_path,
+            error,
+        })?;
 
         num_directories_created += 1;
     }
@@ -194,19 +192,15 @@ pub(crate) fn copy_directory_unchecked(
 
 
                     if !destination_file_metadata.is_file() {
-                        return Err(
-                            CopyDirectoryExecutionError::DestinationEntryUnexpected {
-                                path: destination_file_path.clone(),
-                            },
-                        );
+                        return Err(CopyDirectoryExecutionError::DestinationEntryUnexpected {
+                            path: destination_file_path.clone(),
+                        });
                     }
 
                     if !can_overwrite_files {
-                        return Err(
-                            CopyDirectoryExecutionError::DestinationEntryUnexpected {
-                                path: destination_file_path.clone(),
-                            },
-                        );
+                        return Err(CopyDirectoryExecutionError::DestinationEntryUnexpected {
+                            path: destination_file_path.clone(),
+                        });
                     }
                 }
 
@@ -237,19 +231,15 @@ pub(crate) fn copy_directory_unchecked(
             } => {
                 if destination_directory_path.exists() {
                     if !destination_directory_path.is_dir() {
-                        return Err(
-                            CopyDirectoryExecutionError::DestinationEntryUnexpected {
-                                path: destination_directory_path.clone(),
-                            },
-                        );
+                        return Err(CopyDirectoryExecutionError::DestinationEntryUnexpected {
+                            path: destination_directory_path.clone(),
+                        });
                     }
 
                     if !can_ignore_existing_sub_directories {
-                        return Err(
-                            CopyDirectoryExecutionError::DestinationEntryUnexpected {
-                                path: destination_directory_path.clone(),
-                            },
-                        );
+                        return Err(CopyDirectoryExecutionError::DestinationEntryUnexpected {
+                            path: destination_directory_path.clone(),
+                        });
                     }
 
                     continue;
@@ -542,19 +532,15 @@ where
 
 
         if !destination_path_metadata.is_file() {
-            return Err(
-                CopyDirectoryExecutionError::DestinationEntryUnexpected {
-                    path: destination_path.clone(),
-                },
-            );
+            return Err(CopyDirectoryExecutionError::DestinationEntryUnexpected {
+                path: destination_path.clone(),
+            });
         }
 
         if !can_overwrite_destination_file {
-            return Err(
-                CopyDirectoryExecutionError::DestinationEntryUnexpected {
-                    path: destination_path.clone(),
-                },
-            );
+            return Err(CopyDirectoryExecutionError::DestinationEntryUnexpected {
+                path: destination_path.clone(),
+            });
         }
     }
 
@@ -659,27 +645,21 @@ where
 
     if destination_directory_exists {
         let destination_directory_metadata = fs::symlink_metadata(&destination_directory_path)
-            .map_err(
-                |error| CopyDirectoryExecutionError::UnableToAccessDestination {
-                    path: destination_directory_path.clone(),
-                    error,
-                },
-            )?;
+            .map_err(|error| CopyDirectoryExecutionError::UnableToAccessDestination {
+                path: destination_directory_path.clone(),
+                error,
+            })?;
 
         if !destination_directory_metadata.is_dir() {
-            return Err(
-                CopyDirectoryExecutionError::DestinationEntryUnexpected {
-                    path: destination_directory_path,
-                },
-            );
+            return Err(CopyDirectoryExecutionError::DestinationEntryUnexpected {
+                path: destination_directory_path,
+            });
         }
 
         if options.destination_directory_rule == DestinationDirectoryRule::DisallowExisting {
-            return Err(
-                CopyDirectoryExecutionError::DestinationEntryUnexpected {
-                    path: destination_directory_path,
-                },
-            );
+            return Err(CopyDirectoryExecutionError::DestinationEntryUnexpected {
+                path: destination_directory_path,
+            });
         }
 
         // If the destination directory rule does not forbid an existing sub-directory,
@@ -727,11 +707,9 @@ where
     // Create destination directory if needed.
     let mut progress = if validated_destination.state.exists() {
         if options.destination_directory_rule == DestinationDirectoryRule::DisallowExisting {
-            return Err(
-                CopyDirectoryExecutionError::DestinationEntryUnexpected {
-                    path: validated_destination.directory_path,
-                },
-            );
+            return Err(CopyDirectoryExecutionError::DestinationEntryUnexpected {
+                path: validated_destination.directory_path,
+            });
         }
 
         CopyDirectoryProgress {

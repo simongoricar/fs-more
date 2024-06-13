@@ -226,18 +226,14 @@ fn validate_destination_file_path(
         }
 
 
-        Ok(DestinationValidationAction::Continue(
-            ValidatedDestinationFilePath {
-                destination_file_path: canonical_destination_path,
-                exists: true,
-            },
-        ))
+        Ok(DestinationValidationAction::Continue(ValidatedDestinationFilePath {
+            destination_file_path: canonical_destination_path,
+            exists: true,
+        }))
     } else {
-        Ok(DestinationValidationAction::Continue(
-            ValidatedDestinationFilePath {
-                destination_file_path: destination_file_path.to_path_buf(),
-                exists: false,
-            },
-        ))
+        Ok(DestinationValidationAction::Continue(ValidatedDestinationFilePath {
+            destination_file_path: destination_file_path.to_path_buf(),
+            exists: false,
+        }))
     }
 }

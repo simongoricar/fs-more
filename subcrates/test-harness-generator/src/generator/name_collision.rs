@@ -16,11 +16,7 @@ impl NameCollisionAvoider {
         if let Some(usages_for_name) = self.names_with_usages.get_mut(preferred_struct_name) {
             *usages_for_name += 1;
 
-            format!(
-                "{}{}",
-                preferred_struct_name,
-                *usages_for_name - 2
-            )
+            format!("{}{}", preferred_struct_name, *usages_for_name - 2)
         } else {
             self.names_with_usages
                 .insert(preferred_struct_name.to_string(), 1);
@@ -40,21 +36,9 @@ mod test {
     fn collsion_avoider_works() {
         let mut avoider = NameCollisionAvoider::new_empty();
 
-        assert_eq!(
-            avoider.get_collision_free_name("HelloWorld"),
-            "HelloWorld"
-        );
-        assert_eq!(
-            avoider.get_collision_free_name("HelloWorld"),
-            "HelloWorld1"
-        );
-        assert_eq!(
-            avoider.get_collision_free_name("HelloWorld"),
-            "HelloWorld2"
-        );
-        assert_eq!(
-            avoider.get_collision_free_name("FooBar"),
-            "FooBar"
-        );
+        assert_eq!(avoider.get_collision_free_name("HelloWorld"), "HelloWorld");
+        assert_eq!(avoider.get_collision_free_name("HelloWorld"), "HelloWorld1");
+        assert_eq!(avoider.get_collision_free_name("HelloWorld"), "HelloWorld2");
+        assert_eq!(avoider.get_collision_free_name("FooBar"), "FooBar");
     }
 }

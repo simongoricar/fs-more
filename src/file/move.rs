@@ -229,12 +229,7 @@ where
         validated_source_file_path.as_path()
     };
 
-    if fs::rename(
-        source_file_path_to_rename,
-        &validated_destination_file_path,
-    )
-    .is_ok()
-    {
+    if fs::rename(source_file_path_to_rename, &validated_destination_file_path).is_ok() {
         // Get size of file that we just renamed.
         let target_file_path_metadata = fs::metadata(&validated_destination_file_path)
             .map_err(|error| FileError::OtherIoError { error })?;
@@ -254,11 +249,9 @@ where
         // Special case: if the original was a symlink to a file, we need to
         // delete the symlink, not the file it points to.
 
-        let num_bytes_copied = fs::copy(
-            &validated_source_file_path,
-            validated_destination_file_path,
-        )
-        .map_err(|error| FileError::OtherIoError { error })?;
+        let num_bytes_copied =
+            fs::copy(&validated_source_file_path, validated_destination_file_path)
+                .map_err(|error| FileError::OtherIoError { error })?;
 
         let source_file_path_to_remove = if source_file_was_symlink_to_file {
             // `source_file_path` instead of `validated_source_file_path` is intentional:
@@ -502,12 +495,7 @@ where
         validated_source_file_path.as_path()
     };
 
-    if fs::rename(
-        source_file_path_to_rename,
-        &validated_destination_file_path,
-    )
-    .is_ok()
-    {
+    if fs::rename(source_file_path_to_rename, &validated_destination_file_path).is_ok() {
         // Get size of file that we just renamed, emit one progress report, and return.
 
         let target_file_path_size_bytes = fs::metadata(&validated_destination_file_path)

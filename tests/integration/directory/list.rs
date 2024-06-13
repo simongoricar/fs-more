@@ -39,10 +39,7 @@ where
 
     let _ = scanned_path_set.drain().map(|scanned_path| {
         if !expected_path_set.contains(&scanned_path) {
-            panic!(
-                "path \"{}\" was not present in scanned paths",
-                scanned_path.display()
-            );
+            panic!("path \"{}\" was not present in scanned paths", scanned_path.display());
         }
     });
 }
@@ -141,10 +138,7 @@ pub fn directory_scan_calculates_correct_size() -> TestResult {
 
 
     let scanned_size_in_bytes = scan.total_size_in_bytes().unwrap();
-    assert_eq!(
-        scanned_size_in_bytes,
-        actual_size_of_harness_in_bytes
-    );
+    assert_eq!(scanned_size_in_bytes, actual_size_of_harness_in_bytes);
 
 
     harness.destroy();
@@ -177,10 +171,7 @@ pub fn directory_scan_calculates_correct_size_with_depth_limit() -> TestResult<(
     assert!(!scan.covers_entire_directory_tree());
 
     let scanned_size_in_bytes = scan.total_size_in_bytes().unwrap();
-    assert_eq!(
-        scanned_size_in_bytes,
-        actual_size_of_scan_in_bytes
-    );
+    assert_eq!(scanned_size_in_bytes, actual_size_of_scan_in_bytes);
 
 
     harness.destroy();
@@ -207,10 +198,7 @@ pub fn directory_size_in_bytes_produces_correct_information() -> TestResult {
     let directory_size_bytes =
         fs_more::directory::directory_size_in_bytes(harness.as_path(), false).unwrap();
 
-    assert_eq!(
-        directory_size_bytes,
-        actual_size_of_harness_in_bytes
-    );
+    assert_eq!(directory_size_bytes, actual_size_of_harness_in_bytes);
 
 
     harness.destroy();

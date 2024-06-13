@@ -75,12 +75,10 @@ pub(super) fn validate_source_directory_path(
             }
         }
         Err(error) => {
-            return Err(
-                SourceDirectoryPathValidationError::UnableToAccess {
-                    directory_path: source_directory_path.to_path_buf(),
-                    error,
-                },
-            );
+            return Err(SourceDirectoryPathValidationError::UnableToAccess {
+                directory_path: source_directory_path.to_path_buf(),
+                error,
+            });
         }
     }
 
@@ -103,22 +101,18 @@ pub(super) fn validate_source_directory_path(
             })?;
 
             if !metadata_with_follow.is_dir() {
-                return Err(
-                    SourceDirectoryPathValidationError::NotADirectory {
-                        path: source_directory_path.to_path_buf(),
-                    },
-                );
+                return Err(SourceDirectoryPathValidationError::NotADirectory {
+                    path: source_directory_path.to_path_buf(),
+                });
             } else {
                 true
             }
         } else if metadata_without_follow.is_dir() {
             false
         } else {
-            return Err(
-                SourceDirectoryPathValidationError::NotADirectory {
-                    path: source_directory_path.to_path_buf(),
-                },
-            );
+            return Err(SourceDirectoryPathValidationError::NotADirectory {
+                path: source_directory_path.to_path_buf(),
+            });
         }
     };
 
@@ -207,11 +201,9 @@ pub(super) fn validate_destination_directory_path(
     // If `destination_directory_path` exists, but does not point to a directory,
     // we should abort.
     if destination_directory_exists && !destination_directory_path.is_dir() {
-        return Err(
-            DestinationDirectoryPathValidationError::NotADirectory {
-                directory_path: destination_directory_path.to_path_buf(),
-            },
-        );
+        return Err(DestinationDirectoryPathValidationError::NotADirectory {
+            directory_path: destination_directory_path.to_path_buf(),
+        });
     }
 
 
@@ -257,16 +249,11 @@ pub(super) fn validate_destination_directory_path(
 
     match destination_directory_rule {
         DestinationDirectoryRule::DisallowExisting => {
-            if !matches!(
-                destination_directory_state,
-                DestinationDirectoryState::DoesNotExist
-            ) {
-                return Err(
-                    DestinationDirectoryPathValidationError::AlreadyExists {
-                        path: resolved_destination_directory_path,
-                        destination_directory_rule,
-                    },
-                );
+            if !matches!(destination_directory_state, DestinationDirectoryState::DoesNotExist) {
+                return Err(DestinationDirectoryPathValidationError::AlreadyExists {
+                    path: resolved_destination_directory_path,
+                    destination_directory_rule,
+                });
             }
         }
         DestinationDirectoryRule::AllowEmpty => {
@@ -274,12 +261,10 @@ pub(super) fn validate_destination_directory_path(
                 destination_directory_state,
                 DestinationDirectoryState::DoesNotExist | DestinationDirectoryState::IsEmpty
             ) {
-                return Err(
-                    DestinationDirectoryPathValidationError::NotEmpty {
-                        directory_path: resolved_destination_directory_path,
-                        destination_directory_rule,
-                    },
-                );
+                return Err(DestinationDirectoryPathValidationError::NotEmpty {
+                    directory_path: resolved_destination_directory_path,
+                    destination_directory_rule,
+                });
             }
         }
         DestinationDirectoryRule::AllowNonEmpty { .. } => {}
@@ -310,12 +295,10 @@ pub(super) fn validate_source_destination_directory_pair(
     // Ensure `destination_directory_path` isn't equal,
     // or a subdirectory of, `source_directory_path`˙.
     if destination_directory_path.starts_with(source_directory_path) {
-        return Err(
-            DestinationDirectoryPathValidationError::DescendantOfSourceDirectory {
-                destination_directory_path: destination_directory_path.to_path_buf(),
-                source_directory_path: source_directory_path.to_path_buf(),
-            },
-        );
+        return Err(DestinationDirectoryPathValidationError::DescendantOfSourceDirectory {
+            destination_directory_path: destination_directory_path.to_path_buf(),
+            source_directory_path: source_directory_path.to_path_buf(),
+        });
     }
 
     Ok(())
@@ -403,9 +386,9 @@ fn scan_and_plan_directory_copy(
                 &new_directory_path_without_symlink_follows,
                 &destination_directory_path,
             )
-            .map_err(
-                |error| CopyDirectoryPlanError::EntryEscapesSourceDirectory { path: error.path },
-            )?;
+            .map_err(|error| CopyDirectoryPlanError::EntryEscapesSourceDirectory {
+                path: error.path,
+            })?;
 
 
             let item_type = directory_item.file_type().map_err(|error| {
@@ -577,11 +560,9 @@ fn check_operation_queue_for_collisions(
                         })?;
 
                     if destination_file_exists {
-                        return Err(
-                            CopyDirectoryPlanError::DestinationItemAlreadyExists {
-                                path: destination_file_path.clone(),
-                            },
-                        );
+                        return Err(CopyDirectoryPlanError::DestinationItemAlreadyExists {
+                            path: destination_file_path.clone(),
+                        });
                     }
                 }
             }
@@ -598,11 +579,9 @@ fn check_operation_queue_for_collisions(
                         })?;
 
                     if destination_directory_exists {
-                        return Err(
-                            CopyDirectoryPlanError::DestinationItemAlreadyExists {
-                                path: destination_directory_path.clone(),
-                            },
-                        );
+                        return Err(CopyDirectoryPlanError::DestinationItemAlreadyExists {
+                            path: destination_directory_path.clone(),
+                        });
                     }
                 }
             }
@@ -706,10 +685,7 @@ impl DirectoryCopyPrepared {
         destination_directory_path: &Path,
         destination_directory_rule: DestinationDirectoryRule,
     ) -> Result<
-        (
-            ValidatedSourceDirectory,
-            ValidatedDestinationDirectory,
-        ),
+        (ValidatedSourceDirectory, ValidatedDestinationDirectory),
         CopyDirectoryPreparationError,
     > {
         let validated_source_directory = validate_source_directory_path(source_directory_path)?;
@@ -723,10 +699,7 @@ impl DirectoryCopyPrepared {
             &validated_target_directory.directory_path,
         )?;
 
-        Ok((
-            validated_source_directory,
-            validated_target_directory,
-        ))
+        Ok((validated_source_directory, validated_target_directory))
     }
 
     /// Scans the source directory and prepares a plan (a set of operations)
