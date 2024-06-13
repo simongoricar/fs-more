@@ -1,6 +1,3 @@
-#[deprecated]
-pub mod assertable_old;
-
 pub mod assertable;
 mod content_assertion;
 pub mod error;
@@ -11,8 +8,6 @@ mod seeded_data;
 pub mod trees;
 
 pub mod case_sensitivity;
-#[deprecated]
-pub mod trees_old;
 
 pub mod tree_framework;
 

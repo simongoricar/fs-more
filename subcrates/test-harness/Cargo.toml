@@ -7,7 +7,6 @@ publish = false
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-fs-more-test-harness-macros = { path = "../test-harness-macros" }
 fs-more-test-harness-schema = { path = "../test-harness-schema" }
 
 assert_fs = "1.0.13"
