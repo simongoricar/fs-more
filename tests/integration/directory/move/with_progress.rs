@@ -256,7 +256,7 @@ pub fn move_directory_with_progress_does_not_preserve_symlinks_when_destination_
 
     let deep_harness_non_symlink_copy = DeepTree::initialize();
 
-    let move_destination_harness = EmptyTree::initialize();
+    let move_destination_harness = SimpleTree::initialize();
 
 
     {
@@ -278,7 +278,7 @@ pub fn move_directory_with_progress_does_not_preserve_symlinks_when_destination_
     };
 
 
-    deep_harness.assert_is_directory_and_fully_matches_secondary_directory_with_options(
+    deep_harness.assert_is_directory_and_has_contents_of_secondary_directory_with_options(
         deep_harness_non_symlink_copy.as_path(),
         false,
     );

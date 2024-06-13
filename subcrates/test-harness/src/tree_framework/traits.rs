@@ -28,6 +28,8 @@ pub trait FileSystemHarnessDirectory: AsPath {
 }
 
 pub trait AsRelativePath {
+    /// Returns a relative path for this file or directory.
+    /// The path will be relative to the root of the test harness.
     fn as_path_relative_to_harness_root(&self) -> &Path;
 }
 

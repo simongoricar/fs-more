@@ -10,7 +10,12 @@ use fs_more_test_harness::{
     },
     error::TestResult,
     is_temporary_directory_case_sensitive,
-    tree_framework::{AssertableInitialFileCapture, FileSystemHarness, FileSystemHarnessDirectory},
+    tree_framework::{
+        AsRelativePath,
+        AssertableInitialFileCapture,
+        FileSystemHarness,
+        FileSystemHarnessDirectory,
+    },
     trees::simple::SimpleTree,
 };
 
@@ -216,7 +221,7 @@ pub fn copy_file_with_progress_errors_when_trying_to_copy_into_self_even_when_mo
     let is_fs_case_sensitive = is_temporary_directory_case_sensitive();
 
 
-    let source_file_size_bytes = harness.yes.no_bin.size_in_bytes();
+    let source_file_size_bytes = harness.yes.hello_world_txt.size_in_bytes();
 
 
     let destination_file_path = {
@@ -234,7 +239,7 @@ pub fn copy_file_with_progress_errors_when_trying_to_copy_into_self_even_when_mo
             .yes
             .as_path()
             .join("..")
-            .join(harness.yes.as_path().file_name().unwrap())
+            .join(harness.yes.as_path_relative_to_harness_root())
             .join(hello_world_uppercased_file_name)
     };
 
