@@ -8,7 +8,7 @@ use quote::{format_ident, quote};
 use syn::Ident;
 
 use super::{file_codegen::codegen_harness_file_entry, NameCollisionAvoider};
-use crate::schema::{FileSystemHarnessDirectoryEntry, FileSystemHarnessEntry};
+use crate::schema::{DirectoryEntry, FileSystemHarnessEntry};
 
 
 pub(crate) struct GeneratedHarnessDirectoryEntry {
@@ -27,7 +27,7 @@ pub(crate) fn codegen_harness_directory_entry(
     struct_name_collision_avoider: &mut NameCollisionAvoider,
     root_harness_struct_ident: &Ident,
     parent_relative_path: &Path,
-    directory: &FileSystemHarnessDirectoryEntry,
+    directory: &DirectoryEntry,
 ) -> GeneratedHarnessDirectoryEntry {
     let friendly_upper_camel_case_directory_name = directory
         .name

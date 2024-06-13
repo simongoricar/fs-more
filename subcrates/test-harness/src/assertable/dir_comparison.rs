@@ -331,20 +331,18 @@ fn ensure_primary_directory_precisely_contains_secondary_directory_inner(
                 .join(entry_file_name);
 
             let remapped_path_type = PathType::from_path(&remapped_onto_comparison_target)
-                .map_err(
-                    |error| DirectoryComparisonErrorInner::UnableToAccessPath {
-                        path: remapped_onto_comparison_target.clone(),
-                        error,
-                    },
-                )?;
+                .map_err(|error| DirectoryComparisonErrorInner::UnableToAccessPath {
+                    path: remapped_onto_comparison_target.clone(),
+                    error,
+                })?;
 
 
 
             match entry_path_type {
                 PathType::NotFound => {
-                    return Err(
-                        DirectoryComparisonErrorInner::InvalidDirectoryEntry { path: entry_path },
-                    );
+                    return Err(DirectoryComparisonErrorInner::InvalidDirectoryEntry {
+                        path: entry_path,
+                    });
                 }
                 PathType::BareFile | PathType::SymlinkToFile => {
                     // Scanned path is file.
@@ -365,12 +363,10 @@ fn ensure_primary_directory_precisely_contains_secondary_directory_inner(
                             }
                         }
                         Err(error) => {
-                            return Err(
-                                DirectoryComparisonErrorInner::UnableToAccessPath {
-                                    path: remapped_onto_comparison_target,
-                                    error,
-                                },
-                            );
+                            return Err(DirectoryComparisonErrorInner::UnableToAccessPath {
+                                path: remapped_onto_comparison_target,
+                                error,
+                            });
                         }
                     }
 
@@ -385,13 +381,11 @@ fn ensure_primary_directory_precisely_contains_secondary_directory_inner(
                     );
 
                     if let Err(comparison_error) = comparison_result {
-                        return Err(
-                            DirectoryComparisonErrorInner::FileComparisonError {
-                                original_path: entry_path,
-                                expected_path: remapped_onto_comparison_target,
-                                error: comparison_error,
-                            },
-                        );
+                        return Err(DirectoryComparisonErrorInner::FileComparisonError {
+                            original_path: entry_path,
+                            expected_path: remapped_onto_comparison_target,
+                            error: comparison_error,
+                        });
                     }
                 }
                 PathType::BareDirectory => {
@@ -436,13 +430,13 @@ fn ensure_primary_directory_precisely_contains_secondary_directory_inner(
                                 );
                             }
 
-                            let resolved_remapped_symlink_path =
-                                fs::read_link(&remapped_onto_comparison_target).map_err(
-                                    |error| DirectoryComparisonErrorInner::UnableToAccessPath {
-                                        path: entry_path.clone(),
-                                        error,
-                                    },
-                                )?;
+                            let resolved_remapped_symlink_path = fs::read_link(
+                                &remapped_onto_comparison_target,
+                            )
+                            .map_err(|error| DirectoryComparisonErrorInner::UnableToAccessPath {
+                                path: entry_path.clone(),
+                                error,
+                            })?;
 
                             scan_queue.push_front(PendingDirectory {
                                 directory_path_to_scan: entry_path,
@@ -494,13 +488,13 @@ fn ensure_primary_directory_precisely_contains_secondary_directory_inner(
                             // directory is a symlink to a directory. We should now resolve
                             // the symlinks and queue them for comparison.
 
-                            let resolved_remapped_symlink_path =
-                                fs::read_link(&remapped_onto_comparison_target).map_err(
-                                    |error| DirectoryComparisonErrorInner::UnableToAccessPath {
-                                        path: remapped_onto_comparison_target.clone(),
-                                        error,
-                                    },
-                                )?;
+                            let resolved_remapped_symlink_path = fs::read_link(
+                                &remapped_onto_comparison_target,
+                            )
+                            .map_err(|error| DirectoryComparisonErrorInner::UnableToAccessPath {
+                                path: remapped_onto_comparison_target.clone(),
+                                error,
+                            })?;
 
 
                             scan_queue.push_front(PendingDirectory {
@@ -543,9 +537,9 @@ fn ensure_primary_directory_precisely_contains_secondary_directory_inner(
                     }
                 }
                 PathType::Unrecognized => {
-                    return Err(
-                        DirectoryComparisonErrorInner::InvalidDirectoryEntry { path: entry_path },
-                    );
+                    return Err(DirectoryComparisonErrorInner::InvalidDirectoryEntry {
+                        path: entry_path,
+                    });
                 }
             }
         }
@@ -628,20 +622,24 @@ mod test {
     //      and assert_primary_directory_fully_matches_secondary_directory
 
     use super::*;
-    use crate::trees_old::DeepTreeHarness;
+    use crate::{assertable::AsPath, tree_framework::FileSystemHarness, trees::deep::DeepTree};
 
 
     #[test]
     fn two_identical_directories_match() {
-        let deep_tree = DeepTreeHarness::new().unwrap();
-        let deep_tree_copy = DeepTreeHarness::new().unwrap();
+        let deep_tree = DeepTree::initialize();
+        let deep_tree_copy = DeepTree::initialize();
 
         assert_primary_directory_fully_matches_secondary_directory(
-            deep_tree.root.path(),
-            deep_tree_copy.root.path(),
+            deep_tree.as_path(),
+            deep_tree_copy.as_path(),
             DirectoryComparisonOptions {
                 strict_symlink_comparison: true,
             },
         );
+
+
+        deep_tree.destroy();
+        deep_tree_copy.destroy();
     }
 }

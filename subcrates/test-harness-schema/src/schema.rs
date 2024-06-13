@@ -19,7 +19,7 @@ pub enum FileDataConfiguration {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
-pub struct FileSystemHarnessFileEntry {
+pub struct FileEntry {
     /// File name (including extension).
     pub name: String,
 
@@ -30,7 +30,7 @@ pub struct FileSystemHarnessFileEntry {
 
 
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
-pub struct FileSystemHarnessDirectoryEntry {
+pub struct DirectoryEntry {
     /// Directory name.
     pub name: String,
 
@@ -38,6 +38,7 @@ pub struct FileSystemHarnessDirectoryEntry {
     /// inside this directory.
     pub entries: Option<Vec<FileSystemHarnessEntry>>,
 }
+
 
 /// Describes an entry in a tree - a file or a directory.
 ///
@@ -47,10 +48,10 @@ pub struct FileSystemHarnessDirectoryEntry {
 #[serde(tag = "type")]
 pub enum FileSystemHarnessEntry {
     #[serde(rename = "file")]
-    File(FileSystemHarnessFileEntry),
+    File(FileEntry),
 
     #[serde(rename = "directory")]
-    Directory(FileSystemHarnessDirectoryEntry),
+    Directory(DirectoryEntry),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]

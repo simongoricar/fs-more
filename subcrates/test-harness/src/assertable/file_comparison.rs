@@ -103,6 +103,7 @@ pub(crate) fn ensure_contents_of_files_are_equal_inner(
         })?;
 
 
+    #[allow(clippy::if_same_then_else)]
     if options.strict_symlink_comparison {
         if first_file_metadata_no_follow.is_symlink()
             && !second_file_metadata_no_follow.is_symlink()
@@ -137,12 +138,10 @@ pub(crate) fn ensure_contents_of_files_are_equal_inner(
         let file = OpenOptions::new()
             .read(true)
             .open(first_file_path)
-            .map_err(
-                |error| FileComparisonErrorInner::UnableToReadFile {
-                    file_path: first_file_path.to_path_buf(),
-                    error,
-                },
-            )?;
+            .map_err(|error| FileComparisonErrorInner::UnableToReadFile {
+                file_path: first_file_path.to_path_buf(),
+                error,
+            })?;
 
         BufReader::with_capacity(FILE_READ_BUFFER_SIZE, file)
     };
@@ -151,12 +150,10 @@ pub(crate) fn ensure_contents_of_files_are_equal_inner(
         let file = OpenOptions::new()
             .read(true)
             .open(second_file_path)
-            .map_err(
-                |error| FileComparisonErrorInner::UnableToReadFile {
-                    file_path: second_file_path.to_path_buf(),
-                    error,
-                },
-            )?;
+            .map_err(|error| FileComparisonErrorInner::UnableToReadFile {
+                file_path: second_file_path.to_path_buf(),
+                error,
+            })?;
 
         BufReader::with_capacity(FILE_READ_BUFFER_SIZE, file)
     };
@@ -167,20 +164,16 @@ pub(crate) fn ensure_contents_of_files_are_equal_inner(
         first_file.bytes().zip(second_file.bytes()).enumerate()
     {
         let first_file_value =
-            first_file_value.map_err(
-                |error| FileComparisonErrorInner::UnableToReadFile {
-                    file_path: first_file_path.to_path_buf(),
-                    error,
-                },
-            )?;
+            first_file_value.map_err(|error| FileComparisonErrorInner::UnableToReadFile {
+                file_path: first_file_path.to_path_buf(),
+                error,
+            })?;
 
         let second_file_value =
-            second_file_value.map_err(
-                |error| FileComparisonErrorInner::UnableToReadFile {
-                    file_path: second_file_path.to_path_buf(),
-                    error,
-                },
-            )?;
+            second_file_value.map_err(|error| FileComparisonErrorInner::UnableToReadFile {
+                file_path: second_file_path.to_path_buf(),
+                error,
+            })?;
 
 
         if first_file_value != second_file_value {

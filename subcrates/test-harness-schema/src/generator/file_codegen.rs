@@ -8,7 +8,7 @@ use quote::{format_ident, quote};
 use syn::Ident;
 
 use super::NameCollisionAvoider;
-use crate::schema::{FileDataConfiguration, FileSystemHarnessFileEntry};
+use crate::schema::{FileDataConfiguration, FileEntry};
 
 
 pub(crate) struct GeneratedHarnessFileEntry {
@@ -25,7 +25,7 @@ pub(crate) fn codegen_harness_file_entry(
     struct_name_collision_avoider: &mut NameCollisionAvoider,
     root_harness_struct_ident: &Ident,
     parent_relative_path: &Path,
-    file: &FileSystemHarnessFileEntry,
+    file: &FileEntry,
 ) -> GeneratedHarnessFileEntry {
     let friendly_upper_camel_case_file_name = file
         .name
