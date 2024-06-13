@@ -5,7 +5,6 @@ use std::{
 
 use_enabled_fs_module!();
 
-use cfg_if::cfg_if;
 
 use super::{
     common::DestinationDirectoryRule,
@@ -217,12 +216,14 @@ pub(super) fn validate_destination_directory_path(
             )?;
 
 
-        cfg_if! {
-            if #[cfg(feature = "dunce")] {
-                dunce::simplified(&canonical_destination_directory_path).to_path_buf()
-            } else {
-                canonical_destination_directory_path
-            }
+        #[cfg(feature = "dunce")]
+        {
+            dunce::simplified(&canonical_destination_directory_path).to_path_buf()
+        }
+
+        #[cfg(not(feature = "dunce"))]
+        {
+            canonical_destination_directory_path
         }
     } else {
         destination_directory_path.to_path_buf()
