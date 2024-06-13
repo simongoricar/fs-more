@@ -34,7 +34,7 @@ use crate::assertable::r#trait::AssertablePath;
 use crate::assertable::r#trait::CaptureableFilePath;
 use crate::assertable::file_capture::CapturedFileState;
 use crate::assertable::file_capture::FileState;
-use fs_more_test_harness_schema::schema::FileDataConfiguration;
+use fs_more_test_harness_generator::schema::FileDataConfiguration;
 /**A fs-more filesystem testing harness. Upon calling [`Self::initialize`],
 it sets up a temporary directory and initializes the entire configured file tree.
 When it's dropped or when [`Self::destroy`] is called, the temporary directory is removed.

@@ -42,7 +42,7 @@ use crate::assertable::r#trait::AssertablePath;
 use crate::assertable::r#trait::CaptureableFilePath;
 use crate::assertable::file_capture::CapturedFileState;
 use crate::assertable::file_capture::FileState;
-use fs_more_test_harness_schema::schema::FileDataConfiguration;
+use fs_more_test_harness_generator::schema::FileDataConfiguration;
 /**This is a file residing at `./a.bin` (relative to the root of the test harness).
 
 <br>

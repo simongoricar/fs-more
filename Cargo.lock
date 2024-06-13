@@ -306,7 +306,7 @@ name = "fs-more-test-harness"
 version = "0.1.0"
 dependencies = [
  "assert_fs",
- "fs-more-test-harness-schema",
+ "fs-more-test-harness-generator",
  "once_cell",
  "rand",
  "rand_chacha",
@@ -315,7 +315,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fs-more-test-harness-schema"
+name = "fs-more-test-harness-generator"
 version = "0.1.0"
 dependencies = [
  "clap",

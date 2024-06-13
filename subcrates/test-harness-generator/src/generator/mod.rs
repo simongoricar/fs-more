@@ -342,7 +342,7 @@ pub fn generate_rust_source_file_for_schema(
         use crate::assertable::file_capture::CapturedFileState;
         use crate::assertable::file_capture::FileState;
 
-        use fs_more_test_harness_schema::schema::FileDataConfiguration;
+        use fs_more_test_harness_generator::schema::FileDataConfiguration;
 
         #token_stream_to_prepend
 

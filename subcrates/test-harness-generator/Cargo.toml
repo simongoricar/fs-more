@@ -1,5 +1,5 @@
 [package]
-name = "fs-more-test-harness-schema"
+name = "fs-more-test-harness-generator"
 version = "0.1.0"
 edition = "2021"
 
