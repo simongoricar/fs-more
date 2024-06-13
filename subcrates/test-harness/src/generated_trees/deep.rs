@@ -86,7 +86,7 @@ impl AsInitialFileStateRef for ABin {
 impl AssertableInitialFileCapture for ABin {}
 impl AsRelativePath for ABin {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new(".\\a.bin")
+        Path::new("./a.bin")
     }
 }
 /**This is a file residing at `./foo/b.bin` (relative to the root of the test harness).
@@ -132,7 +132,7 @@ impl AsInitialFileStateRef for BBin {
 impl AssertableInitialFileCapture for BBin {}
 impl AsRelativePath for BBin {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new(".\\foo\\b.bin")
+        Path::new("./foo/b.bin")
     }
 }
 /**This is a file residing at `./foo/bar/c.bin` (relative to the root of the test harness).
@@ -178,7 +178,7 @@ impl AsInitialFileStateRef for CBin {
 impl AssertableInitialFileCapture for CBin {}
 impl AsRelativePath for CBin {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new(".\\foo\\bar\\c.bin")
+        Path::new("./foo/bar/c.bin")
     }
 }
 /**This is a file residing at `./foo/bar/hello/world/d.bin` (relative to the root of the test harness).
@@ -224,7 +224,7 @@ impl AsInitialFileStateRef for DBin {
 impl AssertableInitialFileCapture for DBin {}
 impl AsRelativePath for DBin {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new(".\\foo\\bar\\hello\\world\\d.bin")
+        Path::new("./foo/bar/hello/world/d.bin")
     }
 }
 /**This is a sub-directory residing at `./foo/bar/hello/world` (relative to the root of the test harness).

@@ -51,7 +51,7 @@ pub(crate) fn codegen_harness_file_entry(
 
     let file_relative_path = parent_relative_path.join(&file.name);
     let file_relative_path_string = file_relative_path
-        .to_str()
+        .to_slash()
         .expect("invalid relative file path: not UTF-8!");
 
 

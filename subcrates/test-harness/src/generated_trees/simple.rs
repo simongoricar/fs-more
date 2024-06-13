@@ -76,7 +76,7 @@ impl AsInitialFileStateRef for EmptyTxt {
 impl AssertableInitialFileCapture for EmptyTxt {}
 impl AsRelativePath for EmptyTxt {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new(".\\empty.txt")
+        Path::new("./empty.txt")
     }
 }
 /**This is a file residing at `./yes/hello-world.txt` (relative to the root of the test harness).
@@ -118,7 +118,7 @@ impl AsInitialFileStateRef for HelloWorldTxt {
 impl AssertableInitialFileCapture for HelloWorldTxt {}
 impl AsRelativePath for HelloWorldTxt {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new(".\\yes\\hello-world.txt")
+        Path::new("./yes/hello-world.txt")
     }
 }
 /**This is a file residing at `./yes/no.bin` (relative to the root of the test harness).
@@ -164,7 +164,7 @@ impl AsInitialFileStateRef for NoBin {
 impl AssertableInitialFileCapture for NoBin {}
 impl AsRelativePath for NoBin {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new(".\\yes\\no.bin")
+        Path::new("./yes/no.bin")
     }
 }
 /**This is a sub-directory residing at `./yes` (relative to the root of the test harness).
