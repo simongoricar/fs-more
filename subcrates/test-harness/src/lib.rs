@@ -2,8 +2,6 @@ pub mod assertable;
 mod content_assertion;
 pub mod error;
 
-mod seeded_data;
-
 #[path = "generated_trees/mod.rs"]
 pub mod trees;
 
