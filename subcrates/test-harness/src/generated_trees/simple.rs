@@ -221,7 +221,7 @@ impl AsPath for Yes {
 impl FileSystemHarnessDirectory for Yes {}
 impl AsRelativePath for Yes {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new(".\\yes")
+        Path::new("./yes")
     }
 }
 /**A fs-more filesystem testing harness. Upon calling [`Self::initialize`],

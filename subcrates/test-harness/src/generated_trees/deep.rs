@@ -266,7 +266,7 @@ impl AsPath for World {
 impl FileSystemHarnessDirectory for World {}
 impl AsRelativePath for World {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new(".\\foo\\bar\\hello\\world")
+        Path::new("./foo/bar/hello/world")
     }
 }
 /**This is a sub-directory residing at `./foo/bar/hello` (relative to the root of the test harness).
@@ -311,7 +311,7 @@ impl AsPath for Hello {
 impl FileSystemHarnessDirectory for Hello {}
 impl AsRelativePath for Hello {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new(".\\foo\\bar\\hello")
+        Path::new("./foo/bar/hello")
     }
 }
 /**This is a sub-directory residing at `./foo/bar` (relative to the root of the test harness).
@@ -368,7 +368,7 @@ impl AsPath for Bar {
 impl FileSystemHarnessDirectory for Bar {}
 impl AsRelativePath for Bar {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new(".\\foo\\bar")
+        Path::new("./foo/bar")
     }
 }
 /**This is a sub-directory residing at `./foo` (relative to the root of the test harness).
@@ -422,7 +422,7 @@ impl AsPath for Foo {
 impl FileSystemHarnessDirectory for Foo {}
 impl AsRelativePath for Foo {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new(".\\foo")
+        Path::new("./foo")
     }
 }
 /**A fs-more filesystem testing harness. Upon calling [`Self::initialize`],

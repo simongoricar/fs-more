@@ -53,7 +53,7 @@ pub(crate) fn codegen_harness_directory_entry(
 
     let directory_relative_path = parent_relative_path.join(&directory.name);
     let directory_relative_path_string = directory_relative_path
-        .to_str()
+        .to_slash()
         .expect("invalid relative directory path: not UTF-8!");
 
 
