@@ -1,11 +1,52 @@
 use std::{
+    fmt::Debug,
     fs::{self, OpenOptions},
     io::prelude::Read,
     path::{Path, PathBuf},
 };
 
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+fn format_abbreviated_u8_slice(slice: &[u8], maximum_displayed_length: usize) -> String {
+    if slice.len() <= maximum_displayed_length {
+        return format!("{:?}", slice);
+    }
+
+
+    let mut elements = Vec::with_capacity(slice.len().min(maximum_displayed_length));
+
+    for element in slice.iter().take(maximum_displayed_length) {
+        elements.push(format!("{}", *element));
+    }
+
+
+    format!(
+        "[{}, ... ({} remaining)]",
+        elements.join(", "),
+        slice.len().saturating_sub(maximum_displayed_length)
+    )
+}
+
+fn format_abbreviated_string(slice: &[u8], maximum_displayed_chars: usize) -> String {
+    let Ok(as_string) = String::from_utf8(slice.to_vec()) else {
+        return "(not UTF-8)".to_string();
+    };
+
+
+    format!(
+        "{} [{} remaining]",
+        as_string
+            .chars()
+            .take(maximum_displayed_chars)
+            .collect::<String>(),
+        as_string
+            .chars()
+            .count()
+            .saturating_sub(maximum_displayed_chars)
+    )
+}
+
+
+#[derive(Clone, PartialEq, Eq)]
 pub enum FileState {
     NonExistent,
     Empty,
@@ -47,6 +88,27 @@ impl FileState {
     #[inline]
     pub fn equals_other_file_state(&self, other: &Self) -> bool {
         self == other
+    }
+}
+
+impl Debug for FileState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FileState::NonExistent => write!(f, "FileState::NonExistent"),
+            FileState::Empty => write!(f, "FileState::Empty"),
+            FileState::NonEmpty { content } => {
+                write!(
+                    f,
+                    "FileState::NonEmpty {{\n  \
+                        {}: {}\n  \
+                        {}\n\
+                    }}",
+                    humansize::format_size(content.len(), humansize::BINARY),
+                    format_abbreviated_u8_slice(content, 12),
+                    format_abbreviated_string(content, 12)
+                )
+            }
+        }
     }
 }
 

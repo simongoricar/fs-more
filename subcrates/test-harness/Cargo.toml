@@ -9,9 +9,8 @@ publish = false
 [dependencies]
 fs-more-test-harness-generator = { path = "../test-harness-generator" }
 
-assert_fs = "1.0.13"
-once_cell = "1.18.0"
 rand = "0.8.5"
 rand_chacha = "0.3.1"
 thiserror = "1.0.48"
 tempfile = "3.10.1"
+humansize = "2.1.3"

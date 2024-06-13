@@ -53,6 +53,7 @@ pub struct ABin {
     initial_state: FileState,
 }
 impl ABin {
+    #[track_caller]
     fn new<S>(parent_path: PathBuf, file_name: S) -> Self
     where
         S: Into<String>,
@@ -98,6 +99,7 @@ pub struct BBin {
     initial_state: FileState,
 }
 impl BBin {
+    #[track_caller]
     fn new<S>(parent_path: PathBuf, file_name: S) -> Self
     where
         S: Into<String>,
@@ -143,6 +145,7 @@ pub struct CBin {
     initial_state: FileState,
 }
 impl CBin {
+    #[track_caller]
     fn new<S>(parent_path: PathBuf, file_name: S) -> Self
     where
         S: Into<String>,
@@ -188,6 +191,7 @@ pub struct DBin {
     initial_state: FileState,
 }
 impl DBin {
+    #[track_caller]
     fn new<S>(parent_path: PathBuf, file_name: S) -> Self
     where
         S: Into<String>,
@@ -241,6 +245,7 @@ pub struct World {
     pub d_bin: DBin,
 }
 impl World {
+    #[track_caller]
     fn new<S>(parent_path: PathBuf, directory_name: S) -> Self
     where
         S: Into<String>,
@@ -285,6 +290,7 @@ This directory has the following entries:
     pub world: World,
 }
 impl Hello {
+    #[track_caller]
     fn new<S>(parent_path: PathBuf, directory_name: S) -> Self
     where
         S: Into<String>,
@@ -336,6 +342,7 @@ This directory has the following entries:
     pub hello: Hello,
 }
 impl Bar {
+    #[track_caller]
     fn new<S>(parent_path: PathBuf, directory_name: S) -> Self
     where
         S: Into<String>,
@@ -393,6 +400,7 @@ This directory has the following entries:
     pub bar: Bar,
 }
 impl Foo {
+    #[track_caller]
     fn new<S>(parent_path: PathBuf, directory_name: S) -> Self
     where
         S: Into<String>,
@@ -466,6 +474,7 @@ This directory has the following entries:
     pub foo: Foo,
 }
 impl FileSystemHarness for DeepTree {
+    #[track_caller]
     fn initialize() -> Self {
         let temporary_directory = tempfile::tempdir()
             .expect("failed to initialize temporary directory");
@@ -479,10 +488,18 @@ impl FileSystemHarness for DeepTree {
             foo,
         }
     }
+    #[track_caller]
     fn destroy(self) {
-        self.temporary_directory
-            .close()
-            .expect("failed to destroy filesystem harness directory");
+        if self.temporary_directory.path().exists() {
+            self.temporary_directory
+                .close()
+                .expect("failed to destroy filesystem harness directory");
+        } else {
+            println!(
+                "Temporary directory \"{}\" doesn't exist, no need to clean up.", self
+                .temporary_directory.path().display()
+            );
+        }
     }
 }
 impl AsPath for DeepTree {

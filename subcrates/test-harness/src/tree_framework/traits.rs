@@ -41,6 +41,7 @@ pub trait AsInitialFileStateRef: AsPath {
 pub trait AssertableInitialFileCapture: AsInitialFileStateRef {
     /// Assert that the *initial* [`FileState`] (captured for each file at test harness initialization)
     /// matches the *current* state of the file `other`.
+    #[track_caller]
     fn assert_initial_state_matches_other_file<P>(&self, other: P)
     where
         P: AsRef<Path>,
@@ -50,14 +51,17 @@ pub trait AssertableInitialFileCapture: AsInitialFileStateRef {
         assert!(
             self.initial_state()
                 .equals_other_file_state(&captured_other_file),
-            "files \"{}\" and \"{}\" don't have equal states",
+            "initial capture of \"{}\" and \"{}\" don't have equal states: \n{:?} vs {:?}",
             self.as_path().display(),
             other.as_ref().display(),
+            self.initial_state(),
+            captured_other_file
         );
     }
 
     /// Assert that the *initial* [`FileState`] (captured for each file at test harness initialization)
     /// matches the current state of the same file on disk.
+    #[track_caller]
     fn assert_unchanged_from_initial_state(&self) {
         let file_now_exists = self
             .as_path()
@@ -69,7 +73,7 @@ pub trait AssertableInitialFileCapture: AsInitialFileStateRef {
             FileState::NonExistent => {
                 if file_now_exists {
                     panic!(
-                        "previous state is NonExistent, but file \"{}\" exists",
+                        "initial state is NonExistent, but file \"{}\" exists",
                         self.as_path().display()
                     );
                 }
@@ -77,7 +81,7 @@ pub trait AssertableInitialFileCapture: AsInitialFileStateRef {
             FileState::Empty => {
                 if !file_now_exists {
                     panic!(
-                        "previous state is Empty, but file \"{}\" does not exist",
+                        "initial state is Empty, but file \"{}\" does not exist",
                         self.as_path().display()
                     );
                 }
@@ -89,7 +93,7 @@ pub trait AssertableInitialFileCapture: AsInitialFileStateRef {
 
                 if file.bytes().next().is_some() {
                     panic!(
-                        "previous state is Empty, but file \"{}\" is not empty",
+                        "initial state is Empty, but file \"{}\" is not empty",
                         self.as_path().display()
                     );
                 }
@@ -97,7 +101,7 @@ pub trait AssertableInitialFileCapture: AsInitialFileStateRef {
             FileState::NonEmpty { content } => {
                 if !file_now_exists {
                     panic!(
-                        "previous state is NonEmpty, but file \"{}\" does not exist",
+                        "initial state is NonEmpty, but file \"{}\" does not exist",
                         self.as_path().display()
                     );
                 }
@@ -108,7 +112,7 @@ pub trait AssertableInitialFileCapture: AsInitialFileStateRef {
                 assert_eq!(
                     content,
                     &fresh_file_contents,
-                    "previous state is NonEmpty, but file \"{}\" does not match the captured content",
+                    "initial state is NonEmpty, but file \"{}\" does not match the captured content",
                     self.as_path().display()
                 );
             }

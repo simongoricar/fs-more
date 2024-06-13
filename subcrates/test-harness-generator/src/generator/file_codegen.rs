@@ -102,6 +102,7 @@ pub(crate) fn codegen_harness_file_entry(
         }
 
         impl #file_struct_ident {
+            #[track_caller]
             fn new<S>(parent_path: PathBuf, file_name: S) -> Self
             where
                 S: Into<String>,

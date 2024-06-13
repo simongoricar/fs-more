@@ -50,22 +50,54 @@ pub trait AssertablePath {
 
     /// Asserts contents of directory at `self` and `other_directory_path` perfectly match content-wise.
     ///
-    /// Structure and exact file contents are compared (two-way),
-    /// but **symlinks and file and directory metadata is ignored in the comparison**.
+    /// Structure and exact file contents are compared (two-way).
     fn assert_is_directory_and_fully_matches_secondary_directory<P>(&self, other_directory_path: P)
     where
-        P: AsPath;
+        P: AsPath + AssertablePath;
+
+    /// Asserts contents of directory at `self` and `other_directory_path` perfectly match content-wise.
+    ///
+    /// Structure and exact file contents are compared (two-way).
+    ///
+    /// Additionaly, the caller may specify if the comparison should require symlinks in the primary
+    /// directory to also be symlinks to the same contents in the secondary directory
+    /// (this is the behaviour for `strict_symlink_comparison = true`). If set to `false`,
+    /// only the contents are compared.
+    fn assert_is_directory_and_fully_matches_secondary_directory_with_options<P>(
+        &self,
+        secondary_directory_path: P,
+        strict_symlink_comparison: bool,
+    ) where
+        P: AsPath + AssertablePath;
 
     /// Asserts contents of directory at `other_directory_path` are present in the one at `self`.
     ///
-    /// Structure and exact file contents are compared (one-way),
-    /// but **symlinks and file and directory metadata is ignored in the comparison**.
+    /// Matches [`with-options`]`(other_directory_path, true)`
+    ///
+    /// Structure and exact file contents are compared (one-way).
+    ///
+    ///
+    /// [`with-options`]: AssertablePath::assert_is_directory_and_has_contents_of_secondary_directory_with_options
     fn assert_is_directory_and_has_contents_of_secondary_directory<P>(
         &self,
         other_directory_path: P,
     ) where
-        P: AsPath;
+        P: AsPath + AssertablePath;
 
+    /// Asserts contents of directory at `other_directory_path` are present in the one at `self`.
+    ///
+    /// Structure and exact file contents are compared (one-way).
+    ///
+    /// Additionaly, the caller may specify if the comparison should require symlinks in the primary
+    /// directory to also be symlinks to the same contents in the secondary directory
+    /// (this is the behaviour for `strict_symlink_comparison = true`). If set to `false`,
+    /// only the contents are compared.
+    fn assert_is_directory_and_has_contents_of_secondary_directory_with_options<P>(
+        &self,
+        secondary_directory_path: P,
+        strict_symlink_comparison: bool,
+    ) where
+        P: AsPath + AssertablePath;
 
     /*
      * File-related assertions.
@@ -377,6 +409,26 @@ where
     }
 
     #[track_caller]
+    fn assert_is_directory_and_fully_matches_secondary_directory_with_options<P>(
+        &self,
+        secondary_directory_path: P,
+        strict_symlink_comparison: bool,
+    ) where
+        P: AsPath + AssertablePath,
+    {
+        self.assert_is_directory();
+        secondary_directory_path.assert_is_directory();
+
+        assert_primary_directory_fully_matches_secondary_directory(
+            self.as_path(),
+            secondary_directory_path.as_path(),
+            DirectoryComparisonOptions {
+                strict_symlink_comparison,
+            },
+        );
+    }
+
+    #[track_caller]
     fn assert_is_directory_and_has_contents_of_secondary_directory<P>(
         &self,
         secondary_directory_path: P,
@@ -391,6 +443,26 @@ where
             secondary_directory_path.as_path(),
             DirectoryComparisonOptions {
                 strict_symlink_comparison: true,
+            },
+        );
+    }
+
+    #[track_caller]
+    fn assert_is_directory_and_has_contents_of_secondary_directory_with_options<P>(
+        &self,
+        secondary_directory_path: P,
+        strict_symlink_comparison: bool,
+    ) where
+        P: AsPath + AssertablePath,
+    {
+        self.assert_is_directory();
+        secondary_directory_path.assert_is_directory();
+
+        assert_primary_directory_precisely_contains_secondary_directory(
+            self.as_path(),
+            secondary_directory_path.as_path(),
+            DirectoryComparisonOptions {
+                strict_symlink_comparison,
             },
         );
     }

@@ -17,7 +17,7 @@ use fs_more_test_harness::{
 pub fn remove_file_deletes_file() -> TestResult {
     let harness = SimpleTree::initialize();
 
-    let removal_result = fs_more::file::remove_file(harness.foo.hello_world_txt.as_path());
+    let removal_result = fs_more::file::remove_file(harness.yes.hello_world_txt.as_path());
 
 
     assert!(
@@ -27,7 +27,7 @@ pub fn remove_file_deletes_file() -> TestResult {
     );
 
     harness.empty_txt.assert_exists();
-    harness.foo.hello_world_txt.assert_not_exists();
+    harness.yes.hello_world_txt.assert_not_exists();
 
     harness.destroy();
     Ok(())

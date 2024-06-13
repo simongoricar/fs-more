@@ -25,12 +25,12 @@ pub fn copy_file_creates_an_identical_copy() -> TestResult {
     destination_file_path.assert_not_exists();
 
 
-    let captured_source_file = harness.foo.hello_world_txt.capture_with_content();
-    let source_file_size_bytes = harness.foo.hello_world_txt.size_in_bytes();
+    let captured_source_file = harness.yes.hello_world_txt.capture_with_content();
+    let source_file_size_bytes = harness.yes.hello_world_txt.size_in_bytes();
 
 
     let copy_result = fs_more::file::copy_file(
-        harness.foo.hello_world_txt.as_path(),
+        harness.yes.hello_world_txt.as_path(),
         &destination_file_path,
         CopyFileOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
@@ -59,12 +59,12 @@ pub fn copy_file_creates_an_identical_copy() -> TestResult {
 pub fn copy_file_errors_when_trying_to_copy_into_self() -> TestResult {
     let harness = SimpleTree::initialize();
 
-    let captured_file = harness.foo.bar_bin.capture_with_content();
+    let captured_file = harness.yes.no_bin.capture_with_content();
 
 
     let copy_result = fs_more::file::copy_file(
-        harness.foo.bar_bin.as_path(),
-        harness.foo.bar_bin.as_path(),
+        harness.yes.no_bin.as_path(),
+        harness.yes.no_bin.as_path(),
         CopyFileOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
         },
@@ -73,7 +73,7 @@ pub fn copy_file_errors_when_trying_to_copy_into_self() -> TestResult {
     assert_matches!(
         copy_result.unwrap_err(),
         FileError::SourceAndDestinationAreTheSame { path }
-        if path == harness.foo.bar_bin.as_path()
+        if path == harness.yes.no_bin.as_path()
     );
 
     captured_file.assert_unchanged();
@@ -92,7 +92,7 @@ pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
 
 
     let hello_world_uppercased_file_name = harness
-        .foo
+        .yes
         .hello_world_txt
         .as_path()
         .file_name()
@@ -102,7 +102,7 @@ pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
         .to_uppercase();
 
     let hello_world_uppercased_file_path = harness
-        .foo
+        .yes
         .hello_world_txt
         .as_path()
         .with_file_name(hello_world_uppercased_file_name);
@@ -117,7 +117,7 @@ pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
 
 
     let copy_result = fs_more::file::copy_file(
-        harness.foo.hello_world_txt.as_path(),
+        harness.yes.hello_world_txt.as_path(),
         &hello_world_uppercased_file_path,
         CopyFileOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
@@ -136,18 +136,18 @@ pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
         assert_matches!(
             copy_result.unwrap_err(),
             FileError::SourceAndDestinationAreTheSame { path }
-            if path == hello_world_uppercased_file_path.as_path() || path == harness.foo.hello_world_txt.as_path()
+            if path == hello_world_uppercased_file_path.as_path() || path == harness.yes.hello_world_txt.as_path()
         );
     }
 
     harness
-        .foo
+        .yes
         .hello_world_txt
         .assert_unchanged_from_initial_state();
 
     hello_world_uppercased_file_path.assert_is_file_and_not_symlink();
     harness
-        .foo
+        .yes
         .hello_world_txt
         .assert_initial_state_matches_other_file(&hello_world_uppercased_file_path);
 
@@ -166,7 +166,7 @@ pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated
 
     let destination_file_path = {
         let hello_world_uppercased_file_name = harness
-            .foo
+            .yes
             .hello_world_txt
             .as_path()
             .file_name()
@@ -176,10 +176,10 @@ pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated
             .to_uppercase();
 
         harness
-            .foo
+            .yes
             .as_path()
             .join("..")
-            .join(harness.foo.as_path().file_name().unwrap())
+            .join(harness.yes.as_path().file_name().unwrap())
             .join(hello_world_uppercased_file_name)
     };
 
@@ -191,7 +191,7 @@ pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated
 
 
     let copy_result = fs_more::file::copy_file(
-        harness.foo.hello_world_txt.as_path(),
+        harness.yes.hello_world_txt.as_path(),
         &destination_file_path,
         CopyFileOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
@@ -205,18 +205,18 @@ pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated
         assert_matches!(
             copy_result.unwrap_err(),
             FileError::SourceAndDestinationAreTheSame { path }
-            if path == harness.foo.hello_world_txt.as_path() || path == destination_file_path
+            if path == harness.yes.hello_world_txt.as_path() || path == destination_file_path
         );
     }
 
 
     harness
-        .foo
+        .yes
         .hello_world_txt
         .assert_unchanged_from_initial_state();
 
     harness
-        .foo
+        .yes
         .hello_world_txt
         .assert_initial_state_matches_other_file(&destination_file_path);
 
@@ -232,12 +232,12 @@ pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated
 pub fn copy_file_overwrites_destination_file_when_behaviour_is_overwrite() -> TestResult {
     let harness = SimpleTree::initialize();
 
-    let source_file_size_bytes = harness.foo.bar_bin.size_in_bytes();
+    let source_file_size_bytes = harness.yes.no_bin.size_in_bytes();
 
 
     let copy_result = fs_more::file::copy_file(
-        harness.foo.bar_bin.as_path(),
-        harness.foo.hello_world_txt.as_path(),
+        harness.yes.no_bin.as_path(),
+        harness.yes.hello_world_txt.as_path(),
         CopyFileOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
         },
@@ -251,13 +251,13 @@ pub fn copy_file_overwrites_destination_file_when_behaviour_is_overwrite() -> Te
     );
 
 
-    harness.foo.bar_bin.assert_unchanged_from_initial_state();
+    harness.yes.no_bin.assert_unchanged_from_initial_state();
 
-    harness.foo.hello_world_txt.assert_is_file_and_not_symlink();
+    harness.yes.hello_world_txt.assert_is_file_and_not_symlink();
     harness
-        .foo
-        .bar_bin
-        .assert_initial_state_matches_other_file(harness.foo.hello_world_txt.as_path());
+        .yes
+        .no_bin
+        .assert_initial_state_matches_other_file(harness.yes.hello_world_txt.as_path());
 
 
     harness.destroy();
@@ -271,8 +271,8 @@ pub fn copy_file_errors_on_existing_destination_file_when_behaviour_is_abort() -
 
 
     let copy_result = fs_more::file::copy_file(
-        harness.foo.bar_bin.as_path(),
-        harness.foo.hello_world_txt.as_path(),
+        harness.yes.no_bin.as_path(),
+        harness.yes.hello_world_txt.as_path(),
         CopyFileOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
         },
@@ -281,13 +281,13 @@ pub fn copy_file_errors_on_existing_destination_file_when_behaviour_is_abort() -
     assert_matches!(
         copy_result.unwrap_err(),
         FileError::DestinationPathAlreadyExists { path }
-        if path == harness.foo.hello_world_txt.as_path()
+        if path == harness.yes.hello_world_txt.as_path()
     );
 
 
-    harness.foo.bar_bin.assert_unchanged_from_initial_state();
+    harness.yes.no_bin.assert_unchanged_from_initial_state();
     harness
-        .foo
+        .yes
         .hello_world_txt
         .assert_unchanged_from_initial_state();
 
@@ -304,8 +304,8 @@ pub fn copy_file_skips_existing_destination_file_when_behaviour_is_skip() -> Tes
 
 
     let copy_result = fs_more::file::copy_file(
-        harness.foo.hello_world_txt.as_path(),
-        harness.foo.bar_bin.as_path(),
+        harness.yes.hello_world_txt.as_path(),
+        harness.yes.no_bin.as_path(),
         CopyFileOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Skip,
         },
@@ -315,11 +315,11 @@ pub fn copy_file_skips_existing_destination_file_when_behaviour_is_skip() -> Tes
 
 
     harness
-        .foo
+        .yes
         .hello_world_txt
         .assert_unchanged_from_initial_state();
 
-    harness.foo.bar_bin.assert_unchanged_from_initial_state();
+    harness.yes.no_bin.assert_unchanged_from_initial_state();
 
 
     harness.destroy();
@@ -336,12 +336,12 @@ pub fn copy_file_errors_when_source_path_is_symlink_to_destination_file() -> Tes
 
     let source_symlink_path = harness.child_path("symlink");
     source_symlink_path.assert_not_exists();
-    source_symlink_path.symlink_to_file(harness.foo.hello_world_txt.as_path());
+    source_symlink_path.symlink_to_file(harness.yes.hello_world_txt.as_path());
 
 
     let copy_result = fs_more::file::copy_file(
         &source_symlink_path,
-        harness.foo.hello_world_txt.as_path(),
+        harness.yes.hello_world_txt.as_path(),
         CopyFileOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
         },
@@ -351,7 +351,7 @@ pub fn copy_file_errors_when_source_path_is_symlink_to_destination_file() -> Tes
     assert_matches!(
         copy_result.unwrap_err(),
         FileError::SourceAndDestinationAreTheSame { path }
-        if path == harness.foo.hello_world_txt.as_path()
+        if path == harness.yes.hello_world_txt.as_path()
     );
 
 
@@ -370,10 +370,10 @@ pub fn copy_file_does_not_preserve_symlinks() -> TestResult {
 
     let symlink_path = harness.child_path("symlink");
     symlink_path.assert_not_exists();
-    symlink_path.symlink_to_file(harness.foo.bar_bin.as_path());
+    symlink_path.symlink_to_file(harness.yes.no_bin.as_path());
 
 
-    let symlink_destination_file_size_bytes = harness.foo.bar_bin.as_path().size_in_bytes();
+    let symlink_destination_file_size_bytes = harness.yes.no_bin.as_path().size_in_bytes();
 
 
     let copy_destination_path = harness.child_path("destination-file");
@@ -396,12 +396,12 @@ pub fn copy_file_does_not_preserve_symlinks() -> TestResult {
     );
 
 
-    symlink_path.assert_is_symlink_to_file_and_destination_matches(harness.foo.bar_bin.as_path());
+    symlink_path.assert_is_symlink_to_file_and_destination_matches(harness.yes.no_bin.as_path());
     copy_destination_path.assert_is_file_and_not_symlink();
 
     harness
-        .foo
-        .bar_bin
+        .yes
+        .no_bin
         .assert_initial_state_matches_other_file(&copy_destination_path);
 
 

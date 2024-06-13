@@ -59,6 +59,7 @@ pub struct EmptyTree {
     temporary_directory: TempDir,
 }
 impl FileSystemHarness for EmptyTree {
+    #[track_caller]
     fn initialize() -> Self {
         let temporary_directory = tempfile::tempdir()
             .expect("failed to initialize temporary directory");
@@ -66,10 +67,18 @@ impl FileSystemHarness for EmptyTree {
         temporary_directory_path.assert_is_directory_and_empty();
         Self { temporary_directory }
     }
+    #[track_caller]
     fn destroy(self) {
-        self.temporary_directory
-            .close()
-            .expect("failed to destroy filesystem harness directory");
+        if self.temporary_directory.path().exists() {
+            self.temporary_directory
+                .close()
+                .expect("failed to destroy filesystem harness directory");
+        } else {
+            println!(
+                "Temporary directory \"{}\" doesn't exist, no need to clean up.", self
+                .temporary_directory.path().display()
+            );
+        }
     }
 }
 impl AsPath for EmptyTree {

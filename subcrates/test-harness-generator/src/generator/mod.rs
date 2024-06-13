@@ -354,6 +354,7 @@ pub fn generate_rust_source_file_for_schema(
         }
 
         impl FileSystemHarness for #root_tree_struct_ident {
+            #[track_caller]
             fn initialize() -> Self {
                 let temporary_directory =
                     tempfile::tempdir()
@@ -372,10 +373,18 @@ pub fn generate_rust_source_file_for_schema(
                 }
             }
 
+            #[track_caller]
             fn destroy(self) {
-                self.temporary_directory
-                    .close()
-                    .expect("failed to destroy filesystem harness directory");
+                if self.temporary_directory.path().exists() {
+                    self.temporary_directory
+                        .close()
+                        .expect("failed to destroy filesystem harness directory");
+                } else {
+                    println!(
+                        "Temporary directory \"{}\" doesn't exist, no need to clean up.",
+                        self.temporary_directory.path().display()
+                    );
+                }
             }
         }
 

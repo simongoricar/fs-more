@@ -196,18 +196,19 @@ pub fn move_directory_with_progress_errors_when_source_is_symlink_to_destination
     let empty_harness = EmptyTree::initialize();
 
 
-    empty_harness.assert_is_directory_and_empty();
-    empty_harness.symlink_to_directory(deep_harness.as_path());
+    let empty_harness_symlink_path = empty_harness.child_path("some-dir");
+    empty_harness_symlink_path.assert_not_exists();
+    empty_harness_symlink_path.symlink_to_directory(deep_harness.as_path());
 
     deep_harness_untouched
         .assert_is_directory_and_fully_matches_secondary_directory(deep_harness.as_path());
     deep_harness_untouched
-        .assert_is_directory_and_fully_matches_secondary_directory(empty_harness.as_path());
+        .assert_is_directory_and_fully_matches_secondary_directory(&empty_harness_symlink_path);
 
 
     let move_result: Result<fs_more::directory::MoveDirectoryFinished, MoveDirectoryError> =
         fs_more::directory::move_directory_with_progress(
-            empty_harness.as_path(),
+            &empty_harness_symlink_path,
             deep_harness.as_path(),
             MoveDirectoryWithProgressOptions {
                 destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
@@ -227,14 +228,14 @@ pub fn move_directory_with_progress_errors_when_source_is_symlink_to_destination
             MoveDirectoryPreparationError::DestinationDirectoryValidationError(
                 DestinationDirectoryPathValidationError::DescendantOfSourceDirectory { destination_directory_path, source_directory_path }
             )
-        ) if source_directory_path == empty_harness.as_path() && destination_directory_path == deep_harness.as_path()
+        ) if source_directory_path == deep_harness.as_path() && destination_directory_path == deep_harness.as_path()
     );
 
 
     deep_harness_untouched
         .assert_is_directory_and_fully_matches_secondary_directory(deep_harness.as_path());
     deep_harness_untouched
-        .assert_is_directory_and_fully_matches_secondary_directory(empty_harness.as_path());
+        .assert_is_directory_and_fully_matches_secondary_directory(&empty_harness_symlink_path);
 
 
     deep_harness.destroy();
@@ -250,11 +251,12 @@ pub fn move_directory_with_progress_errors_when_source_is_symlink_to_destination
 pub fn move_directory_with_progress_does_not_preserve_symlinks_when_destination_directory_already_exists_and_is_not_empty(
 ) -> TestResult {
     let deep_harness = DeepTree::initialize();
+    let deep_harness_untouched = DeepTree::initialize();
     let simple_harness = SimpleTree::initialize();
 
     let deep_harness_non_symlink_copy = DeepTree::initialize();
 
-    let copy_destination_harness = DeepTree::initialize();
+    let move_destination_harness = EmptyTree::initialize();
 
 
     {
@@ -276,15 +278,16 @@ pub fn move_directory_with_progress_does_not_preserve_symlinks_when_destination_
     };
 
 
-    deep_harness.assert_is_directory_and_fully_matches_secondary_directory(
+    deep_harness.assert_is_directory_and_fully_matches_secondary_directory_with_options(
         deep_harness_non_symlink_copy.as_path(),
+        false,
     );
 
 
 
     let finished_move = fs_more::directory::move_directory_with_progress(
         deep_harness.as_path(),
-        copy_destination_harness.as_path(),
+        move_destination_harness.as_path(),
         MoveDirectoryWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
@@ -301,20 +304,22 @@ pub fn move_directory_with_progress_does_not_preserve_symlinks_when_destination_
     }
 
 
-    let remapped_previous_symlink_path = copy_destination_harness.child_path("here-we-go");
+    let remapped_previous_symlink_path = move_destination_harness.child_path("here-we-go");
     remapped_previous_symlink_path.assert_is_directory_and_not_symlink();
     remapped_previous_symlink_path
         .assert_is_directory_and_fully_matches_secondary_directory(simple_harness.as_path());
 
 
-    copy_destination_harness
-        .assert_is_directory_and_has_contents_of_secondary_directory(deep_harness.as_path());
+    move_destination_harness.assert_is_directory_and_has_contents_of_secondary_directory(
+        deep_harness_untouched.as_path(),
+    );
 
 
-    copy_destination_harness.destroy();
+    move_destination_harness.destroy();
     deep_harness_non_symlink_copy.destroy();
     simple_harness.destroy();
     deep_harness.destroy();
+    deep_harness_untouched.destroy();
     Ok(())
 }
 
@@ -329,7 +334,7 @@ pub fn move_directory_with_progress_may_preserve_symlinks_when_destination_direc
 
     let deep_harness_non_symlink_copy = DeepTree::initialize();
 
-    let copy_destination_harness = DeepTree::initialize();
+    let copy_destination_harness = EmptyTree::initialize();
 
 
     {
@@ -351,8 +356,9 @@ pub fn move_directory_with_progress_may_preserve_symlinks_when_destination_direc
     };
 
 
-    deep_harness.assert_is_directory_and_fully_matches_secondary_directory(
+    deep_harness.assert_is_directory_and_fully_matches_secondary_directory_with_options(
         deep_harness_non_symlink_copy.as_path(),
+        false,
     );
 
 

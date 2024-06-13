@@ -213,6 +213,7 @@ pub(crate) fn codegen_harness_directory_entry(
         }
 
         impl #directory_struct_name_ident {
+            #[track_caller]
             fn new<S>(parent_path: PathBuf, directory_name: S) -> Self
             where
                 S: Into<String>,

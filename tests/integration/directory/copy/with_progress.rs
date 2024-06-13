@@ -288,7 +288,7 @@ pub fn copy_directory_with_progress_errors_when_destination_is_inside_source_pat
 
     let copy_result = fs_more::directory::copy_directory_with_progress(
         deep_harness.as_path(),
-        deep_harness.foo.b_bin.as_path(),
+        deep_harness.foo.as_path(),
         CopyDirectoryWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
@@ -308,7 +308,7 @@ pub fn copy_directory_with_progress_errors_when_destination_is_inside_source_pat
                 DestinationDirectoryPathValidationError::DescendantOfSourceDirectory { destination_directory_path, source_directory_path }
             )
         )
-        if source_directory_path == deep_harness.as_path() && destination_directory_path == deep_harness.foo.b_bin.as_path()
+        if source_directory_path == deep_harness.as_path() && destination_directory_path == deep_harness.foo.as_path()
     );
 
 
@@ -359,8 +359,6 @@ pub fn copy_directory_with_progress_errors_when_destination_directory_already_ex
 
 
 
-// TODO migrate other tests as well
-
 #[test]
 pub fn copy_directory_with_progress_errors_when_destination_file_collides_and_its_behaviour_is_abort(
 ) -> TestResult {
@@ -393,7 +391,9 @@ pub fn copy_directory_with_progress_errors_when_destination_file_collides_and_it
         empty_harness_colliding_file_path.assert_is_file_and_not_symlink();
 
         deep_harness
-            .a_bin
+            .foo
+            .bar
+            .c_bin
             .assert_initial_state_matches_other_file(&empty_harness_colliding_file_path);
 
         empty_harness.assert_is_directory_and_not_empty();
@@ -586,8 +586,8 @@ pub fn copy_directory_with_progress_does_not_preserve_directory_symlinks() -> Te
 
 
 
+    remapped_destination_symlink_path.assert_is_directory_and_not_symlink();
     remapped_destination_symlink_path
-        .assert_is_symlink_to_directory_and_resolve_destination()
         .assert_is_directory_and_fully_matches_secondary_directory(deep_harness.foo.bar.as_path());
 
 

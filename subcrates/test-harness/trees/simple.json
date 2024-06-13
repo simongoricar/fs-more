@@ -12,7 +12,7 @@
       },
       {
         "type": "directory",
-        "name": "foo",
+        "name": "yes",
         "entries": [
           {
             "type": "file",
@@ -24,7 +24,7 @@
           },
           {
             "type": "file",
-            "name": "bar.bin",
+            "name": "no.bin",
             "data": {
               "type": "seeded-random",
               "seed": 39581913123,

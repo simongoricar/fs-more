@@ -65,13 +65,13 @@ pub fn directory_scan_produces_correct_information() -> TestResult {
     assert!(scan.covers_entire_directory_tree());
 
 
-    assert_path_list_fully_matches_set(scan.directories(), [harness.foo.as_path()]);
+    assert_path_list_fully_matches_set(scan.directories(), [harness.yes.as_path()]);
     assert_path_list_fully_matches_set(
         scan.files(),
         [
             harness.empty_txt.as_path(),
-            harness.foo.hello_world_txt.as_path(),
-            harness.foo.bar_bin.as_path(),
+            harness.yes.hello_world_txt.as_path(),
+            harness.yes.no_bin.as_path(),
         ],
     );
 
@@ -101,7 +101,7 @@ pub fn directory_scan_respects_limited_depth_option() -> TestResult {
     assert!(!scan.covers_entire_directory_tree());
 
 
-    assert_path_list_fully_matches_set(scan.directories(), [harness.foo.as_path()]);
+    assert_path_list_fully_matches_set(scan.directories(), [harness.yes.as_path()]);
     assert_path_list_fully_matches_set(scan.files(), [harness.empty_txt.as_path()]);
 
 
@@ -118,9 +118,9 @@ pub fn directory_scan_calculates_correct_size() -> TestResult {
 
     let actual_size_of_harness_in_bytes = {
         let empty_txt_size_bytes = harness.empty_txt.size_in_bytes();
-        let foo_dir_size_bytes = harness.foo.size_in_bytes();
-        let hello_world_size_bytes = harness.foo.hello_world_txt.size_in_bytes();
-        let bar_bin_size_bytes = harness.foo.bar_bin.size_in_bytes();
+        let foo_dir_size_bytes = harness.yes.size_in_bytes();
+        let hello_world_size_bytes = harness.yes.hello_world_txt.size_in_bytes();
+        let bar_bin_size_bytes = harness.yes.no_bin.size_in_bytes();
 
         empty_txt_size_bytes + foo_dir_size_bytes + hello_world_size_bytes + bar_bin_size_bytes
     };
@@ -154,7 +154,7 @@ pub fn directory_scan_calculates_correct_size_with_depth_limit() -> TestResult<(
 
     let actual_size_of_scan_in_bytes = {
         let empty_txt_size_bytes = harness.empty_txt.size_in_bytes();
-        let foo_dir_size_bytes = harness.foo.size_in_bytes();
+        let foo_dir_size_bytes = harness.yes.size_in_bytes();
 
         empty_txt_size_bytes + foo_dir_size_bytes
     };
@@ -187,9 +187,9 @@ pub fn directory_size_in_bytes_produces_correct_information() -> TestResult {
 
     let actual_size_of_harness_in_bytes = {
         let empty_txt_size_bytes = harness.empty_txt.size_in_bytes();
-        let foo_dir_size_bytes = harness.foo.size_in_bytes();
-        let hello_world_size_bytes = harness.foo.hello_world_txt.size_in_bytes();
-        let bar_bin_size_bytes = harness.foo.bar_bin.size_in_bytes();
+        let foo_dir_size_bytes = harness.yes.size_in_bytes();
+        let hello_world_size_bytes = harness.yes.hello_world_txt.size_in_bytes();
+        let bar_bin_size_bytes = harness.yes.no_bin.size_in_bytes();
 
         empty_txt_size_bytes + foo_dir_size_bytes + hello_world_size_bytes + bar_bin_size_bytes
     };

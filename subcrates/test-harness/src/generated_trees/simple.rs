@@ -8,8 +8,8 @@
 //! ```md
 //! .
 //! |-- empty.txt (empty)
-//! |-- foo
-//! |   |-- bar.bin (random data, 16 KiB)
+//! |-- yes
+//! |   |-- no.bin (random data, 16 KiB)
 //! |   |-- hello-world.txt (text data, 12 B)
 //! ```
 //!
@@ -49,6 +49,7 @@ pub struct EmptyTxt {
     initial_state: FileState,
 }
 impl EmptyTxt {
+    #[track_caller]
     fn new<S>(parent_path: PathBuf, file_name: S) -> Self
     where
         S: Into<String>,
@@ -78,7 +79,7 @@ impl AsRelativePath for EmptyTxt {
         Path::new(".\\empty.txt")
     }
 }
-/**This is a file residing at `./foo/hello-world.txt` (relative to the root of the test harness).
+/**This is a file residing at `./yes/hello-world.txt` (relative to the root of the test harness).
 
 <br>
 
@@ -88,6 +89,7 @@ pub struct HelloWorldTxt {
     initial_state: FileState,
 }
 impl HelloWorldTxt {
+    #[track_caller]
     fn new<S>(parent_path: PathBuf, file_name: S) -> Self
     where
         S: Into<String>,
@@ -116,19 +118,20 @@ impl AsInitialFileStateRef for HelloWorldTxt {
 impl AssertableInitialFileCapture for HelloWorldTxt {}
 impl AsRelativePath for HelloWorldTxt {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new(".\\foo\\hello-world.txt")
+        Path::new(".\\yes\\hello-world.txt")
     }
 }
-/**This is a file residing at `./foo/bar.bin` (relative to the root of the test harness).
+/**This is a file residing at `./yes/no.bin` (relative to the root of the test harness).
 
 <br>
 
 <sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
-pub struct BarBin {
+pub struct NoBin {
     path: PathBuf,
     initial_state: FileState,
 }
-impl BarBin {
+impl NoBin {
+    #[track_caller]
     fn new<S>(parent_path: PathBuf, file_name: S) -> Self
     where
         S: Into<String>,
@@ -147,48 +150,49 @@ impl BarBin {
         Self { path, initial_state }
     }
 }
-impl AsPath for BarBin {
+impl AsPath for NoBin {
     fn as_path(&self) -> &Path {
         &self.path
     }
 }
-impl CaptureableFilePath for BarBin {}
-impl AsInitialFileStateRef for BarBin {
+impl CaptureableFilePath for NoBin {}
+impl AsInitialFileStateRef for NoBin {
     fn initial_state(&self) -> &FileState {
         &self.initial_state
     }
 }
-impl AssertableInitialFileCapture for BarBin {}
-impl AsRelativePath for BarBin {
+impl AssertableInitialFileCapture for NoBin {}
+impl AsRelativePath for NoBin {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new(".\\foo\\bar.bin")
+        Path::new(".\\yes\\no.bin")
     }
 }
-/**This is a sub-directory residing at `./foo` (relative to the root of the test harness).
+/**This is a sub-directory residing at `./yes` (relative to the root of the test harness).
 
 This directory has the following entries:
 - `hello_world_txt` (see [`HelloWorldTxt`])
-- `bar_bin` (see [`BarBin`])
+- `no_bin` (see [`NoBin`])
 
 <br>
 
 <sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
-pub struct Foo {
+pub struct Yes {
     directory_path: PathBuf,
-    /**This is a file residing at `./foo/hello-world.txt` (relative to the root of the test harness).
+    /**This is a file residing at `./yes/hello-world.txt` (relative to the root of the test harness).
 
 <br>
 
 <sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
     pub hello_world_txt: HelloWorldTxt,
-    /**This is a file residing at `./foo/bar.bin` (relative to the root of the test harness).
+    /**This is a file residing at `./yes/no.bin` (relative to the root of the test harness).
 
 <br>
 
 <sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
-    pub bar_bin: BarBin,
+    pub no_bin: NoBin,
 }
-impl Foo {
+impl Yes {
+    #[track_caller]
     fn new<S>(parent_path: PathBuf, directory_name: S) -> Self
     where
         S: Into<String>,
@@ -201,23 +205,23 @@ impl Foo {
             directory_path.clone(),
             "hello-world.txt",
         );
-        let bar_bin = <BarBin>::new(directory_path.clone(), "bar.bin");
+        let no_bin = <NoBin>::new(directory_path.clone(), "no.bin");
         Self {
             directory_path,
             hello_world_txt,
-            bar_bin,
+            no_bin,
         }
     }
 }
-impl AsPath for Foo {
+impl AsPath for Yes {
     fn as_path(&self) -> &Path {
         &self.directory_path
     }
 }
-impl FileSystemHarnessDirectory for Foo {}
-impl AsRelativePath for Foo {
+impl FileSystemHarnessDirectory for Yes {}
+impl AsRelativePath for Yes {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new(".\\foo")
+        Path::new(".\\yes")
     }
 }
 /**A fs-more filesystem testing harness. Upon calling [`Self::initialize`],
@@ -229,15 +233,15 @@ is created for each file. This is the same as [`CaptureableFilePath::capture_wit
 
 This harness has the following entries at the top level:
 - `empty_txt` (see [`EmptyTxt`])
-- `foo` (see [`Foo`])
+- `yes` (see [`Yes`])
 
 
 The full file tree is as follows:
 ```md
 .
 |-- empty.txt (empty)
-|-- foo
-|   |-- bar.bin (random data, 16 KiB)
+|-- yes
+|   |-- no.bin (random data, 16 KiB)
 |   |-- hello-world.txt (text data, 12 B)
 ```
 
@@ -253,18 +257,19 @@ pub struct SimpleTree {
 
 <sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
     pub empty_txt: EmptyTxt,
-    /**This is a sub-directory residing at `./foo` (relative to the root of the test harness).
+    /**This is a sub-directory residing at `./yes` (relative to the root of the test harness).
 
 This directory has the following entries:
 - `hello_world_txt` (see [`HelloWorldTxt`])
-- `bar_bin` (see [`BarBin`])
+- `no_bin` (see [`NoBin`])
 
 <br>
 
 <sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
-    pub foo: Foo,
+    pub yes: Yes,
 }
 impl FileSystemHarness for SimpleTree {
+    #[track_caller]
     fn initialize() -> Self {
         let temporary_directory = tempfile::tempdir()
             .expect("failed to initialize temporary directory");
@@ -274,17 +279,25 @@ impl FileSystemHarness for SimpleTree {
             temporary_directory_path.to_owned(),
             "empty.txt",
         );
-        let foo = <Foo>::new(temporary_directory_path.to_owned(), "foo");
+        let yes = <Yes>::new(temporary_directory_path.to_owned(), "yes");
         Self {
             temporary_directory,
             empty_txt,
-            foo,
+            yes,
         }
     }
+    #[track_caller]
     fn destroy(self) {
-        self.temporary_directory
-            .close()
-            .expect("failed to destroy filesystem harness directory");
+        if self.temporary_directory.path().exists() {
+            self.temporary_directory
+                .close()
+                .expect("failed to destroy filesystem harness directory");
+        } else {
+            println!(
+                "Temporary directory \"{}\" doesn't exist, no need to clean up.", self
+                .temporary_directory.path().display()
+            );
+        }
     }
 }
 impl AsPath for SimpleTree {

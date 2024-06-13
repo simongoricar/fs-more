@@ -305,9 +305,8 @@ dependencies = [
 name = "fs-more-test-harness"
 version = "0.1.0"
 dependencies = [
- "assert_fs",
  "fs-more-test-harness-generator",
- "once_cell",
+ "humansize",
  "rand",
  "rand_chacha",
  "tempfile",
@@ -510,12 +509,6 @@ checksum = "b8ec7ab813848ba4522158d5517a6093db1ded27575b070f4177b8d12b41db5e"
 dependencies = [
  "memchr",
 ]
-
-[[package]]
-name = "once_cell"
-version = "1.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
 
 [[package]]
 name = "owo-colors"

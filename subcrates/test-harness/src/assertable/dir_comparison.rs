@@ -566,6 +566,7 @@ fn format_error_with_source(error: &dyn Error) -> String {
 
 
 
+#[track_caller]
 pub(crate) fn assert_primary_directory_precisely_contains_secondary_directory<F, S>(
     first_directory_path: F,
     second_directory_path: S,
@@ -585,6 +586,7 @@ pub(crate) fn assert_primary_directory_precisely_contains_secondary_directory<F,
     }
 }
 
+#[track_caller]
 pub(crate) fn assert_primary_directory_fully_matches_secondary_directory<F, S>(
     first_directory_path: F,
     second_directory_path: S,
