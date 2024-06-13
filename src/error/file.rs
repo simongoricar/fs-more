@@ -97,7 +97,7 @@ pub enum FileError {
         error: std::io::Error,
     },
 
-    /// The source and destination file paths point to the same file.
+    /// The source and destination file paths point to the same canonical file.
     #[error("source and destination file path are the same file: {}", .path.display())]
     SourceAndDestinationAreTheSame {
         /// The conflicting source and destination path.
