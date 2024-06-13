@@ -15,6 +15,9 @@ use crate::{
     error::{FileError, FileRemoveError},
     file::ValidatedSourceFilePath,
     use_enabled_fs_module,
+    DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL,
+    DEFAULT_READ_BUFFER_SIZE,
+    DEFAULT_WRITE_BUFFER_SIZE,
 };
 
 
@@ -310,7 +313,7 @@ pub struct MoveFileWithProgressOptions {
     /// *Note that this is the minimum;* the real reporting interval can be larger.
     /// Consult [`copy_file_with_progress`] documentation for more details.
     ///
-    /// Defaults to 64 KiB.
+    /// Defaults to 512 KiB.
     ///
     ///
     /// [`copy_file_with_progress`]: [super::copy_file_with_progress]
@@ -321,16 +324,13 @@ impl Default for MoveFileWithProgressOptions {
     /// Constructs a default [`MoveFileOptions`]:
     /// - existing destination files will not be overwritten, and will cause an error ([`ExistingFileBehaviour::Abort`]),
     /// - read and write buffers with be 64 KiB large,
-    /// - the progress report closure interval will be 64 KiB.
+    /// - the progress report closure interval will be 512 KiB.
     fn default() -> Self {
         Self {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
-            // 64 KiB
-            read_buffer_size: 1024 * 64,
-            // 64 KiB
-            write_buffer_size: 1024 * 64,
-            // 64 KiB
-            progress_update_byte_interval: 1024 * 64,
+            read_buffer_size: DEFAULT_READ_BUFFER_SIZE,
+            write_buffer_size: DEFAULT_WRITE_BUFFER_SIZE,
+            progress_update_byte_interval: DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL,
         }
     }
 }

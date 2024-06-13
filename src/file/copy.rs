@@ -14,7 +14,13 @@ use super::{
     ValidatedDestinationFilePath,
     ValidatedSourceFilePath,
 };
-use crate::{error::FileError, use_enabled_fs_module};
+use crate::{
+    error::FileError,
+    use_enabled_fs_module,
+    DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL,
+    DEFAULT_READ_BUFFER_SIZE,
+    DEFAULT_WRITE_BUFFER_SIZE,
+};
 
 
 
@@ -230,7 +236,7 @@ pub struct CopyFileWithProgressOptions {
     /// *Note that this is the minimum interval.* The actual reporting interval can be larger.
     /// Consult [`copy_file_with_progress`] documentation for more details.
     ///
-    /// Defaults to 64 KiB.
+    /// Defaults to 512 KiB.
     pub progress_update_byte_interval: u64,
 }
 
@@ -238,17 +244,13 @@ impl Default for CopyFileWithProgressOptions {
     /// Constructs relatively safe defaults for copying a file:
     /// - aborts if there is an existing destination file ([`ExistingFileBehaviour::Abort`]),
     /// - sets buffer size for reading and writing to 64 KiB, and
-    /// - sets the progress update closure call interval to 64 KiB.
+    /// - sets the progress update closure call interval to 512 KiB.
     fn default() -> Self {
         Self {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
-            // 64 KiB
-            read_buffer_size: 1024 * 64,
-            // 64 KiB
-            write_buffer_size: 1024 * 64,
-            // TODO Increase this to a much larger default value to avoid performance problems.
-            // 64 KiB
-            progress_update_byte_interval: 1024 * 64,
+            read_buffer_size: DEFAULT_READ_BUFFER_SIZE,
+            write_buffer_size: DEFAULT_WRITE_BUFFER_SIZE,
+            progress_update_byte_interval: DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL,
         }
     }
 }

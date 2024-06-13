@@ -127,6 +127,18 @@
 
 #![warn(missing_docs)]
 
+
+/// 64 KiB
+const DEFAULT_READ_BUFFER_SIZE: usize = 1024 * 64;
+
+/// 64 KiB
+const DEFAULT_WRITE_BUFFER_SIZE: usize = 1024 * 64;
+
+/// 512 KiB
+const DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL: u64 = 1024 * 512;
+
+
+
 pub mod directory;
 pub mod error;
 pub mod file;

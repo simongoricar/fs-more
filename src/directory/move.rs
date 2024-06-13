@@ -26,6 +26,9 @@ use crate::{
     error::{MoveDirectoryError, MoveDirectoryExecutionError, MoveDirectoryPreparationError},
     file::FileProgress,
     use_enabled_fs_module,
+    DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL,
+    DEFAULT_READ_BUFFER_SIZE,
+    DEFAULT_WRITE_BUFFER_SIZE,
 };
 
 
@@ -389,7 +392,8 @@ pub struct MoveDirectoryWithProgressOptions {
     pub write_buffer_size: usize,
 
     /// *Minimum* amount of bytes written between two consecutive progress reports.
-    /// Defaults to 64 KiB.
+    ///
+    /// Defaults to 512 KiB.
     ///
     /// *Note that the real reporting interval can be larger.*
     pub progress_update_byte_interval: u64,
@@ -399,12 +403,9 @@ impl Default for MoveDirectoryWithProgressOptions {
     fn default() -> Self {
         Self {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
-            // 64 KiB
-            read_buffer_size: 1024 * 64,
-            // 64 KiB
-            write_buffer_size: 1024 * 64,
-            // 64 KiB
-            progress_update_byte_interval: 1024 * 64,
+            read_buffer_size: DEFAULT_READ_BUFFER_SIZE,
+            write_buffer_size: DEFAULT_WRITE_BUFFER_SIZE,
+            progress_update_byte_interval: DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL,
         }
     }
 }

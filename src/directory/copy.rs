@@ -17,6 +17,9 @@ use crate::{
         FileProgress,
     },
     use_enabled_fs_module,
+    DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL,
+    DEFAULT_READ_BUFFER_SIZE,
+    DEFAULT_WRITE_BUFFER_SIZE,
 };
 
 /// The maximum depth of a directory copy operation.
@@ -464,7 +467,7 @@ pub struct CopyDirectoryWithProgressOptions {
 
     /// *Minimum* amount of bytes written between two consecutive progress reports.
     ///
-    /// Defaults to 64 KiB.
+    /// Defaults to 512 KiB.
     ///
     /// *Note that the real reporting interval can be larger*
     /// (see [`copy_directory_with_progress`] for more info).
@@ -476,17 +479,14 @@ impl Default for CopyDirectoryWithProgressOptions {
     /// - if the destination directory already exists, it must be empty ([`DestinationDirectoryRule::AllowEmpty`]), and
     /// - there is no copy depth limit ([`CopyDirectoryDepthLimit::Unlimited`]),
     /// - read and write buffers are 64 KiB large, and
-    /// - the progress reporting closure byte interval is set to 64 KiB.
+    /// - the progress reporting closure byte interval is set to 512 KiB.
     fn default() -> Self {
         Self {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
             copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
-            // 64 KiB
-            read_buffer_size: 1024 * 64,
-            // 64 KiB
-            write_buffer_size: 1024 * 64,
-            // 64 KiB
-            progress_update_byte_interval: 1024 * 64,
+            read_buffer_size: DEFAULT_READ_BUFFER_SIZE,
+            write_buffer_size: DEFAULT_WRITE_BUFFER_SIZE,
+            progress_update_byte_interval: DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL,
         }
     }
 }
