@@ -503,7 +503,7 @@ fn ensure_primary_directory_precisely_contains_secondary_directory_inner(
                             });
                         }
                         PathType::BareDirectory => {
-                            // The scanned path is a symlink to a directoy, but the remapped path
+                            // The scanned path is a symlink to a directory, but the remapped path
                             // inside the primary directory is a normal directory.
                             // If `strict_symlink_comparison` is `false`, this is valid,
                             // otherwise this returns an errors.

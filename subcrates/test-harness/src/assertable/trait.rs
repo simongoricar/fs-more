@@ -59,7 +59,7 @@ pub trait AssertablePath {
     ///
     /// Structure and exact file contents are compared (two-way).
     ///
-    /// Additionaly, the caller may specify if the comparison should require symlinks in the primary
+    /// Additionally, the caller may specify if the comparison should require symlinks in the primary
     /// directory to also be symlinks to the same contents in the secondary directory
     /// (this is the behaviour for `strict_symlink_comparison = true`). If set to `false`,
     /// only the contents are compared.
@@ -88,7 +88,7 @@ pub trait AssertablePath {
     ///
     /// Structure and exact file contents are compared (one-way).
     ///
-    /// Additionaly, the caller may specify if the comparison should require symlinks in the primary
+    /// Additionally, the caller may specify if the comparison should require symlinks in the primary
     /// directory to also be symlinks to the same contents in the secondary directory
     /// (this is the behaviour for `strict_symlink_comparison = true`). If set to `false`,
     /// only the contents are compared.
@@ -281,6 +281,7 @@ pub trait CaptureableFilePath: AsPath {
     /// [`AssertableInitialFileCapture`]: crate::tree_framework::AssertableInitialFileCapture
     /// [`assert_unchanged_from_initial_state`]: crate::tree_framework::AssertableInitialFileCapture::assert_unchanged_from_initial_state
     /// [`initialize`]: crate::tree_framework::FileSystemHarness::initialize
+    /// [`FileState::capture_from_file_path`]: crate::assertable::file_capture::FileState::capture_from_file_path
     fn capture_with_content(&self) -> CapturedFileState {
         CapturedFileState::new_with_content_capture(self.as_path())
     }

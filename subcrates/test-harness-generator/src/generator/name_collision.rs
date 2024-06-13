@@ -33,7 +33,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn collsion_avoider_works() {
+    fn collision_avoider_works() {
         let mut avoider = NameCollisionAvoider::new_empty();
 
         assert_eq!(avoider.get_collision_free_name("HelloWorld"), "HelloWorld");

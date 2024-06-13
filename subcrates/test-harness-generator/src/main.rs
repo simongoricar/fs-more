@@ -39,8 +39,8 @@ fn collect_tree_schemas(
         .into_diagnostic()
         .wrap_err("Failed to initialize directory iterator.")?;
 
-    for directoy_entry in directory_iterator {
-        let directory_entry = directoy_entry
+    for directory_entry in directory_iterator {
+        let directory_entry = directory_entry
             .into_diagnostic()
             .wrap_err("Failed to iterate.")?;
 
