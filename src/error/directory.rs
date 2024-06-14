@@ -31,7 +31,7 @@ pub enum SourceDirectoryPathValidationError {
         path: PathBuf,
     },
 
-    /// The source directory could not be read.
+    /// The source directory could not be read, or its path could not be canonicalized.
     ///
     /// Among other things, this can happen due to missing read permissions.
     ///
@@ -42,21 +42,6 @@ pub enum SourceDirectoryPathValidationError {
         directory_path: PathBuf,
 
         /// IO error describing why the source directory could not be accessed.
-        #[source]
-        error: std::io::Error,
-    },
-
-    /// The source directory path could not be canonicalized.
-    ///
-    /// Among other things, this can happen due to missing read permissions.
-    ///
-    /// The inner [`std::io::Error`] will likely describe a more precise cause of this error.
-    #[error("unable to canonicalize source directory: {}", .directory_path.display())]
-    UnableToCanonicalize {
-        /// The exact path we are unable to canonicalize.
-        directory_path: PathBuf,
-
-        /// IO error describing why the source directory could not be canonicalized.
         #[source]
         error: std::io::Error,
     },
@@ -77,7 +62,7 @@ pub enum DestinationDirectoryPathValidationError {
         directory_path: PathBuf,
     },
 
-    /// The destination directory could not be read.
+    /// The destination directory could not be read, or its path could not be canonicalized.
     ///
     /// Among other things, this can happen due to missing read permissions.
     ///
@@ -88,21 +73,6 @@ pub enum DestinationDirectoryPathValidationError {
         directory_path: PathBuf,
 
         /// IO error describing why the source directory could not be accessed.
-        #[source]
-        error: std::io::Error,
-    },
-
-    /// The destination directory path could not be canonicalized.
-    ///
-    /// Among other things, this can happen due to missing read permissions.
-    ///
-    /// The inner [`std::io::Error`] will likely describe a more precise cause of this error.
-    #[error("unable to canonicalize destination directory: {}", .directory_path.display())]
-    UnableToCanonicalize {
-        /// The exact path we are unable to canonicalize.
-        directory_path: PathBuf,
-
-        /// IO error describing why the destination directory could not be canonicalized.
         #[source]
         error: std::io::Error,
     },

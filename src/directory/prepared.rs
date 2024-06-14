@@ -118,7 +118,7 @@ pub(super) fn validate_source_directory_path(
 
     let canonical_source_directory_path =
         fs::canonicalize(source_directory_path).map_err(|error| {
-            SourceDirectoryPathValidationError::UnableToCanonicalize {
+            SourceDirectoryPathValidationError::UnableToAccess {
                 directory_path: source_directory_path.to_path_buf(),
                 error,
             }
@@ -208,12 +208,10 @@ pub(super) fn validate_destination_directory_path(
 
     let resolved_destination_directory_path = if destination_directory_exists {
         let canonical_destination_directory_path = fs::canonicalize(destination_directory_path)
-            .map_err(
-                |error| DestinationDirectoryPathValidationError::UnableToCanonicalize {
-                    directory_path: destination_directory_path.to_path_buf(),
-                    error,
-                },
-            )?;
+            .map_err(|error| DestinationDirectoryPathValidationError::UnableToAccess {
+                directory_path: destination_directory_path.to_path_buf(),
+                error,
+            })?;
 
 
         #[cfg(feature = "dunce")]

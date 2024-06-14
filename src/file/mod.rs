@@ -91,7 +91,7 @@ fn validate_source_file_path(
 
             if source_file_path.is_symlink() {
                 let canonicalized_path = fs::canonicalize(source_file_path).map_err(|error| {
-                    FileError::UnableToCanonicalizeSourceFilePath {
+                    FileError::UnableToAccessSourceFile {
                         path: source_file_path.to_path_buf(),
                         error,
                     }
@@ -179,7 +179,7 @@ fn validate_destination_file_path(
         let canonical_destination_path = {
             let canonical_destination_path =
                 destination_file_path.canonicalize().map_err(|error| {
-                    FileError::UnableToCanonicalizeDestinationFilePath {
+                    FileError::UnableToAccessDestinationFile {
                         path: destination_file_path.to_path_buf(),
                         error,
                     }

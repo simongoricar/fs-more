@@ -20,7 +20,7 @@ pub enum FileError {
         path: PathBuf,
     },
 
-    /// The source file cannot be accessed, for example due to missing permissions.
+    /// The source file cannot be accessed or canonicalized, for example due to missing permissions.
     ///
     /// The inner [`std::io::Error`] will likely describe the real cause of this error.
     #[error("unable to access source file: {}", .path.display())]
@@ -29,21 +29,6 @@ pub enum FileError {
         path: PathBuf,
 
         /// Underlying IO error describing why the source file could not be accessed.
-        #[source]
-        error: std::io::Error,
-    },
-
-    /// The source file path could not be canonicalized.
-    ///
-    /// The inner [`std::io::Error`] will likely describe the real cause of this error.
-    ///
-    /// See also: [`std::fs::canonicalize`].
-    #[error("unable to canonicalize source file path: {}", .path.display())]
-    UnableToCanonicalizeSourceFilePath {
-        /// Source file path that could not be canonicalized.
-        path: PathBuf,
-
-        /// Underlying IO error describing why the source file could not be canonicalized.
         #[source]
         error: std::io::Error,
     },
@@ -67,7 +52,7 @@ pub enum FileError {
         path: PathBuf,
     },
 
-    /// The destination file cannot be accessed or written to,
+    /// The destination file cannot be accessed, written to, or its path canonicalized,
     /// for example due to missing permissions.
     ///
     /// The inner [`std::io::Error`] will likely describe the real cause of this error.
@@ -77,21 +62,6 @@ pub enum FileError {
         path: PathBuf,
 
         /// Underlying IO error describing why the destination file could not be accessed.
-        #[source]
-        error: std::io::Error,
-    },
-
-    /// The destination file path could not be canonicalized.
-    ///
-    /// The inner [`std::io::Error`] will likely describe the real cause of this error.
-    ///
-    /// See also: [`std::fs::canonicalize`].
-    #[error("unable to canonicalize destination file path: {}", .path.display())]
-    UnableToCanonicalizeDestinationFilePath {
-        /// Destination file path that could not be canonicalized.
-        path: PathBuf,
-
-        /// Underlying IO error describing why the destination file could not be canonicalized.
         #[source]
         error: std::io::Error,
     },
