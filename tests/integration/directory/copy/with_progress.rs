@@ -11,9 +11,9 @@ use fs_more::{
     },
     error::{
         CopyDirectoryError,
-        CopyDirectoryPlanError,
         CopyDirectoryPreparationError,
         DestinationDirectoryPathValidationError,
+        DirectoryExecutionPlanError,
     },
     file::{CopyFileOptions, ExistingFileBehaviour},
 };
@@ -421,7 +421,7 @@ pub fn copy_directory_with_progress_errors_when_destination_file_collides_and_it
         copy_result.unwrap_err(),
         CopyDirectoryError::PreparationError(
             CopyDirectoryPreparationError::CopyPlanningError(
-                CopyDirectoryPlanError::DestinationItemAlreadyExists { path }
+                DirectoryExecutionPlanError::DestinationItemAlreadyExists { path }
             )
         ) if path == colliding_file_path
     );
@@ -482,7 +482,7 @@ pub fn copy_directory_with_progress_errors_when_destination_subdirectory_collide
         copy_result.unwrap_err(),
         CopyDirectoryError::PreparationError(
             CopyDirectoryPreparationError::CopyPlanningError(
-                CopyDirectoryPlanError::DestinationItemAlreadyExists { path }
+                DirectoryExecutionPlanError::DestinationItemAlreadyExists { path }
             )
         ) if path == colliding_directory_path
     );
@@ -708,7 +708,7 @@ pub fn copy_directory_with_progress_preemptively_checks_for_directory_collisions
         copy_result.unwrap_err(),
         CopyDirectoryError::PreparationError(
             CopyDirectoryPreparationError::CopyPlanningError(
-                CopyDirectoryPlanError::DestinationItemAlreadyExists { path }
+                DirectoryExecutionPlanError::DestinationItemAlreadyExists { path }
             )
         )
         if path == remapped_colliding_directory_path
@@ -779,7 +779,7 @@ pub fn copy_directory_with_progress_preemptively_checks_for_file_collisions() ->
         copy_result.unwrap_err(),
         CopyDirectoryError::PreparationError(
             CopyDirectoryPreparationError::CopyPlanningError(
-                CopyDirectoryPlanError::DestinationItemAlreadyExists { path }
+                DirectoryExecutionPlanError::DestinationItemAlreadyExists { path }
             )
         ) if path == remapped_colliding_file_path
     );

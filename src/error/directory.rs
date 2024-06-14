@@ -161,7 +161,7 @@ pub enum DestinationDirectoryPathValidationError {
 
 /// Directory copy or move planning error.
 #[derive(Error, Debug)]
-pub enum CopyDirectoryPlanError {
+pub enum DirectoryExecutionPlanError {
     /// A source or destination directory, one of its sub-directories or a file
     /// in it (or its metadata) cannot be read.
     ///
@@ -250,7 +250,7 @@ pub enum CopyDirectoryPreparationError {
 
     /// Directory copy or move planning error.
     #[error(transparent)]
-    CopyPlanningError(#[from] CopyDirectoryPlanError),
+    CopyPlanningError(#[from] DirectoryExecutionPlanError),
 }
 
 
@@ -344,7 +344,7 @@ pub enum MoveDirectoryPreparationError {
     #[error(transparent)]
     DestinationDirectoryValidationError(#[from] DestinationDirectoryPathValidationError),
 
-    /// Source directory scanning error.
+    /// Source directory entry scanning error.
     #[error(transparent)]
     DirectoryScanError(#[from] DirectoryScanError),
 
@@ -353,9 +353,9 @@ pub enum MoveDirectoryPreparationError {
     DirectorySizeScanError(#[from] DirectorySizeScanError),
 
     /// Directory copy planning error. These errors can happen
-    /// when a move-by-rename fails and a copy-and-delete is performed instead.
+    /// when a move-by-rename fails and a copy-and-delete is attempted instead.
     #[error(transparent)]
-    CopyPlanningError(#[from] CopyDirectoryPlanError),
+    CopyPlanningError(#[from] DirectoryExecutionPlanError),
 }
 
 
@@ -427,7 +427,7 @@ pub enum MoveDirectoryExecutionError {
 
 
 
-/// Directory moving error (see [`move_directory_with_progress`]).
+/// Directory moving error, see [`move_directory_with_progress`].
 ///
 /// [`move_directory_with_progress`]: [crate::directory::move_directory_with_progress]
 #[derive(Error, Debug)]
@@ -576,6 +576,8 @@ pub enum DirectoryError {
     },
 }
 
+
+
 /// An error that can occur when scanning a directory.
 #[derive(Error, Debug)]
 pub enum DirectoryScanError {
@@ -614,7 +616,7 @@ pub enum DirectoryScanError {
     /// that could not be read due to an IO error.
     ///
     /// The inner [`std::io::Error`] will likely describe a more precise cause of this error.
-    #[error("unable to read directory entries: {}", .directory_path.display())]
+    #[error("unable to read directory entry for {}", .directory_path.display())]
     UnableToReadDirectoryItem {
         /// Directory path whose entries could not be read.
         directory_path: PathBuf,
@@ -624,6 +626,8 @@ pub enum DirectoryScanError {
         error: std::io::Error,
     },
 }
+
+
 
 /// An error that can occur when querying size of a scanned directory.
 #[derive(Error, Debug)]
@@ -690,6 +694,8 @@ pub enum DirectorySizeScanError {
         error: std::io::Error,
     },
 }
+
+
 
 /// An error that can occur when checking whether a directory is empty.
 #[derive(Error, Debug)]

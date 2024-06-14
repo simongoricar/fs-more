@@ -14,9 +14,9 @@ use super::{
 use crate::{
     directory::common::join_relative_source_path_onto_destination,
     error::{
-        CopyDirectoryPlanError,
         CopyDirectoryPreparationError,
         DestinationDirectoryPathValidationError,
+        DirectoryExecutionPlanError,
         SourceDirectoryPathValidationError,
     },
     use_enabled_fs_module,
@@ -322,7 +322,7 @@ fn scan_and_plan_directory_copy(
     source_directory_path: PathBuf,
     destination_directory_path: PathBuf,
     copy_depth_limit: CopyDirectoryDepthLimit,
-) -> Result<Vec<QueuedOperation>, CopyDirectoryPlanError> {
+) -> Result<Vec<QueuedOperation>, DirectoryExecutionPlanError> {
     let mut operation_queue: Vec<QueuedOperation> = Vec::new();
 
 
@@ -346,7 +346,7 @@ fn scan_and_plan_directory_copy(
         // Scan the directory for its files and directories.
         // Files are queued for copying, directories are queued for creation.
         let directory_iterator = fs::read_dir(&next_directory.directory_path).map_err(|error| {
-            CopyDirectoryPlanError::UnableToAccess {
+            DirectoryExecutionPlanError::UnableToAccess {
                 path: next_directory.directory_path.clone(),
                 error,
             }
@@ -354,14 +354,14 @@ fn scan_and_plan_directory_copy(
 
         for directory_item in directory_iterator {
             let directory_item =
-                directory_item.map_err(|error| CopyDirectoryPlanError::UnableToAccess {
+                directory_item.map_err(|error| DirectoryExecutionPlanError::UnableToAccess {
                     path: next_directory.directory_path.clone(),
                     error,
                 })?;
 
             let directory_item_source_path = directory_item.path();
             let directory_item_name = directory_item_source_path.file_name().ok_or_else(|| {
-                CopyDirectoryPlanError::UnableToAccess {
+                DirectoryExecutionPlanError::UnableToAccess {
                     path: directory_item_source_path.clone(),
                     error: io::Error::new(
                         ErrorKind::Other,
@@ -387,13 +387,13 @@ fn scan_and_plan_directory_copy(
                 &new_directory_path_without_symlink_follows,
                 &destination_directory_path,
             )
-            .map_err(|error| CopyDirectoryPlanError::EntryEscapesSourceDirectory {
-                path: error.path,
+            .map_err(|error| {
+                DirectoryExecutionPlanError::EntryEscapesSourceDirectory { path: error.path }
             })?;
 
 
             let item_type = directory_item.file_type().map_err(|error| {
-                CopyDirectoryPlanError::UnableToAccess {
+                DirectoryExecutionPlanError::UnableToAccess {
                     path: directory_item_source_path.clone(),
                     error,
                 }
@@ -402,7 +402,7 @@ fn scan_and_plan_directory_copy(
 
             if item_type.is_file() {
                 let file_metadata = directory_item.metadata().map_err(|error| {
-                    CopyDirectoryPlanError::UnableToAccess {
+                    DirectoryExecutionPlanError::UnableToAccess {
                         path: directory_item_source_path.clone(),
                         error,
                     }
@@ -418,7 +418,7 @@ fn scan_and_plan_directory_copy(
                 });
             } else if item_type.is_dir() {
                 let directory_metadata = directory_item.metadata().map_err(|error| {
-                    CopyDirectoryPlanError::UnableToAccess {
+                    DirectoryExecutionPlanError::UnableToAccess {
                         path: directory_item_source_path.clone(),
                         error,
                     }
@@ -464,14 +464,14 @@ fn scan_and_plan_directory_copy(
                 // (unlike [`DirEntry::metadata`], this metadata call *does* follow symolic links).
                 let underlying_path =
                     fs::canonicalize(&directory_item_source_path).map_err(|error| {
-                        CopyDirectoryPlanError::UnableToAccess {
+                        DirectoryExecutionPlanError::UnableToAccess {
                             path: directory_item_source_path.clone(),
                             error,
                         }
                     })?;
 
                 let underlying_item_metadata = fs::metadata(&underlying_path).map_err(|error| {
-                    CopyDirectoryPlanError::UnableToAccess {
+                    DirectoryExecutionPlanError::UnableToAccess {
                         path: underlying_path.clone(),
                         error,
                     }
@@ -529,7 +529,7 @@ fn scan_and_plan_directory_copy(
 fn check_operation_queue_for_collisions(
     queue: &[QueuedOperation],
     destination_directory_rules: DestinationDirectoryRule,
-) -> Result<(), CopyDirectoryPlanError> {
+) -> Result<(), DirectoryExecutionPlanError> {
     let can_overwrite_existing_destination_files =
         destination_directory_rules.allows_overwriting_existing_destination_files();
 
@@ -554,14 +554,14 @@ fn check_operation_queue_for_collisions(
                 if !can_overwrite_existing_destination_files {
                     let destination_file_exists =
                         destination_file_path.try_exists().map_err(|error| {
-                            CopyDirectoryPlanError::UnableToAccess {
+                            DirectoryExecutionPlanError::UnableToAccess {
                                 path: destination_file_path.to_path_buf(),
                                 error,
                             }
                         })?;
 
                     if destination_file_exists {
-                        return Err(CopyDirectoryPlanError::DestinationItemAlreadyExists {
+                        return Err(DirectoryExecutionPlanError::DestinationItemAlreadyExists {
                             path: destination_file_path.clone(),
                         });
                     }
@@ -574,13 +574,13 @@ fn check_operation_queue_for_collisions(
                 if !should_ignore_existing_destination_sub_directory {
                     let destination_directory_exists = destination_directory_path
                         .try_exists()
-                        .map_err(|error| CopyDirectoryPlanError::UnableToAccess {
+                        .map_err(|error| DirectoryExecutionPlanError::UnableToAccess {
                             path: destination_directory_path.to_path_buf(),
                             error,
                         })?;
 
                     if destination_directory_exists {
-                        return Err(CopyDirectoryPlanError::DestinationItemAlreadyExists {
+                        return Err(DirectoryExecutionPlanError::DestinationItemAlreadyExists {
                             path: destination_directory_path.clone(),
                         });
                     }
@@ -649,7 +649,7 @@ impl DirectoryCopyPrepared {
         validated_destination_directory: ValidatedDestinationDirectory,
         destination_directory_rule: DestinationDirectoryRule,
         copy_depth_limit: CopyDirectoryDepthLimit,
-    ) -> Result<Self, CopyDirectoryPlanError> {
+    ) -> Result<Self, DirectoryExecutionPlanError> {
         let operations = Self::prepare_directory_operations(
             validated_source_directory.directory_path,
             validated_destination_directory.directory_path.clone(),
@@ -726,7 +726,7 @@ impl DirectoryCopyPrepared {
         destination_directory_path: PathBuf,
         destination_directory_rule: DestinationDirectoryRule,
         copy_depth_limit: CopyDirectoryDepthLimit,
-    ) -> Result<Vec<QueuedOperation>, CopyDirectoryPlanError> {
+    ) -> Result<Vec<QueuedOperation>, DirectoryExecutionPlanError> {
         // Initialize a queue of file copy or directory create operations.
         let copy_queue = scan_and_plan_directory_copy(
             source_directory_path,
