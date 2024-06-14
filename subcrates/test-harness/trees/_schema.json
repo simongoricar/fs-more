@@ -8,20 +8,35 @@
     "structure"
   ],
   "properties": {
+    "description": {
+      "description": "A short description of the tree.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "file_name": {
+      "description": "File name (without extension) to save the generated harness into.\n\nExample: `simple` will save the generated harness code into `simple.rs`.",
       "type": "string"
     },
     "name": {
+      "description": "Name of the root struct for the generated filesystem harness. Will be converted to upper camel case if not already.\n\nExample: `simple` will generate, among other things, a `Simple` struct, which will be the root of the harness.",
       "type": "string"
     },
     "structure": {
-      "$ref": "#/definitions/FileSystemHarnessStructure"
+      "description": "The full file tree of the harness.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/FileSystemHarnessStructure"
+        }
+      ]
     }
   },
   "definitions": {
     "FileDataConfiguration": {
       "oneOf": [
         {
+          "description": "Creates an empty file.",
           "type": "object",
           "required": [
             "type"
@@ -36,6 +51,7 @@
           }
         },
         {
+          "description": "Creates a file and writes the given `content` into it.",
           "type": "object",
           "required": [
             "content",
@@ -54,6 +70,7 @@
           }
         },
         {
+          "description": "Creates a file and seeds it with `file_size_bytes` bytes of deterministic random data.",
           "type": "object",
           "required": [
             "file_size_bytes",
@@ -82,6 +99,7 @@
       ]
     },
     "FileSystemHarnessEntry": {
+      "description": "Describes an entry in a tree - a file or a directory.\n\nA directory can additionally contain one or more files or subdirectories.",
       "oneOf": [
         {
           "type": "object",
@@ -91,6 +109,7 @@
           ],
           "properties": {
             "data": {
+              "description": "Specifies the data to seed this file with. If `None`, an empty file is created (just like [`FileDataConfiguration::Empty`]).",
               "anyOf": [
                 {
                   "$ref": "#/definitions/FileDataConfiguration"
@@ -101,6 +120,7 @@
               ]
             },
             "name": {
+              "description": "File name (including extension).",
               "type": "string"
             },
             "type": {
@@ -114,18 +134,22 @@
         {
           "type": "object",
           "required": [
-            "entries",
             "name",
             "type"
           ],
           "properties": {
             "entries": {
-              "type": "array",
+              "description": "If any, this specifies files and subdirectories inside this directory.",
+              "type": [
+                "array",
+                "null"
+              ],
               "items": {
                 "$ref": "#/definitions/FileSystemHarnessEntry"
               }
             },
             "name": {
+              "description": "Directory name.",
               "type": "string"
             },
             "type": {
@@ -145,6 +169,7 @@
       ],
       "properties": {
         "entries": {
+          "description": "A list of hiearhical filesystem entries. The first level of these entries will reside in the root directory of the harness.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/FileSystemHarnessEntry"
