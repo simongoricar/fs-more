@@ -104,11 +104,11 @@ println!(
 The following feature flags are available:
 - `fs-err`: enables [`fs-err`](https://docs.rs/fs-err) support, which means more helpful underlying IO error messages
   (though `fs-more` already provides many on its own).
-- `dunce` (*enabled by default*): enables the optional [`dunce`](../dunce/index.html) support:
+- `dunce` (*enabled by default*): enables the optional [`dunce`](https://docs.rs/dunce) support:
   This automatically strips Windows' UNC paths if they can be represented
-  using the usual type of path (e.g. `\\?\C:\foo -> C:\foo`) both internally
-  and in e.g. `DirectoryScan`'s file and directory paths (this is recommended because path canonicalization
-  very commonly returns UNC paths).
+  using the usual type of path (e.g. `\\?\C:\foo -> C:\foo`).
+  This is used both internally and in e.g. `DirectoryScan`'s file and directory paths. This feature flag is enabled by default and recommended 
+  because because path canonicalization very commonly returns UNC paths.
   This crate only has an effect when compiling for Windows targets.
 
 
