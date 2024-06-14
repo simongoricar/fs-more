@@ -19,8 +19,25 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4.1.1
+      - name: Install typos tool
+        uses: taiki-e/install-action@v2
+        with:
+          tool: typos@1.22.7
       - name: Check for typos
-        uses: crate-ci/typos@v1.22.7
+        run: typos --color always --format long
+  
+  rustfmt:
+    name: Verify code formatting
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.1.1
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+      - name: Check with rustfmt
+        run: cargo fmt --all --check -- --config-path rustfmt.toml
 
   deny:
     name: Run cargo-deny
