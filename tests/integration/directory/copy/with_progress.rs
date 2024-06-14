@@ -139,7 +139,7 @@ pub fn copy_directory_with_progress_creates_an_identical_copy() -> TestResult {
             }
 
 
-            last_progress_report = Some(progress.clone());
+            last_progress_report = Some(progress.to_owned_progress());
         }
     ).unwrap();
 
@@ -768,7 +768,7 @@ pub fn copy_directory_with_progress_preemptively_checks_for_file_collisions() ->
             ..Default::default()
         },
         |progress| {
-            last_progress_report = Some(progress.clone());
+            last_progress_report = Some(progress.to_owned_progress());
         },
     );
 
@@ -835,7 +835,7 @@ pub fn copy_directory_with_progress_errors_when_source_is_symlink_to_destination
             ..Default::default()
         },
         |progress| {
-            last_progress_report = Some(progress.clone());
+            last_progress_report = Some(progress.to_owned_progress());
         },
     );
 

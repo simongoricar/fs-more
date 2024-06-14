@@ -464,7 +464,7 @@ pub struct DirectoryMoveProgress {
     pub current_operation: DirectoryMoveOperation,
 
     /// The index of the current operation (starts at `0`, goes to `total_operations - 1`).
-    pub current_operation_index: isize,
+    pub current_operation_index: usize,
 
     /// The total amount of operations that need to be performed to move the requested directory.
     ///
@@ -472,7 +472,7 @@ pub struct DirectoryMoveProgress {
     /// - copying a file,
     /// - creating a directory or
     /// - removing the source directory (at the very end).
-    pub total_operations: isize,
+    pub total_operations: usize,
 }
 
 

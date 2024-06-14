@@ -373,8 +373,69 @@ pub enum CopyDirectoryOperation {
 
 /// Directory copying progress.
 ///
-/// This struct is used to report progress to a user-provided closure,
-/// see usage in [`copy_directory_with_progress`].
+/// This struct is used to report progress to a user-provided closure
+/// (see usage in [`copy_directory_with_progress`]).
+///
+/// Note that the data inside this struct isn't fully owned - the `current_operation`
+/// field is borrowed, and cloning will not have the desired effect.
+/// To obtain a fully-owned clone of this state, call
+/// [`CopyDirectoryProgressRef::to_owned_progress`].
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct CopyDirectoryProgressRef<'o> {
+    /// Total number of bytes that need to be copied
+    /// for the directory copy to be complete.
+    pub bytes_total: u64,
+
+    /// Number of bytes that have been copied so far.
+    pub bytes_finished: u64,
+
+    /// Number of files that have been copied so far.
+    pub files_copied: usize,
+
+    /// Number of directories that have been created so far.
+    pub directories_created: usize,
+
+    /// The current operation being performed.
+    pub current_operation: &'o CopyDirectoryOperation,
+
+    /// The index of the current operation.
+    ///
+    /// Starts at `0`, goes up to (including) `total_operations - 1`.
+    pub current_operation_index: usize,
+
+    /// The total amount of operations that need to be performed to
+    /// copy the requested directory.
+    ///
+    /// A single operation is either copying a file or creating a directory,
+    /// see [`CopyDirectoryOperation`].
+    pub total_operations: usize,
+}
+
+impl<'o> CopyDirectoryProgressRef<'o> {
+    /// Clones the required data from this progress struct
+    /// into an [`CopyDirectoryProgress`] - this way you own
+    /// the entire state.
+    pub fn to_owned_progress(&self) -> CopyDirectoryProgress {
+        CopyDirectoryProgress {
+            bytes_total: self.bytes_total,
+            bytes_finished: self.bytes_finished,
+            files_copied: self.files_copied,
+            directories_created: self.directories_created,
+            current_operation: self.current_operation.to_owned(),
+            current_operation_index: self.current_operation_index,
+            total_operations: self.total_operations,
+        }
+    }
+}
+
+
+/// Directory copying progress.
+///
+/// This is a fully-owned version of [`CopyDirectoryProgress`],
+/// where the `current_operation` field is borrowed.
+///
+/// Obtainable from a reference to [`CopyDirectoryProgressRef`]
+/// by calling [`CopyDirectoryProgressRef::to_owned_progress`].
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct CopyDirectoryProgress {
     /// Total number of bytes that need to be copied
@@ -393,21 +454,53 @@ pub struct CopyDirectoryProgress {
     /// The current operation being performed.
     pub current_operation: CopyDirectoryOperation,
 
-    // TODO Consider refactoring this and total_operations to usize.
     /// The index of the current operation.
     ///
     /// Starts at `0`, goes up to (including) `total_operations - 1`.
-    pub current_operation_index: isize,
+    pub current_operation_index: usize,
 
     /// The total amount of operations that need to be performed to
     /// copy the requested directory.
     ///
     /// A single operation is either copying a file or creating a directory,
     /// see [`CopyDirectoryOperation`].
-    pub total_operations: isize,
+    pub total_operations: usize,
 }
 
-impl CopyDirectoryProgress {
+
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+struct InternalCopyDirectoryProgress {
+    /// Total number of bytes that need to be copied
+    /// for the directory copy to be complete.
+    bytes_total: u64,
+
+    /// Number of bytes that have been copied so far.
+    bytes_finished: u64,
+
+    /// Number of files that have been copied so far.
+    files_copied: usize,
+
+    /// Number of directories that have been created so far.
+    directories_created: usize,
+
+    /// The current operation being performed.
+    current_operation: Option<CopyDirectoryOperation>,
+
+    /// The index of the current operation.
+    ///
+    /// Starts at `0`, goes up to (including) `total_operations - 1`.
+    current_operation_index: Option<usize>,
+
+    /// The total amount of operations that need to be performed to
+    /// copy the requested directory.
+    ///
+    /// A single operation is either copying a file or creating a directory,
+    /// see [`CopyDirectoryOperation`].
+    total_operations: usize,
+}
+
+impl InternalCopyDirectoryProgress {
     /// Modifies `self` with the provided `FnMut` closure.
     /// Then, the provided progress handler closure is called.
     fn update_operation_and_emit_progress<M, F>(
@@ -416,29 +509,66 @@ impl CopyDirectoryProgress {
         progress_handler: &mut F,
     ) where
         M: FnMut(&mut Self),
-        F: FnMut(&CopyDirectoryProgress),
+        F: FnMut(&CopyDirectoryProgressRef),
     {
         self_modifier_closure(self);
-        progress_handler(self);
+        progress_handler(&self.to_user_facing_progress());
     }
 
     /// Replaces the current [`current_operation`][Self::current_operation]
-    /// with the next one. The [`current_operation_index`][Self::current_operation_index]
-    /// is also incremented.
-    /// Then, the provided progress handler closure is called.
+    /// with the next one.
+    ///
+    /// The [`current_operation_index`][Self::current_operation_index]
+    /// is incremented or set to 0, if previously unset.
+    ///
+    /// Finally, the provided progress handler closure is called.
     fn set_next_operation_and_emit_progress<F>(
         &mut self,
         operation: CopyDirectoryOperation,
         progress_handler: &mut F,
     ) where
-        F: FnMut(&CopyDirectoryProgress),
+        F: FnMut(&CopyDirectoryProgressRef),
     {
-        self.current_operation_index += 1;
-        self.current_operation = operation;
+        if let Some(existing_operation_index) = self.current_operation_index.as_mut() {
+            *existing_operation_index += 1;
+        } else {
+            self.current_operation_index = Some(0);
+        }
 
-        progress_handler(self)
+        self.current_operation = Some(operation);
+
+        progress_handler(&self.to_user_facing_progress())
+    }
+
+    /// Converts the [`PartialCopyDirectoryProgress`] to a [`CopyDirectoryProgress`],
+    /// copying only the small fields, and passing the `current_operation` as a reference.
+    ///
+    /// # Panics
+    /// Panics if the `current_operation` or `current_operation_index` field is `None`.
+    fn to_user_facing_progress(&self) -> CopyDirectoryProgressRef<'_> {
+        let current_operation_reference = self
+            .current_operation
+            .as_ref()
+            // PANIC SATEFY: The caller is responsible.
+            .expect("current_operation field to be Some");
+
+        let current_operation_index = self
+            .current_operation_index
+            // PANIC SATEFY: The caller is responsible.
+            .expect("current_operation_index to be Some");
+
+        CopyDirectoryProgressRef {
+            bytes_total: self.bytes_total,
+            bytes_finished: self.bytes_finished,
+            files_copied: self.files_copied,
+            directories_created: self.directories_created,
+            current_operation: current_operation_reference,
+            current_operation_index,
+            total_operations: self.total_operations,
+        }
     }
 }
+
 
 
 
@@ -502,11 +632,11 @@ fn execute_copy_file_operation_with_progress<F>(
     source_size_bytes: u64,
     destination_path: PathBuf,
     options: &CopyDirectoryWithProgressOptions,
-    progress: &mut CopyDirectoryProgress,
+    progress: &mut InternalCopyDirectoryProgress,
     progress_handler: &mut F,
 ) -> Result<(), CopyDirectoryExecutionError>
 where
-    F: FnMut(&CopyDirectoryProgress),
+    F: FnMut(&CopyDirectoryProgressRef),
 {
     let can_overwrite_destination_file = options
         .destination_directory_rule
@@ -580,10 +710,16 @@ where
         },
         |new_file_progress| progress.update_operation_and_emit_progress(
                 |progress| {
+                    let current_operation = progress.current_operation.as_mut()
+                        // PANIC SATEFY: The function calls `set_next_operation_and_emit_progress` above,
+                        // meaning the `current_operation` can never be None.
+                        .expect("the current_operation field to be Some");
+
+
                     if let CopyDirectoryOperation::CopyingFile {
                         progress: file_progress,
                         ..
-                    } = &mut progress.current_operation
+                    } = current_operation
                     {
                         // It is somewhat possible that a file is written to between the scanning phase 
                         // and copying. In that case, it is *possible* that the file size changes, 
@@ -629,11 +765,11 @@ fn execute_create_directory_operation_with_progress<F>(
     destination_directory_path: PathBuf,
     source_size_bytes: u64,
     options: &CopyDirectoryWithProgressOptions,
-    progress: &mut CopyDirectoryProgress,
+    progress: &mut InternalCopyDirectoryProgress,
     progress_handler: &mut F,
 ) -> Result<(), CopyDirectoryExecutionError>
 where
-    F: FnMut(&CopyDirectoryProgress),
+    F: FnMut(&CopyDirectoryProgressRef),
 {
     let destination_directory_exists =
         destination_directory_path.try_exists().map_err(|error| {
@@ -700,7 +836,7 @@ pub(crate) fn execute_prepared_copy_directory_with_progress_unchecked<F>(
     mut progress_handler: F,
 ) -> Result<CopyDirectoryFinished, CopyDirectoryExecutionError>
 where
-    F: FnMut(&CopyDirectoryProgress),
+    F: FnMut(&CopyDirectoryProgressRef),
 {
     let validated_destination = prepared_copy.validated_destination_directory;
 
@@ -712,35 +848,33 @@ where
             });
         }
 
-        CopyDirectoryProgress {
+        InternalCopyDirectoryProgress {
             bytes_total: prepared_copy.total_bytes,
             bytes_finished: 0,
             files_copied: 0,
             directories_created: 0,
             // This is an invisible operation - we don't emit this progress struct at all,
             // but we do need something here before the next operation starts.
-            current_operation: CopyDirectoryOperation::CreatingDirectory {
-                destination_directory_path: PathBuf::new(),
-            },
-            current_operation_index: -1,
-            total_operations: prepared_copy.operation_queue.len() as isize,
+            current_operation: None,
+            current_operation_index: None,
+            total_operations: prepared_copy.operation_queue.len(),
         }
     } else {
         // This time we actually emit progress after creating the destination directory.
 
-        let mut progress = CopyDirectoryProgress {
+        let mut progress = InternalCopyDirectoryProgress {
             bytes_total: prepared_copy.total_bytes,
             bytes_finished: 0,
             files_copied: 0,
             directories_created: 0,
-            current_operation: CopyDirectoryOperation::CreatingDirectory {
+            current_operation: Some(CopyDirectoryOperation::CreatingDirectory {
                 destination_directory_path: validated_destination.directory_path.clone(),
-            },
-            current_operation_index: 0,
-            total_operations: prepared_copy.operation_queue.len() as isize + 1,
+            }),
+            current_operation_index: Some(0),
+            total_operations: prepared_copy.operation_queue.len() + 1,
         };
 
-        progress_handler(&progress);
+        progress_handler(&progress.to_user_facing_progress());
 
         fs::create_dir_all(&validated_destination.directory_path).map_err(|error| {
             CopyDirectoryExecutionError::UnableToCreateDirectory {
@@ -784,7 +918,7 @@ where
     }
 
     // One last progress update - everything should be done at this point.
-    progress_handler(&progress);
+    progress_handler(&progress.to_user_facing_progress());
 
     Ok(CopyDirectoryFinished {
         total_bytes_copied: progress.bytes_finished,
@@ -880,7 +1014,7 @@ pub fn copy_directory_with_progress<S, T, F>(
 where
     S: AsRef<Path>,
     T: AsRef<Path>,
-    F: FnMut(&CopyDirectoryProgress),
+    F: FnMut(&CopyDirectoryProgressRef),
 {
     let prepared_copy = DirectoryCopyPrepared::prepare(
         source_directory_path.as_ref(),
