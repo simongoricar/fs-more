@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use fs_more::directory::DirectoryScanDepthLimit;
+use fs_more::directory::{DirectoryScanDepthLimit, DirectoryScanOptions};
 use fs_more_test_harness::{
     assertable::{
         r#trait::{AssertablePath, ManageablePath},
@@ -68,8 +68,7 @@ pub fn directory_scan_produces_correct_information() -> TestResult {
 
     let scan = fs_more::directory::DirectoryScan::scan_with_options(
         harness.as_path(),
-        DirectoryScanDepthLimit::Unlimited,
-        false,
+        DirectoryScanOptions::default(),
     )
     .unwrap();
 
@@ -104,8 +103,10 @@ pub fn directory_scan_respects_limited_depth_option() -> TestResult {
 
     let scan = fs_more::directory::DirectoryScan::scan_with_options(
         harness.as_path(),
-        DirectoryScanDepthLimit::Limited { maximum_depth: 0 },
-        false,
+        DirectoryScanOptions {
+            maximum_scan_depth: DirectoryScanDepthLimit::Limited { maximum_depth: 0 },
+            ..Default::default()
+        },
     )
     .unwrap();
 
@@ -143,8 +144,7 @@ pub fn directory_scan_calculates_correct_size() -> TestResult {
 
     let scan = fs_more::directory::DirectoryScan::scan_with_options(
         harness.as_path(),
-        DirectoryScanDepthLimit::Unlimited,
-        false,
+        DirectoryScanOptions::default(),
     )
     .unwrap();
 
@@ -177,8 +177,10 @@ pub fn directory_scan_calculates_correct_size_with_depth_limit() -> TestResult<(
 
     let scan = fs_more::directory::DirectoryScan::scan_with_options(
         harness.as_path(),
-        DirectoryScanDepthLimit::Limited { maximum_depth: 0 },
-        false,
+        DirectoryScanOptions {
+            maximum_scan_depth: DirectoryScanDepthLimit::Limited { maximum_depth: 0 },
+            ..Default::default()
+        },
     )
     .unwrap();
 
@@ -196,7 +198,7 @@ pub fn directory_scan_calculates_correct_size_with_depth_limit() -> TestResult<(
 
 
 #[test]
-pub fn directory_scan_follows_file_and_directory_symlink_when_configured() -> TestResult {
+pub fn directory_scan_does_not_follow_file_and_directory_symlink_when_configured() -> TestResult {
     let deep_harness = DeepTree::initialize();
     let simple_harness = SimpleTree::initialize();
 
@@ -220,8 +222,10 @@ pub fn directory_scan_follows_file_and_directory_symlink_when_configured() -> Te
 
     let scan_results = fs_more::directory::DirectoryScan::scan_with_options(
         deep_harness.as_path(),
-        DirectoryScanDepthLimit::Unlimited,
-        false,
+        DirectoryScanOptions {
+            maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
+            follow_symbolic_links: false,
+        },
     )
     .unwrap();
 
@@ -255,7 +259,7 @@ pub fn directory_scan_follows_file_and_directory_symlink_when_configured() -> Te
 }
 
 #[test]
-pub fn directory_scan_does_not_follow_file_and_directory_symlink_when_configured() -> TestResult {
+pub fn directory_scan_follows_file_and_directory_symlink_when_configured() -> TestResult {
     let deep_harness = DeepTree::initialize();
     let simple_harness = SimpleTree::initialize();
 
@@ -275,8 +279,10 @@ pub fn directory_scan_does_not_follow_file_and_directory_symlink_when_configured
 
     let scan_results = fs_more::directory::DirectoryScan::scan_with_options(
         deep_harness.as_path(),
-        DirectoryScanDepthLimit::Unlimited,
-        true,
+        DirectoryScanOptions {
+            maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
+            follow_symbolic_links: true,
+        },
     )
     .unwrap();
 

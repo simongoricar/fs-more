@@ -76,6 +76,48 @@ pub enum DirectoryScanDepthLimit {
     },
 }
 
+/// Options that influence [`DirectoryScan`].
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct DirectoryScanOptions {
+    /// The maximum directory scanning depth, see [`DirectoryScanDepthLimit`].
+    pub maximum_scan_depth: DirectoryScanDepthLimit,
+
+    /// Whether to follow symbolic links when scanning or not.
+    ///
+    /// ## If enabled
+    /// We'll follow the symbolic links, even if they lead outside the base `directory_path`.
+    /// Note that this means the files and directories included in the scan results
+    /// **might not necessarily be sub-paths of the provided base `directory_path`**.
+    ///
+    /// If a symbolic link turns out to be broken (its destination doesn't exist),
+    /// it is simply ignored (not included in the scan results).
+    ///
+    ///
+    /// ## If disabled
+    /// When we encounter a symbolic link, the results will include the file path of
+    /// the symbolic link itself, *not the link's destination path*.
+    ///
+    /// If an encountered symbolic link points to a directory, it will
+    /// be included in the results in a similar manner, but with one significant difference:
+    /// as we won't resolve symbolic links, the files and subdirectories of that symlinked directory
+    /// will not be scanned, even if the scan depth limit would have allowed it.
+    ///
+    /// If a symbolic link turns out to be broken (its destination doesn't exist),
+    /// it is simply ignored (not included in the scan results).
+    pub follow_symbolic_links: bool,
+}
+
+impl Default for DirectoryScanOptions {
+    /// Returns the default directory scanning options, which are:
+    /// - unlimited scan depth,
+    /// - symlinks are no followed.
+    fn default() -> Self {
+        Self {
+            maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
+            follow_symbolic_links: false,
+        }
+    }
+}
 
 
 /// A directory scanner with configurable scan depth and symlink behaviour.
@@ -88,11 +130,6 @@ pub enum DirectoryScanDepthLimit {
 pub struct DirectoryScan {
     /// Path of the directory that was scanned.
     root_directory_path: PathBuf,
-
-    /// The maximum depth setting used for this scan.
-    ///
-    /// See [`DirectoryScanDepth`] for more information.
-    maximum_scanned_depth: DirectoryScanDepthLimit,
 
     /// A `bool` indicating whether this scan covered the entire directory tree.
     ///
@@ -119,43 +156,25 @@ impl DirectoryScan {
     ///
     /// # Scan depth
     /// Maximum scanning depth can be configured by setting
-    /// the `maximum_scan_depth` parameter, see [`DirectoryScanDepthLimit`].
+    /// [`options.maximum_scan_depth`].
     ///
     ///
     /// # Symbolic links
-    /// This scanner can follow symbolic links.
+    /// This scanner can follow symbolic links, see [`options.follow_symbolic_links`]
+    /// for more information.
     ///
     ///
-    /// ## `follow_symbolic_links = true`
-    /// We'll follow the symbolic links, even if they lead outside the base `directory_path`.
-    /// Note that this means the files and directories included in the scan results
-    /// **might not necessarily be sub-paths of the provided base `directory_path`**.
-    ///
-    /// If a symbolic link turns out to be broken (its destination doesn't exist), it is simply ignored
-    /// (not included in the scan results).
-    ///
-    ///
-    /// ## `follow_symbolic_links = false`
-    /// When we encounter a symbolic link, the results will include the file path of
-    /// the symbolic link itself, *not the link's destination path*.
-    ///
-    /// If an encountered symbolic link points to a directory, it will
-    /// be included in the results in a similar manner, but with one significant difference:
-    /// as we won't resolve symbolic links, the files and subdirectories of that symlinked directory
-    /// will not be scanned, even if the scan depth limit would have allowed it.
-    ///
-    /// If a symbolic link turns out to be broken (its destination doesn't exist), it is simply ignored
-    /// (not included in the scan results).
-    ///
-    ///
-    /// ## However
-    /// Regardless of the symbolic link option,
-    /// if `directory_path` is a symbolic link to a directory *itself*,
+    /// ## `directory_path` symlink behaviour
+    /// Regardless of the symbolic link option described above:
+    /// if `directory_path` itself is a symbolic link to a directory,
     /// the link destination will be resolved before beginning the scan.
+    ///
+    ///
+    /// [`options.follow_symbolic_links`]: DirectoryScanOptions::follow_symbolic_links
+    /// [`options.maximum_scan_depth`]: DirectoryScanOptions::maximum_scan_depth
     pub fn scan_with_options<P>(
         directory_path: P,
-        maximum_scan_depth: DirectoryScanDepthLimit,
-        follow_symbolic_links: bool,
+        options: DirectoryScanOptions,
     ) -> Result<Self, DirectoryScanError>
     where
         P: Into<PathBuf>,
@@ -252,7 +271,7 @@ impl DirectoryScan {
                     // If the scan depth limit allows it, sub-directories will need to be scanned
                     // for additional content. We can do that by adding them to the `directory_scan_queue`.
 
-                    match maximum_scan_depth {
+                    match options.maximum_scan_depth {
                         DirectoryScanDepthLimit::Limited { maximum_depth } => {
                             if next_directory.depth < maximum_depth {
                                 directory_scan_queue.push(PendingDirectoryScan::new(
@@ -313,12 +332,12 @@ impl DirectoryScan {
                         })?;
 
 
-                    if follow_symbolic_links {
+                    if options.follow_symbolic_links {
                         if resolved_symlink_metadata.is_file() {
                             file_list.push(resolved_symlink_path);
                         } else if resolved_symlink_metadata.is_dir() {
                             // Depth settings are respected if the destination is a directory.
-                            match maximum_scan_depth {
+                            match options.maximum_scan_depth {
                                 DirectoryScanDepthLimit::Limited { maximum_depth } => {
                                     if next_directory.depth < maximum_depth {
                                         directory_scan_queue.push(PendingDirectoryScan::new(
@@ -339,12 +358,10 @@ impl DirectoryScan {
 
                             directory_list.push(resolved_symlink_path);
                         }
-                    } else {
-                        if resolved_symlink_metadata.is_file() {
-                            file_list.push(directory_entry.path());
-                        } else if resolved_symlink_metadata.is_dir() {
-                            directory_list.push(directory_entry.path());
-                        }
+                    } else if resolved_symlink_metadata.is_file() {
+                        file_list.push(directory_entry.path());
+                    } else if resolved_symlink_metadata.is_dir() {
+                        directory_list.push(directory_entry.path());
                     }
                 }
             }
@@ -352,7 +369,6 @@ impl DirectoryScan {
 
         Ok(Self {
             root_directory_path: directory_path,
-            maximum_scanned_depth: maximum_scan_depth,
             covers_entire_subtree: !actual_tree_is_deeper_than_scan,
             files: file_list,
             directories: directory_list,

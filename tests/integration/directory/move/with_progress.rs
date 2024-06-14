@@ -7,7 +7,7 @@ use fs_more::{
         DirectoryMoveOperation,
         DirectoryMoveProgress,
         DirectoryMoveStrategy,
-        DirectoryScanDepthLimit,
+        DirectoryScanOptions,
         ExistingSubDirectoryBehaviour,
         MoveDirectoryWithProgressOptions,
     },
@@ -39,8 +39,7 @@ pub fn move_directory_with_progress_moves_all_files_and_subdirectories() -> Test
 
     let source_scan = fs_more::directory::DirectoryScan::scan_with_options(
         deep_harness.as_path(),
-        DirectoryScanDepthLimit::Unlimited,
-        false,
+        DirectoryScanOptions::default(),
     )
     .unwrap();
 

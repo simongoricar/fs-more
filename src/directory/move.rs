@@ -21,6 +21,7 @@ use super::{
     DestinationDirectoryRule,
     DirectoryScan,
     DirectoryScanDepthLimit,
+    DirectoryScanOptions,
 };
 use crate::{
     error::{MoveDirectoryError, MoveDirectoryExecutionError, MoveDirectoryPreparationError},
@@ -121,8 +122,10 @@ fn collect_source_directory_details(
 ) -> Result<DirectoryContentDetails, MoveDirectoryPreparationError> {
     let scan = DirectoryScan::scan_with_options(
         source_directory_path,
-        DirectoryScanDepthLimit::Unlimited,
-        false,
+        DirectoryScanOptions {
+            maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
+            follow_symbolic_links: false,
+        },
     )
     .map_err(MoveDirectoryPreparationError::DirectoryScanError)?;
 

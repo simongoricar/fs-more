@@ -7,6 +7,7 @@ use fs_more::{
         CopyDirectoryWithProgressOptions,
         DestinationDirectoryRule,
         DirectoryScanDepthLimit,
+        DirectoryScanOptions,
         ExistingSubDirectoryBehaviour,
     },
     error::{
@@ -42,8 +43,10 @@ pub fn copy_directory_with_progress_creates_an_identical_copy() -> TestResult {
 
     let deep_harness_scan = fs_more::directory::DirectoryScan::scan_with_options(
         deep_harness.as_path(),
-        DirectoryScanDepthLimit::Unlimited,
-        false,
+        DirectoryScanOptions {
+            maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
+            follow_symbolic_links: false,
+        },
     )
     .unwrap();
 
@@ -194,10 +197,12 @@ pub fn copy_directory_with_progress_respects_copy_depth_limit() -> TestResult {
 
     let deep_harness_scan = fs_more::directory::DirectoryScan::scan_with_options(
         deep_harness.as_path(),
-        DirectoryScanDepthLimit::Limited {
-            maximum_depth: MAXIMUM_DEPTH,
+        DirectoryScanOptions {
+            maximum_scan_depth: DirectoryScanDepthLimit::Limited {
+                maximum_depth: MAXIMUM_DEPTH,
+            },
+            follow_symbolic_links: false,
         },
-        false,
     )
     .unwrap();
 
@@ -224,8 +229,10 @@ pub fn copy_directory_with_progress_respects_copy_depth_limit() -> TestResult {
 
     let destination_harness_scan = fs_more::directory::DirectoryScan::scan_with_options(
         empty_harness.as_path(),
-        DirectoryScanDepthLimit::Unlimited,
-        false,
+        DirectoryScanOptions {
+            maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
+            follow_symbolic_links: false,
+        },
     )
     .unwrap();
 

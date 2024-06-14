@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use super::DirectoryScanDepthLimit;
+use super::{DirectoryScanDepthLimit, DirectoryScanOptions};
 use crate::{
     directory::DirectoryScan,
     error::{DirectoryScanError, DirectorySizeScanError},
@@ -25,8 +25,10 @@ where
 {
     let unlimited_depth_scan = DirectoryScan::scan_with_options(
         directory_path,
-        DirectoryScanDepthLimit::Unlimited,
-        follow_symbolic_links,
+        DirectoryScanOptions {
+            maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
+            follow_symbolic_links,
+        },
     )
     .map_err(|error| match error {
         DirectoryScanError::NotFound { path } => {
