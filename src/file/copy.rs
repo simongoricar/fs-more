@@ -26,14 +26,14 @@ use crate::{
 
 /// Options that influence the [`copy_file`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct CopyFileOptions {
+pub struct FileCopyOptions {
     /// How to behave for a destination file that already exists.
     pub existing_destination_file_behaviour: ExistingFileBehaviour,
 }
 
 
 #[allow(clippy::derivable_impls)]
-impl Default for CopyFileOptions {
+impl Default for FileCopyOptions {
     fn default() -> Self {
         Self {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
@@ -46,7 +46,7 @@ impl Default for CopyFileOptions {
 ///
 /// Returned from: [`copy_file`] and [`copy_file_with_progress`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum CopyFileFinished {
+pub enum FileCopyFinished {
     /// The destination file did not exist prior to the operation.
     /// The file was freshly created and written to.
     Created {
@@ -66,7 +66,7 @@ pub enum CopyFileFinished {
     /// is set to [`ExistingFileBehaviour::Skip`].
     ///
     ///
-    /// [`options.existing_destination_file_behaviour`]: CopyFileOptions::existing_destination_file_behaviour
+    /// [`options.existing_destination_file_behaviour`]: FileCopyOptions::existing_destination_file_behaviour
     Skipped,
 }
 
@@ -89,11 +89,11 @@ pub enum CopyFileFinished {
 ///
 ///
 /// # Options
-/// See [`CopyFileOptions`] for available file copying options.
+/// See [`FileCopyOptions`] for available file copying options.
 ///
 ///
 /// # Return value
-/// If the copy succeeds, the function returns [`CopyFileFinished`],
+/// If the copy succeeds, the function returns [`FileCopyFinished`],
 /// which contains information about whether the file was created,
 /// overwritten or skipped. The struct includes the number of bytes copied,
 /// if relevant.
@@ -145,7 +145,7 @@ pub enum CopyFileFinished {
 /// </details>
 ///
 ///
-/// [`options.existing_destination_file_behaviour`]: CopyFileOptions::existing_destination_file_behaviour
+/// [`options.existing_destination_file_behaviour`]: FileCopyOptions::existing_destination_file_behaviour
 /// [`SourceFileNotFound`]: FileError::SourceFileNotFound
 /// [`SourcePathNotAFile`]: FileError::SourcePathNotAFile
 /// [`UnableToAccessSourceFile`]: FileError::UnableToAccessSourceFile
@@ -158,8 +158,8 @@ pub enum CopyFileFinished {
 pub fn copy_file<S, D>(
     source_file_path: S,
     destination_file_path: D,
-    options: CopyFileOptions,
-) -> Result<CopyFileFinished, FileError>
+    options: FileCopyOptions,
+) -> Result<FileCopyFinished, FileError>
 where
     S: AsRef<Path>,
     D: AsRef<Path>,
@@ -180,7 +180,7 @@ where
     )? {
         DestinationValidationAction::Continue(validated_path) => validated_path,
         DestinationValidationAction::SkipCopyOrMove => {
-            return Ok(CopyFileFinished::Skipped);
+            return Ok(FileCopyFinished::Skipped);
         }
     };
 
@@ -199,8 +199,8 @@ where
 
 
     match destination_file_exists {
-        true => Ok(CopyFileFinished::Overwritten { bytes_copied }),
-        false => Ok(CopyFileFinished::Created { bytes_copied }),
+        true => Ok(FileCopyFinished::Overwritten { bytes_copied }),
+        false => Ok(FileCopyFinished::Created { bytes_copied }),
     }
 }
 
@@ -208,7 +208,7 @@ where
 
 /// Options that influence the [`copy_file_with_progress`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct CopyFileWithProgressOptions {
+pub struct FileCopyWithProgressOptions {
     /// How to behave for destination files that already exist.
     pub existing_destination_file_behaviour: ExistingFileBehaviour,
 
@@ -236,7 +236,7 @@ pub struct CopyFileWithProgressOptions {
     pub progress_update_byte_interval: u64,
 }
 
-impl Default for CopyFileWithProgressOptions {
+impl Default for FileCopyWithProgressOptions {
     /// Constructs relatively safe defaults for copying a file:
     /// - aborts if there is an existing destination file ([`ExistingFileBehaviour::Abort`]),
     /// - sets buffer size for reading and writing to 64 KiB, and
@@ -267,7 +267,7 @@ impl Default for CopyFileWithProgressOptions {
 pub(crate) fn copy_file_with_progress_unchecked<F>(
     source_file_path: &Path,
     destination_file_path: &Path,
-    options: CopyFileWithProgressOptions,
+    options: FileCopyWithProgressOptions,
     progress_handler: F,
 ) -> Result<u64, FileError>
 where
@@ -348,11 +348,11 @@ where
 ///
 ///
 /// # Options
-/// See [`CopyFileWithProgressOptions`] for available file copying options.
+/// See [`FileCopyWithProgressOptions`] for available file copying options.
 ///
 ///
 /// # Return value
-/// If the copy succeeds, the function returns [`CopyFileFinished`],
+/// If the copy succeeds, the function returns [`FileCopyFinished`],
 /// which contains information about whether the file was created,
 /// overwritten or skipped. The struct includes the number of bytes copied,
 /// if relevant.
@@ -422,8 +422,8 @@ where
 /// </details>
 ///
 ///
-/// [`options.progress_update_byte_interval`]: CopyFileWithProgressOptions::progress_update_byte_interval
-/// [`options.existing_destination_file_behaviour`]: CopyFileOptions::existing_destination_file_behaviour
+/// [`options.progress_update_byte_interval`]: FileCopyWithProgressOptions::progress_update_byte_interval
+/// [`options.existing_destination_file_behaviour`]: FileCopyOptions::existing_destination_file_behaviour
 /// [`SourceFileNotFound`]: FileError::SourceFileNotFound
 /// [`SourcePathNotAFile`]: FileError::SourcePathNotAFile
 /// [`UnableToAccessSourceFile`]: FileError::UnableToAccessSourceFile
@@ -436,9 +436,9 @@ where
 pub fn copy_file_with_progress<P, T, F>(
     source_file_path: P,
     destination_file_path: T,
-    options: CopyFileWithProgressOptions,
+    options: FileCopyWithProgressOptions,
     progress_handler: F,
-) -> Result<CopyFileFinished, FileError>
+) -> Result<FileCopyFinished, FileError>
 where
     P: AsRef<Path>,
     T: AsRef<Path>,
@@ -460,7 +460,7 @@ where
     )? {
         DestinationValidationAction::Continue(validated_path) => validated_path,
         DestinationValidationAction::SkipCopyOrMove => {
-            return Ok(CopyFileFinished::Skipped);
+            return Ok(FileCopyFinished::Skipped);
         }
     };
 
@@ -482,7 +482,7 @@ where
     )?;
 
     match destination_file_exists {
-        true => Ok(CopyFileFinished::Overwritten { bytes_copied }),
-        false => Ok(CopyFileFinished::Created { bytes_copied }),
+        true => Ok(FileCopyFinished::Overwritten { bytes_copied }),
+        false => Ok(FileCopyFinished::Created { bytes_copied }),
     }
 }

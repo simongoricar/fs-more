@@ -11,8 +11,8 @@ use crate::{
     file::{
         copy_file,
         copy_file_with_progress,
-        CopyFileOptions,
-        CopyFileWithProgressOptions,
+        FileCopyOptions,
+        FileCopyWithProgressOptions,
         ExistingFileBehaviour,
         FileProgress,
     },
@@ -75,7 +75,7 @@ pub enum CopyDirectoryDepthLimit {
 
 /// Options that influence the [`copy_directory`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct CopyDirectoryOptions {
+pub struct DirectoryCopyOptions {
     /// Specifies whether you allow the destination directory to exist before copying
     /// and whether it must be empty or not.
     ///
@@ -89,7 +89,7 @@ pub struct CopyDirectoryOptions {
     pub copy_depth_limit: CopyDirectoryDepthLimit,
 }
 
-impl Default for CopyDirectoryOptions {
+impl Default for DirectoryCopyOptions {
     /// Constructs defaults for copying a directory:
     /// - if the destination directory already exists, it must be empty ([`DestinationDirectoryRule::AllowEmpty`]), and
     /// - there is no copy depth limit ([`CopyDirectoryDepthLimit::Unlimited`]).
@@ -104,7 +104,7 @@ impl Default for CopyDirectoryOptions {
 
 /// Describes a successful directory copy operation.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct CopyDirectoryFinished {
+pub struct DirectoryCopyFinished {
     /// Total amount of bytes copied.
     pub total_bytes_copied: u64,
 
@@ -122,8 +122,8 @@ pub struct CopyDirectoryFinished {
 /// For more details, see [`copy_directory`].
 pub(crate) fn copy_directory_unchecked(
     prepared_directory_copy: DirectoryCopyPrepared,
-    options: CopyDirectoryOptions,
-) -> Result<CopyDirectoryFinished, CopyDirectoryExecutionError> {
+    options: DirectoryCopyOptions,
+) -> Result<DirectoryCopyFinished, CopyDirectoryExecutionError> {
     let can_overwrite_files = options
         .destination_directory_rule
         .allows_overwriting_existing_destination_files();
@@ -211,7 +211,7 @@ pub(crate) fn copy_directory_unchecked(
                 copy_file(
                     source_file_path,
                     &destination_file_path,
-                    CopyFileOptions {
+                    FileCopyOptions {
                         existing_destination_file_behaviour: match can_overwrite_files {
                             true => ExistingFileBehaviour::Overwrite,
                             false => ExistingFileBehaviour::Abort,
@@ -261,7 +261,7 @@ pub(crate) fn copy_directory_unchecked(
         };
     }
 
-    Ok(CopyDirectoryFinished {
+    Ok(DirectoryCopyFinished {
         total_bytes_copied,
         files_copied: num_files_copied,
         directories_created: num_directories_created,
@@ -289,7 +289,7 @@ pub(crate) fn copy_directory_unchecked(
 ///
 ///
 /// # Options
-/// See [`CopyDirectoryOptions`] for a full set of available directory copying options.
+/// See [`DirectoryCopyOptions`] for a full set of available directory copying options.
 ///
 /// If you allow the destination directory to exist and be non-empty,
 /// source directory contents will be merged into the destination directory.
@@ -300,7 +300,7 @@ pub(crate) fn copy_directory_unchecked(
 ///
 /// # Return value
 /// Upon success, the function returns information about the files and directories that were copied or created
-/// as well as the total amount of bytes copied, see [`CopyDirectoryFinished`].
+/// as well as the total amount of bytes copied, see [`DirectoryCopyFinished`].
 ///
 ///
 /// # Errors
@@ -317,8 +317,8 @@ pub(crate) fn copy_directory_unchecked(
 ///   the error occurred while trying to copy a file or create a directory.
 ///
 ///
-/// [`options.destination_directory_rule`]: CopyDirectoryOptions::destination_directory_rule
-/// [`options.copy_depth_limit`]: CopyDirectoryOptions::copy_depth_limit
+/// [`options.destination_directory_rule`]: DirectoryCopyOptions::destination_directory_rule
+/// [`options.copy_depth_limit`]: DirectoryCopyOptions::copy_depth_limit
 /// [`DisallowExisting`]: DestinationDirectoryRule::DisallowExisting
 /// [`AllowEmpty`]: DestinationDirectoryRule::AllowEmpty
 /// [`AllowNonEmpty`]: DestinationDirectoryRule::AllowNonEmpty
@@ -328,8 +328,8 @@ pub(crate) fn copy_directory_unchecked(
 pub fn copy_directory<S, T>(
     source_directory_path: S,
     destination_directory_path: T,
-    options: CopyDirectoryOptions,
-) -> Result<CopyDirectoryFinished, CopyDirectoryError>
+    options: DirectoryCopyOptions,
+) -> Result<DirectoryCopyFinished, CopyDirectoryError>
 where
     S: AsRef<Path>,
     T: AsRef<Path>,
@@ -351,7 +351,7 @@ where
 ///
 /// Used for progress reporting in [`copy_directory_with_progress`].
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub enum CopyDirectoryOperation {
+pub enum DirectoryCopyOperation {
     /// A directory is being created.
     CreatingDirectory {
         /// Path to the directory that is being created.
@@ -379,9 +379,9 @@ pub enum CopyDirectoryOperation {
 /// Note that the data inside this struct isn't fully owned - the `current_operation`
 /// field is borrowed, and cloning will not have the desired effect.
 /// To obtain a fully-owned clone of this state, call
-/// [`CopyDirectoryProgressRef::to_owned_progress`].
+/// [`DirectoryCopyProgressRef::to_owned_progress`].
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct CopyDirectoryProgressRef<'o> {
+pub struct DirectoryCopyProgressRef<'o> {
     /// Total number of bytes that need to be copied
     /// for the directory copy to be complete.
     pub bytes_total: u64,
@@ -396,7 +396,7 @@ pub struct CopyDirectoryProgressRef<'o> {
     pub directories_created: usize,
 
     /// The current operation being performed.
-    pub current_operation: &'o CopyDirectoryOperation,
+    pub current_operation: &'o DirectoryCopyOperation,
 
     /// The index of the current operation.
     ///
@@ -407,16 +407,16 @@ pub struct CopyDirectoryProgressRef<'o> {
     /// copy the requested directory.
     ///
     /// A single operation is either copying a file or creating a directory,
-    /// see [`CopyDirectoryOperation`].
+    /// see [`DirectoryCopyOperation`].
     pub total_operations: usize,
 }
 
-impl<'o> CopyDirectoryProgressRef<'o> {
+impl<'o> DirectoryCopyProgressRef<'o> {
     /// Clones the required data from this progress struct
-    /// into an [`CopyDirectoryProgress`] - this way you own
+    /// into an [`DirectoryCopyProgress`] - this way you own
     /// the entire state.
-    pub fn to_owned_progress(&self) -> CopyDirectoryProgress {
-        CopyDirectoryProgress {
+    pub fn to_owned_progress(&self) -> DirectoryCopyProgress {
+        DirectoryCopyProgress {
             bytes_total: self.bytes_total,
             bytes_finished: self.bytes_finished,
             files_copied: self.files_copied,
@@ -431,13 +431,13 @@ impl<'o> CopyDirectoryProgressRef<'o> {
 
 /// Directory copying progress.
 ///
-/// This is a fully-owned version of [`CopyDirectoryProgress`],
+/// This is a fully-owned version of [`DirectoryCopyProgress`],
 /// where the `current_operation` field is borrowed.
 ///
-/// Obtainable from a reference to [`CopyDirectoryProgressRef`]
-/// by calling [`CopyDirectoryProgressRef::to_owned_progress`].
+/// Obtainable from a reference to [`DirectoryCopyProgressRef`]
+/// by calling [`DirectoryCopyProgressRef::to_owned_progress`].
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct CopyDirectoryProgress {
+pub struct DirectoryCopyProgress {
     /// Total number of bytes that need to be copied
     /// for the directory copy to be complete.
     pub bytes_total: u64,
@@ -452,7 +452,7 @@ pub struct CopyDirectoryProgress {
     pub directories_created: usize,
 
     /// The current operation being performed.
-    pub current_operation: CopyDirectoryOperation,
+    pub current_operation: DirectoryCopyOperation,
 
     /// The index of the current operation.
     ///
@@ -463,14 +463,14 @@ pub struct CopyDirectoryProgress {
     /// copy the requested directory.
     ///
     /// A single operation is either copying a file or creating a directory,
-    /// see [`CopyDirectoryOperation`].
+    /// see [`DirectoryCopyOperation`].
     pub total_operations: usize,
 }
 
 
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-struct InternalCopyDirectoryProgress {
+struct DirectoryCopyInternalProgress {
     /// Total number of bytes that need to be copied
     /// for the directory copy to be complete.
     bytes_total: u64,
@@ -485,7 +485,7 @@ struct InternalCopyDirectoryProgress {
     directories_created: usize,
 
     /// The current operation being performed.
-    current_operation: Option<CopyDirectoryOperation>,
+    current_operation: Option<DirectoryCopyOperation>,
 
     /// The index of the current operation.
     ///
@@ -496,11 +496,11 @@ struct InternalCopyDirectoryProgress {
     /// copy the requested directory.
     ///
     /// A single operation is either copying a file or creating a directory,
-    /// see [`CopyDirectoryOperation`].
+    /// see [`DirectoryCopyOperation`].
     total_operations: usize,
 }
 
-impl InternalCopyDirectoryProgress {
+impl DirectoryCopyInternalProgress {
     /// Modifies `self` with the provided `FnMut` closure.
     /// Then, the provided progress handler closure is called.
     fn update_operation_and_emit_progress<M, F>(
@@ -509,7 +509,7 @@ impl InternalCopyDirectoryProgress {
         progress_handler: &mut F,
     ) where
         M: FnMut(&mut Self),
-        F: FnMut(&CopyDirectoryProgressRef),
+        F: FnMut(&DirectoryCopyProgressRef),
     {
         self_modifier_closure(self);
         progress_handler(&self.to_user_facing_progress());
@@ -524,10 +524,10 @@ impl InternalCopyDirectoryProgress {
     /// Finally, the provided progress handler closure is called.
     fn set_next_operation_and_emit_progress<F>(
         &mut self,
-        operation: CopyDirectoryOperation,
+        operation: DirectoryCopyOperation,
         progress_handler: &mut F,
     ) where
-        F: FnMut(&CopyDirectoryProgressRef),
+        F: FnMut(&DirectoryCopyProgressRef),
     {
         if let Some(existing_operation_index) = self.current_operation_index.as_mut() {
             *existing_operation_index += 1;
@@ -540,12 +540,12 @@ impl InternalCopyDirectoryProgress {
         progress_handler(&self.to_user_facing_progress())
     }
 
-    /// Converts the [`PartialCopyDirectoryProgress`] to a [`CopyDirectoryProgress`],
+    /// Converts the [`DirectoryCopyInternalProgress`] to a [`DirectoryCopyProgress`],
     /// copying only the small fields, and passing the `current_operation` as a reference.
     ///
     /// # Panics
     /// Panics if the `current_operation` or `current_operation_index` field is `None`.
-    fn to_user_facing_progress(&self) -> CopyDirectoryProgressRef<'_> {
+    fn to_user_facing_progress(&self) -> DirectoryCopyProgressRef<'_> {
         let current_operation_reference = self
             .current_operation
             .as_ref()
@@ -557,7 +557,7 @@ impl InternalCopyDirectoryProgress {
             // PANIC SATEFY: The caller is responsible.
             .expect("current_operation_index to be Some");
 
-        CopyDirectoryProgressRef {
+        DirectoryCopyProgressRef {
             bytes_total: self.bytes_total,
             bytes_finished: self.bytes_finished,
             files_copied: self.files_copied,
@@ -574,7 +574,7 @@ impl InternalCopyDirectoryProgress {
 
 /// Options that influence the [`copy_directory_with_progress`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct CopyDirectoryWithProgressOptions {
+pub struct DirectoryCopyWithProgressOptions {
     /// Specifies whether you allow the destination directory to exist before copying,
     /// and whether you require it to be empty. If you allow a non-empty destination directory,
     /// you may also specify how to handle existing destination files and sub-directories.
@@ -604,7 +604,7 @@ pub struct CopyDirectoryWithProgressOptions {
     pub progress_update_byte_interval: u64,
 }
 
-impl Default for CopyDirectoryWithProgressOptions {
+impl Default for DirectoryCopyWithProgressOptions {
     /// Constructs defaults for copying a directory:
     /// - if the destination directory already exists, it must be empty ([`DestinationDirectoryRule::AllowEmpty`]), and
     /// - there is no copy depth limit ([`CopyDirectoryDepthLimit::Unlimited`]),
@@ -631,12 +631,12 @@ fn execute_copy_file_operation_with_progress<F>(
     source_file_path: PathBuf,
     source_size_bytes: u64,
     destination_path: PathBuf,
-    options: &CopyDirectoryWithProgressOptions,
-    progress: &mut InternalCopyDirectoryProgress,
+    options: &DirectoryCopyWithProgressOptions,
+    progress: &mut DirectoryCopyInternalProgress,
     progress_handler: &mut F,
 ) -> Result<(), CopyDirectoryExecutionError>
 where
-    F: FnMut(&CopyDirectoryProgressRef),
+    F: FnMut(&DirectoryCopyProgressRef),
 {
     let can_overwrite_destination_file = options
         .destination_directory_rule
@@ -676,7 +676,7 @@ where
 
 
     progress.set_next_operation_and_emit_progress(
-        CopyDirectoryOperation::CopyingFile {
+        DirectoryCopyOperation::CopyingFile {
             destination_file_path: destination_path.clone(),
             progress: FileProgress {
                 bytes_finished: 0,
@@ -698,7 +698,7 @@ where
     copy_file_with_progress(
         source_file_path,
         &destination_path,
-        CopyFileWithProgressOptions {
+        FileCopyWithProgressOptions {
             existing_destination_file_behaviour: match options.destination_directory_rule {
                 DestinationDirectoryRule::DisallowExisting => ExistingFileBehaviour::Abort,
                 DestinationDirectoryRule::AllowEmpty => ExistingFileBehaviour::Abort,
@@ -716,7 +716,7 @@ where
                         .expect("the current_operation field to be Some");
 
 
-                    if let CopyDirectoryOperation::CopyingFile {
+                    if let DirectoryCopyOperation::CopyingFile {
                         progress: file_progress,
                         ..
                     } = current_operation
@@ -738,7 +738,7 @@ where
                         // at the beginning of the function, and there is no possibility 
                         // of changing that operation in between, this panic should never happen.
                         panic!(
-                            "BUG: `progress.current_operation` doesn't match CopyDirectoryOperation::CopyingFile"
+                            "BUG: `progress.current_operation` doesn't match DirectoryCopyOperation::CopyingFile"
                         );
                     }
                 },
@@ -764,12 +764,12 @@ where
 fn execute_create_directory_operation_with_progress<F>(
     destination_directory_path: PathBuf,
     source_size_bytes: u64,
-    options: &CopyDirectoryWithProgressOptions,
-    progress: &mut InternalCopyDirectoryProgress,
+    options: &DirectoryCopyWithProgressOptions,
+    progress: &mut DirectoryCopyInternalProgress,
     progress_handler: &mut F,
 ) -> Result<(), CopyDirectoryExecutionError>
 where
-    F: FnMut(&CopyDirectoryProgressRef),
+    F: FnMut(&DirectoryCopyProgressRef),
 {
     let destination_directory_exists =
         destination_directory_path.try_exists().map_err(|error| {
@@ -805,7 +805,7 @@ where
 
 
     progress.set_next_operation_and_emit_progress(
-        CopyDirectoryOperation::CreatingDirectory {
+        DirectoryCopyOperation::CreatingDirectory {
             destination_directory_path: destination_directory_path.clone(),
         },
         progress_handler,
@@ -832,11 +832,11 @@ where
 /// For more details, see [`copy_directory_with_progress`].
 pub(crate) fn execute_prepared_copy_directory_with_progress_unchecked<F>(
     prepared_copy: DirectoryCopyPrepared,
-    options: CopyDirectoryWithProgressOptions,
+    options: DirectoryCopyWithProgressOptions,
     mut progress_handler: F,
-) -> Result<CopyDirectoryFinished, CopyDirectoryExecutionError>
+) -> Result<DirectoryCopyFinished, CopyDirectoryExecutionError>
 where
-    F: FnMut(&CopyDirectoryProgressRef),
+    F: FnMut(&DirectoryCopyProgressRef),
 {
     let validated_destination = prepared_copy.validated_destination_directory;
 
@@ -848,7 +848,7 @@ where
             });
         }
 
-        InternalCopyDirectoryProgress {
+        DirectoryCopyInternalProgress {
             bytes_total: prepared_copy.total_bytes,
             bytes_finished: 0,
             files_copied: 0,
@@ -862,12 +862,12 @@ where
     } else {
         // This time we actually emit progress after creating the destination directory.
 
-        let mut progress = InternalCopyDirectoryProgress {
+        let mut progress = DirectoryCopyInternalProgress {
             bytes_total: prepared_copy.total_bytes,
             bytes_finished: 0,
             files_copied: 0,
             directories_created: 0,
-            current_operation: Some(CopyDirectoryOperation::CreatingDirectory {
+            current_operation: Some(DirectoryCopyOperation::CreatingDirectory {
                 destination_directory_path: validated_destination.directory_path.clone(),
             }),
             current_operation_index: Some(0),
@@ -920,7 +920,7 @@ where
     // One last progress update - everything should be done at this point.
     progress_handler(&progress.to_user_facing_progress());
 
-    Ok(CopyDirectoryFinished {
+    Ok(DirectoryCopyFinished {
         total_bytes_copied: progress.bytes_finished,
         files_copied: progress.files_copied,
         directories_created: progress.directories_created,
@@ -948,7 +948,7 @@ where
 ///
 ///
 /// # Options
-/// See [`CopyDirectoryWithProgressOptions`] for a full set of available directory copying options.
+/// See [`DirectoryCopyWithProgressOptions`] for a full set of available directory copying options.
 ///
 /// If you allow the destination directory to exist and be non-empty,
 /// source directory contents will be merged into the destination directory.
@@ -959,13 +959,13 @@ where
 ///
 /// # Return value
 /// Upon success, the function returns information about the files and directories that were copied or created
-/// as well as the total amount of bytes copied, see [`CopyDirectoryFinished`].
+/// as well as the total amount of bytes copied, see [`DirectoryCopyFinished`].
 ///
 ///
 /// ## Progress reporting
 /// This function allows you to receive progress reports by passing
 /// a `progress_handler` closure. It will be called with
-/// a reference to [`CopyDirectoryProgress`] regularly.
+/// a reference to [`DirectoryCopyProgress`] regularly.
 ///
 /// You can control the progress reporting frequency by setting the
 /// [`options.progress_update_byte_interval`] option to a sufficiently small or large value,
@@ -996,9 +996,9 @@ where
 ///   the error occurred while trying to copy a file or create a directory.
 ///
 ///
-/// [`options.progress_update_byte_interval`]: CopyDirectoryWithProgressOptions::progress_update_byte_interval
-/// [`options.destination_directory_rule`]: CopyDirectoryWithProgressOptions::destination_directory_rule
-/// [`options.copy_depth_limit`]: CopyDirectoryWithProgressOptions::copy_depth_limit
+/// [`options.progress_update_byte_interval`]: DirectoryCopyWithProgressOptions::progress_update_byte_interval
+/// [`options.destination_directory_rule`]: DirectoryCopyWithProgressOptions::destination_directory_rule
+/// [`options.copy_depth_limit`]: DirectoryCopyWithProgressOptions::copy_depth_limit
 /// [`DisallowExisting`]: DestinationDirectoryRule::DisallowExisting
 /// [`AllowEmpty`]: DestinationDirectoryRule::AllowEmpty
 /// [`AllowNonEmpty`]: DestinationDirectoryRule::AllowNonEmpty
@@ -1008,13 +1008,13 @@ where
 pub fn copy_directory_with_progress<S, T, F>(
     source_directory_path: S,
     destination_directory_path: T,
-    options: CopyDirectoryWithProgressOptions,
+    options: DirectoryCopyWithProgressOptions,
     progress_handler: F,
-) -> Result<CopyDirectoryFinished, CopyDirectoryError>
+) -> Result<DirectoryCopyFinished, CopyDirectoryError>
 where
     S: AsRef<Path>,
     T: AsRef<Path>,
-    F: FnMut(&CopyDirectoryProgressRef),
+    F: FnMut(&DirectoryCopyProgressRef),
 {
     let prepared_copy = DirectoryCopyPrepared::prepare(
         source_directory_path.as_ref(),

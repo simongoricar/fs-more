@@ -2,12 +2,12 @@ use assert_matches::assert_matches;
 use fs_more::{
     directory::{
         CopyDirectoryDepthLimit,
-        CopyDirectoryOptions,
         DestinationDirectoryRule,
+        DirectoryCopyOptions,
+        DirectoryMoveOptions,
         DirectoryMoveStrategy,
         DirectoryScanOptions,
         ExistingSubDirectoryBehaviour,
-        MoveDirectoryOptions,
     },
     error::{
         DestinationDirectoryPathValidationError,
@@ -48,7 +48,7 @@ pub fn move_directory_moves_all_files_and_subdirectories() -> TestResult {
     let finished_move = fs_more::directory::move_directory(
         deep_harness.as_path(),
         empty_harness.as_path(),
-        MoveDirectoryOptions {
+        DirectoryMoveOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
         },
     )
@@ -93,7 +93,7 @@ pub fn move_directory_errors_when_source_is_symlink_to_destination_directory() -
     let move_result = fs_more::directory::move_directory(
         &empty_harness_symlink_path,
         deep_harness.as_path(),
-        MoveDirectoryOptions {
+        DirectoryMoveOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
                 existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
@@ -147,7 +147,7 @@ pub fn move_directory_does_not_preserve_symlinks_when_destination_directory_alre
         fs_more::directory::copy_directory(
             simple_harness.as_path(),
             deep_harness_non_symlink_copy.child_path("here-we-go"),
-            CopyDirectoryOptions {
+            DirectoryCopyOptions {
                 destination_directory_rule: DestinationDirectoryRule::DisallowExisting,
                 copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
             },
@@ -168,7 +168,7 @@ pub fn move_directory_does_not_preserve_symlinks_when_destination_directory_alre
     let finished_move = fs_more::directory::move_directory(
         deep_harness.as_path(),
         move_destination_harness.as_path(),
-        MoveDirectoryOptions {
+        DirectoryMoveOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
                 existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
@@ -222,7 +222,7 @@ pub fn move_directory_may_preserve_symlinks_when_destination_directory_exists_an
         fs_more::directory::copy_directory(
             simple_harness.as_path(),
             deep_harness_non_symlink_copy.child_path("here-we-go"),
-            CopyDirectoryOptions {
+            DirectoryCopyOptions {
                 destination_directory_rule: DestinationDirectoryRule::DisallowExisting,
                 copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
             },
@@ -243,7 +243,7 @@ pub fn move_directory_may_preserve_symlinks_when_destination_directory_exists_an
     let finished_move = fs_more::directory::move_directory(
         deep_harness.as_path(),
         copy_destination_harness.as_path(),
-        MoveDirectoryOptions {
+        DirectoryMoveOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
                 existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
@@ -299,7 +299,7 @@ pub fn move_directory_performs_merge_without_overwrite_when_copying_to_non_empty
     let finished_move = fs_more::directory::move_directory(
         source_harness.as_path(),
         destination_harness.as_path(),
-        MoveDirectoryOptions {
+        DirectoryMoveOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
                 existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,

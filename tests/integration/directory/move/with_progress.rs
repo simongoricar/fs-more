@@ -2,14 +2,14 @@ use assert_matches::assert_matches;
 use fs_more::{
     directory::{
         CopyDirectoryDepthLimit,
-        CopyDirectoryOptions,
         DestinationDirectoryRule,
+        DirectoryCopyOptions,
         DirectoryMoveOperation,
         DirectoryMoveProgress,
         DirectoryMoveStrategy,
+        DirectoryMoveWithProgressOptions,
         DirectoryScanOptions,
         ExistingSubDirectoryBehaviour,
-        MoveDirectoryWithProgressOptions,
     },
     error::{
         DestinationDirectoryPathValidationError,
@@ -51,7 +51,7 @@ pub fn move_directory_with_progress_moves_all_files_and_subdirectories() -> Test
     let finished_move = fs_more::directory::move_directory_with_progress(
         deep_harness.as_path(),
         empty_harness.as_path(),
-        MoveDirectoryWithProgressOptions {
+        DirectoryMoveWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
             ..Default::default()
         },
@@ -205,11 +205,11 @@ pub fn move_directory_with_progress_errors_when_source_is_symlink_to_destination
         .assert_is_directory_and_fully_matches_secondary_directory(&empty_harness_symlink_path);
 
 
-    let move_result: Result<fs_more::directory::MoveDirectoryFinished, MoveDirectoryError> =
+    let move_result: Result<fs_more::directory::DirectoryMoveFinished, MoveDirectoryError> =
         fs_more::directory::move_directory_with_progress(
             &empty_harness_symlink_path,
             deep_harness.as_path(),
-            MoveDirectoryWithProgressOptions {
+            DirectoryMoveWithProgressOptions {
                 destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                     existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
                     existing_destination_subdirectory_behaviour:
@@ -266,7 +266,7 @@ pub fn move_directory_with_progress_does_not_preserve_symlinks_when_destination_
         fs_more::directory::copy_directory(
             simple_harness.as_path(),
             deep_harness_non_symlink_copy.child_path("here-we-go"),
-            CopyDirectoryOptions {
+            DirectoryCopyOptions {
                 destination_directory_rule: DestinationDirectoryRule::DisallowExisting,
                 copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
             },
@@ -287,7 +287,7 @@ pub fn move_directory_with_progress_does_not_preserve_symlinks_when_destination_
     let finished_move = fs_more::directory::move_directory_with_progress(
         deep_harness.as_path(),
         move_destination_harness.as_path(),
-        MoveDirectoryWithProgressOptions {
+        DirectoryMoveWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
                 existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
@@ -344,7 +344,7 @@ pub fn move_directory_with_progress_may_preserve_symlinks_when_destination_direc
         fs_more::directory::copy_directory(
             simple_harness.as_path(),
             deep_harness_non_symlink_copy.child_path("here-we-go"),
-            CopyDirectoryOptions {
+            DirectoryCopyOptions {
                 destination_directory_rule: DestinationDirectoryRule::DisallowExisting,
                 copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
             },
@@ -365,7 +365,7 @@ pub fn move_directory_with_progress_may_preserve_symlinks_when_destination_direc
     let finished_move = fs_more::directory::move_directory_with_progress(
         deep_harness.as_path(),
         copy_destination_harness.as_path(),
-        MoveDirectoryWithProgressOptions {
+        DirectoryMoveWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
                 existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
@@ -422,7 +422,7 @@ pub fn move_directory_with_progress_performs_merge_without_overwrite_when_copyin
     let finished_move = fs_more::directory::move_directory_with_progress(
         source_harness.as_path(),
         destination_harness.as_path(),
-        MoveDirectoryWithProgressOptions {
+        DirectoryMoveWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
                 existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,

@@ -21,7 +21,7 @@ use crate::{error::FileError, use_enabled_fs_module};
 
 /// Controls behaviour for existing destination files when copying or moving.
 ///
-/// See also: [`CopyFileOptions`] and [`MoveFileOptions`].
+/// See also: [`FileCopyOptions`] and [`FileMoveOptions`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ExistingFileBehaviour {
     /// Ensures that an error will be returned from the corresponding function

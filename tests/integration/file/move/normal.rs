@@ -1,7 +1,7 @@
 use assert_matches::assert_matches;
 use fs_more::{
     error::FileError,
-    file::{ExistingFileBehaviour, MoveFileFinished, MoveFileMethod, MoveFileOptions},
+    file::{ExistingFileBehaviour, FileMoveFinished, FileMoveMethod, FileMoveOptions},
 };
 use fs_more_test_harness::{
     assertable::{
@@ -30,7 +30,7 @@ pub fn move_file_correctly_moves_the_file() -> TestResult {
     let move_result = fs_more::file::move_file(
         harness.yes.no_bin.as_path(),
         &destination_file_path,
-        MoveFileOptions {
+        FileMoveOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
         },
     );
@@ -60,7 +60,7 @@ pub fn move_file_errors_when_trying_to_copy_into_self() -> TestResult {
     let move_result = fs_more::file::move_file(
         harness.yes.no_bin.as_path(),
         harness.yes.no_bin.as_path(),
-        MoveFileOptions {
+        FileMoveOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
         },
     );
@@ -93,7 +93,7 @@ pub fn move_file_errors_when_trying_to_copy_into_self_even_with_overwrite_behavi
     let move_result = fs_more::file::move_file(
         harness.yes.no_bin.as_path(),
         harness.yes.no_bin.as_path(),
-        MoveFileOptions {
+        FileMoveOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
         },
     );
@@ -151,7 +151,7 @@ pub fn move_file_errors_when_trying_to_copy_into_case_insensitive_self() -> Test
     let file_move_result = fs_more::file::move_file(
         harness.yes.hello_world_txt.as_path(),
         &hello_world_uppercased_file_path,
-        MoveFileOptions {
+        FileMoveOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
         },
     );
@@ -214,7 +214,7 @@ pub fn move_file_errors_when_source_is_symlink_to_destination() -> TestResult {
     let move_result = fs_more::file::move_file(
         &symlink_path,
         harness.yes.hello_world_txt.as_path(),
-        MoveFileOptions {
+        FileMoveOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
         },
     );
@@ -247,14 +247,14 @@ pub fn move_file_overwrites_destination_file_when_behaviour_is_overwrite() -> Te
     let move_result = fs_more::file::move_file(
         harness.yes.hello_world_txt.as_path(),
         harness.yes.no_bin.as_path(),
-        MoveFileOptions {
+        FileMoveOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
         },
     );
 
     assert_matches!(
         move_result.unwrap(),
-        MoveFileFinished::Overwritten { bytes_copied, .. }
+        FileMoveFinished::Overwritten { bytes_copied, .. }
         if bytes_copied == source_file_size
     );
 
@@ -280,7 +280,7 @@ pub fn move_file_errors_on_existing_destination_file_when_behaviour_is_abort() -
     let move_result = fs_more::file::move_file(
         harness.yes.hello_world_txt.as_path(),
         harness.yes.no_bin.as_path(),
-        MoveFileOptions {
+        FileMoveOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
         },
     );
@@ -327,7 +327,7 @@ pub fn move_file_may_preserve_symlinks_when_moving_by_rename() -> TestResult {
     let finished_move = fs_more::file::move_file(
         &symlink_file_path,
         &symlink_moved_file_path,
-        MoveFileOptions {
+        FileMoveOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
         },
     )
@@ -335,17 +335,17 @@ pub fn move_file_may_preserve_symlinks_when_moving_by_rename() -> TestResult {
 
 
     match finished_move {
-        MoveFileFinished::Created {
+        FileMoveFinished::Created {
             bytes_copied,
             method,
         } => match method {
-            MoveFileMethod::Rename => {
+            FileMoveMethod::Rename => {
                 // The symlink was preserved.
                 symlink_moved_file_path.assert_is_symlink_to_file_and_destination_matches(
                     harness.yes.hello_world_txt.as_path(),
                 );
             }
-            MoveFileMethod::CopyAndDelete => {
+            FileMoveMethod::CopyAndDelete => {
                 // The symlink was not preserved.
                 assert_eq!(bytes_copied, symlink_destination_file_size_bytes);
                 symlink_moved_file_path.assert_is_symlink_to_file_and_destination_matches(

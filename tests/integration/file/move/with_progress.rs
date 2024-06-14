@@ -3,10 +3,10 @@ use fs_more::{
     error::FileError,
     file::{
         ExistingFileBehaviour,
+        FileMoveFinished,
+        FileMoveMethod,
+        FileMoveWithProgressOptions,
         FileProgress,
-        MoveFileFinished,
-        MoveFileMethod,
-        MoveFileWithProgressOptions,
     },
 };
 use fs_more_test_harness::{
@@ -42,7 +42,7 @@ pub fn move_file_with_progress_correctly_moves_the_file() -> TestResult {
     let move_result = fs_more::file::move_file_with_progress(
         harness.yes.no_bin.as_path(),
         &destination_file_path,
-        MoveFileWithProgressOptions {
+        FileMoveWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
             ..Default::default()
         },
@@ -72,7 +72,7 @@ pub fn move_file_with_progress_correctly_moves_the_file() -> TestResult {
 
     assert_matches!(
         move_result,
-        MoveFileFinished::Created { bytes_copied, .. }
+        FileMoveFinished::Created { bytes_copied, .. }
         if bytes_copied == file_source_size_bytes
     );
 
@@ -93,7 +93,7 @@ pub fn move_file_with_progress_errors_when_trying_to_copy_into_self() -> TestRes
     let move_result = fs_more::file::move_file_with_progress(
         harness.yes.no_bin.as_path(),
         harness.yes.no_bin.as_path(),
-        MoveFileWithProgressOptions {
+        FileMoveWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
             ..Default::default()
         },
@@ -128,7 +128,7 @@ pub fn move_file_with_progress_errors_when_trying_to_copy_into_self_even_with_ov
     let move_result = fs_more::file::move_file_with_progress(
         harness.yes.no_bin.as_path(),
         harness.yes.no_bin.as_path(),
-        MoveFileWithProgressOptions {
+        FileMoveWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
             ..Default::default()
         },
@@ -189,7 +189,7 @@ pub fn move_file_with_progress_errors_when_trying_to_copy_into_case_insensitive_
     let file_move_result = fs_more::file::move_file_with_progress(
         harness.yes.hello_world_txt.as_path(),
         &hello_world_uppercased_file_path,
-        MoveFileWithProgressOptions {
+        FileMoveWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
             ..Default::default()
         },
@@ -257,7 +257,7 @@ pub fn move_file_with_progress_errors_when_source_is_symlink_to_destination() ->
     let move_result = fs_more::file::move_file_with_progress(
         &symlink_path,
         harness.yes.hello_world_txt.as_path(),
-        MoveFileWithProgressOptions {
+        FileMoveWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
             ..Default::default()
         },
@@ -298,7 +298,7 @@ pub fn move_file_with_progress_overwrites_destination_file_when_behaviour_is_ove
     let move_result = fs_more::file::move_file_with_progress(
         harness.yes.hello_world_txt.as_path(),
         harness.yes.no_bin.as_path(),
-        MoveFileWithProgressOptions {
+        FileMoveWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
             ..Default::default()
         },
@@ -307,7 +307,7 @@ pub fn move_file_with_progress_overwrites_destination_file_when_behaviour_is_ove
 
     assert_matches!(
         move_result.unwrap(),
-        MoveFileFinished::Overwritten { bytes_copied, .. }
+        FileMoveFinished::Overwritten { bytes_copied, .. }
         if bytes_copied == source_file_size
     );
 
@@ -334,7 +334,7 @@ pub fn move_file_with_progress_errors_on_existing_destination_file_when_behaviou
     let move_result = fs_more::file::move_file_with_progress(
         harness.yes.hello_world_txt.as_path(),
         harness.yes.no_bin.as_path(),
-        MoveFileWithProgressOptions {
+        FileMoveWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
             ..Default::default()
         },
@@ -382,7 +382,7 @@ pub fn move_file_with_progress_may_preserve_symlinks_when_moving_by_rename() -> 
     let finished_move = fs_more::file::move_file_with_progress(
         &symlink_file_path,
         &symlink_moved_file_path,
-        MoveFileWithProgressOptions {
+        FileMoveWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
             ..Default::default()
         },
@@ -392,17 +392,17 @@ pub fn move_file_with_progress_may_preserve_symlinks_when_moving_by_rename() -> 
 
 
     match finished_move {
-        MoveFileFinished::Created {
+        FileMoveFinished::Created {
             bytes_copied,
             method,
         } => match method {
-            MoveFileMethod::Rename => {
+            FileMoveMethod::Rename => {
                 // The symlink was preserved.
                 symlink_moved_file_path.assert_is_symlink_to_file_and_destination_matches(
                     harness.yes.hello_world_txt.as_path(),
                 );
             }
-            MoveFileMethod::CopyAndDelete => {
+            FileMoveMethod::CopyAndDelete => {
                 // The symlink was not preserved.
                 assert_eq!(bytes_copied, symlink_destination_file_size_bytes);
                 symlink_moved_file_path.assert_is_symlink_to_file_and_destination_matches(

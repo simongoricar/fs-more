@@ -1,7 +1,7 @@
 use assert_matches::assert_matches;
 use fs_more::{
     error::FileError,
-    file::{CopyFileFinished, CopyFileOptions, ExistingFileBehaviour},
+    file::{ExistingFileBehaviour, FileCopyFinished, FileCopyOptions},
 };
 use fs_more_test_harness::{
     assertable::{
@@ -37,14 +37,14 @@ pub fn copy_file_creates_an_identical_copy() -> TestResult {
     let copy_result = fs_more::file::copy_file(
         harness.yes.hello_world_txt.as_path(),
         &destination_file_path,
-        CopyFileOptions {
+        FileCopyOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
         },
     );
 
     assert_matches!(
         copy_result.unwrap(),
-        CopyFileFinished::Created { bytes_copied }
+        FileCopyFinished::Created { bytes_copied }
         if bytes_copied == source_file_size_bytes
     );
 
@@ -70,7 +70,7 @@ pub fn copy_file_errors_when_trying_to_copy_into_self() -> TestResult {
     let copy_result = fs_more::file::copy_file(
         harness.yes.no_bin.as_path(),
         harness.yes.no_bin.as_path(),
-        CopyFileOptions {
+        FileCopyOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
         },
     );
@@ -124,7 +124,7 @@ pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
     let copy_result = fs_more::file::copy_file(
         harness.yes.hello_world_txt.as_path(),
         &hello_world_uppercased_file_path,
-        CopyFileOptions {
+        FileCopyOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
         },
     );
@@ -133,7 +133,7 @@ pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
     if is_fs_case_sensitive {
         assert_matches!(
             copy_result.unwrap(),
-            CopyFileFinished::Created { .. },
+            FileCopyFinished::Created { .. },
             "copy_file should have created a file (on case-sensitive filesystem) \
             when trying to copy a file into itself, even when the case is different"
         );
@@ -200,7 +200,7 @@ pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated
     let copy_result = fs_more::file::copy_file(
         harness.yes.hello_world_txt.as_path(),
         &destination_file_path,
-        CopyFileOptions {
+        FileCopyOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
         },
     );
@@ -209,7 +209,7 @@ pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated
     if is_fs_case_sensitive {
         assert_matches!(
             copy_result.unwrap(),
-            CopyFileFinished::Created { bytes_copied }
+            FileCopyFinished::Created { bytes_copied }
             if bytes_copied == source_file_size_bytes
         );
     } else {
@@ -249,7 +249,7 @@ pub fn copy_file_overwrites_destination_file_when_behaviour_is_overwrite() -> Te
     let copy_result = fs_more::file::copy_file(
         harness.yes.no_bin.as_path(),
         harness.yes.hello_world_txt.as_path(),
-        CopyFileOptions {
+        FileCopyOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
         },
     );
@@ -257,7 +257,7 @@ pub fn copy_file_overwrites_destination_file_when_behaviour_is_overwrite() -> Te
 
     assert_matches!(
         copy_result.unwrap(),
-        CopyFileFinished::Overwritten { bytes_copied }
+        FileCopyFinished::Overwritten { bytes_copied }
         if bytes_copied == source_file_size_bytes
     );
 
@@ -284,7 +284,7 @@ pub fn copy_file_errors_on_existing_destination_file_when_behaviour_is_abort() -
     let copy_result = fs_more::file::copy_file(
         harness.yes.no_bin.as_path(),
         harness.yes.hello_world_txt.as_path(),
-        CopyFileOptions {
+        FileCopyOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
         },
     );
@@ -317,12 +317,12 @@ pub fn copy_file_skips_existing_destination_file_when_behaviour_is_skip() -> Tes
     let copy_result = fs_more::file::copy_file(
         harness.yes.hello_world_txt.as_path(),
         harness.yes.no_bin.as_path(),
-        CopyFileOptions {
+        FileCopyOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Skip,
         },
     );
 
-    assert_matches!(copy_result.unwrap(), CopyFileFinished::Skipped);
+    assert_matches!(copy_result.unwrap(), FileCopyFinished::Skipped);
 
 
     harness
@@ -353,7 +353,7 @@ pub fn copy_file_errors_when_source_path_is_symlink_to_destination_file() -> Tes
     let copy_result = fs_more::file::copy_file(
         &source_symlink_path,
         harness.yes.hello_world_txt.as_path(),
-        CopyFileOptions {
+        FileCopyOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
         },
     );
@@ -394,7 +394,7 @@ pub fn copy_file_does_not_preserve_symlinks() -> TestResult {
     let copy_result = fs_more::file::copy_file(
         &symlink_path,
         &copy_destination_path,
-        CopyFileOptions {
+        FileCopyOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
         },
     );
@@ -402,7 +402,7 @@ pub fn copy_file_does_not_preserve_symlinks() -> TestResult {
 
     assert_matches!(
         copy_result.unwrap(),
-        CopyFileFinished::Created { bytes_copied }
+        FileCopyFinished::Created { bytes_copied }
         if bytes_copied == symlink_destination_file_size_bytes
     );
 

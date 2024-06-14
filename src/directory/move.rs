@@ -15,10 +15,10 @@ use super::{
         ValidatedSourceDirectory,
     },
     CopyDirectoryDepthLimit,
-    CopyDirectoryOperation,
-    CopyDirectoryOptions,
-    CopyDirectoryWithProgressOptions,
     DestinationDirectoryRule,
+    DirectoryCopyOperation,
+    DirectoryCopyOptions,
+    DirectoryCopyWithProgressOptions,
     DirectoryScan,
     DirectoryScanDepthLimit,
     DirectoryScanOptions,
@@ -35,7 +35,7 @@ use crate::{
 
 
 /// Options that influence the [`move_directory`] function.
-pub struct MoveDirectoryOptions {
+pub struct DirectoryMoveOptions {
     /// Specifies whether you allow the target directory to exist before moving
     /// and whether it must be empty or not.
     ///
@@ -47,7 +47,7 @@ pub struct MoveDirectoryOptions {
     pub destination_directory_rule: DestinationDirectoryRule,
 }
 
-impl Default for MoveDirectoryOptions {
+impl Default for DirectoryMoveOptions {
     fn default() -> Self {
         Self {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
@@ -59,7 +59,7 @@ impl Default for MoveDirectoryOptions {
 
 /// Describes a strategy for performing a directory move.
 ///
-/// This is included in [`MoveDirectoryFinished`] to allow
+/// This is included in [`DirectoryMoveFinished`] to allow
 /// callers to understand how the directory was moved.
 /// Note that *the caller can not request that a specific move strategy be used*.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -85,7 +85,7 @@ pub enum DirectoryMoveStrategy {
 ///
 /// This is the return value of [`move_directory`] and [`move_directory_with_progress`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct MoveDirectoryFinished {
+pub struct DirectoryMoveFinished {
     /// Total number of bytes moved.
     pub total_bytes_moved: u64,
 
@@ -144,7 +144,7 @@ fn collect_source_directory_details(
 
 pub(crate) enum DirectoryMoveByRenameAction {
     Renamed {
-        finished_move: MoveDirectoryFinished,
+        finished_move: DirectoryMoveFinished,
     },
     Impossible,
 }
@@ -181,7 +181,7 @@ fn attempt_directory_move_by_rename(
         .is_ok()
         {
             return Ok(DirectoryMoveByRenameAction::Renamed {
-                finished_move: MoveDirectoryFinished {
+                finished_move: DirectoryMoveFinished {
                     total_bytes_moved: source_directory_details.total_bytes,
                     files_moved: source_directory_details.total_files,
                     directories_moved: source_directory_details.total_directories,
@@ -204,7 +204,7 @@ fn attempt_directory_move_by_rename(
             .is_ok()
         {
             return Ok(DirectoryMoveByRenameAction::Renamed {
-                finished_move: MoveDirectoryFinished {
+                finished_move: DirectoryMoveFinished {
                     total_bytes_moved: source_directory_details.total_bytes,
                     files_moved: source_directory_details.total_files,
                     directories_moved: source_directory_details.total_directories,
@@ -244,7 +244,7 @@ fn attempt_directory_move_by_rename(
 ///
 ///
 /// # Options
-/// See [`MoveDirectoryOptions`] for a full set of available directory moving options.
+/// See [`DirectoryMoveOptions`] for a full set of available directory moving options.
 ///
 /// If you allow the destination directory to exist and be non-empty,
 /// source directory contents will be merged into the destination directory.
@@ -271,7 +271,7 @@ fn attempt_directory_move_by_rename(
 /// # Return value
 /// Upon success, the function returns the number of files and directories that were moved
 /// as well as the total amount of bytes moved and how the move was performed
-/// (see [`MoveDirectoryFinished`]).
+/// (see [`DirectoryMoveFinished`]).
 ///
 ///
 ///
@@ -283,14 +283,14 @@ fn attempt_directory_move_by_rename(
 ///
 ///
 /// [`copy_directory`]: super::copy_directory
-/// [`options.destination_directory_rule`]: MoveDirectoryOptions::destination_directory_rule
+/// [`options.destination_directory_rule`]: DirectoryMoveOptions::destination_directory_rule
 /// [`DisallowExisting`]: DestinationDirectoryRule::DisallowExisting
 /// [`AllowEmpty`]: DestinationDirectoryRule::AllowEmpty
 pub fn move_directory<S, T>(
     source_directory_path: S,
     destination_directory_path: T,
-    options: MoveDirectoryOptions,
-) -> Result<MoveDirectoryFinished, MoveDirectoryError>
+    options: DirectoryMoveOptions,
+) -> Result<DirectoryMoveFinished, MoveDirectoryError>
 where
     S: AsRef<Path>,
     T: AsRef<Path>,
@@ -341,7 +341,7 @@ where
 
     copy_directory_unchecked(
         prepared_copy,
-        CopyDirectoryOptions {
+        DirectoryCopyOptions {
             destination_directory_rule: options.destination_directory_rule,
             copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
         },
@@ -364,7 +364,7 @@ where
     })?;
 
 
-    Ok(MoveDirectoryFinished {
+    Ok(DirectoryMoveFinished {
         total_bytes_moved: source_details.total_bytes,
         files_moved: source_details.total_files,
         directories_moved: source_details.total_directories,
@@ -374,7 +374,7 @@ where
 
 
 /// Options that influence the [`move_directory_with_progress`] function.
-pub struct MoveDirectoryWithProgressOptions {
+pub struct DirectoryMoveWithProgressOptions {
     /// Specifies whether you allow the destination directory to exist before moving
     /// and whether it must be empty or not.
     ///
@@ -402,7 +402,7 @@ pub struct MoveDirectoryWithProgressOptions {
     pub progress_update_byte_interval: u64,
 }
 
-impl Default for MoveDirectoryWithProgressOptions {
+impl Default for DirectoryMoveWithProgressOptions {
     fn default() -> Self {
         Self {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
@@ -497,7 +497,7 @@ pub struct DirectoryMoveProgress {
 ///
 ///
 /// # Options
-/// See [`MoveDirectoryWithProgressOptions`] for a full set of available directory moving options.
+/// See [`DirectoryMoveWithProgressOptions`] for a full set of available directory moving options.
 ///
 /// If you allow the destination directory to exist and be non-empty,
 /// source directory contents will be merged into the destination directory.
@@ -524,7 +524,7 @@ pub struct DirectoryMoveProgress {
 /// # Return value
 /// Upon success, the function returns the number of files and directories that were moved
 /// as well as the total amount of bytes moved and how the move was performed
-/// (see [`MoveDirectoryFinished`]).
+/// (see [`DirectoryMoveFinished`]).
 ///
 ///
 /// ### Progress reporting
@@ -553,16 +553,16 @@ pub struct DirectoryMoveProgress {
 ///
 ///
 /// [`copy_directory_with_progress`]: super::copy_directory_with_progress
-/// [`options.destination_directory_rule`]: MoveDirectoryWithProgressOptions::destination_directory_rule
-/// [`options.progress_update_byte_interval`]: MoveDirectoryWithProgressOptions::progress_update_byte_interval
+/// [`options.destination_directory_rule`]: DirectoryMoveWithProgressOptions::destination_directory_rule
+/// [`options.progress_update_byte_interval`]: DirectoryMoveWithProgressOptions::progress_update_byte_interval
 /// [`DisallowExisting`]: DestinationDirectoryRule::DisallowExisting
 /// [`AllowEmpty`]: DestinationDirectoryRule::AllowEmpty
 pub fn move_directory_with_progress<S, T, F>(
     source_directory_path: S,
     target_directory_path: T,
-    options: MoveDirectoryWithProgressOptions,
+    options: DirectoryMoveWithProgressOptions,
     mut progress_handler: F,
-) -> Result<MoveDirectoryFinished, MoveDirectoryError>
+) -> Result<DirectoryMoveFinished, MoveDirectoryError>
 where
     S: AsRef<Path>,
     T: AsRef<Path>,
@@ -624,7 +624,7 @@ where
     // At this point a simple rename was either impossible or failed.
     // We need to copy and delete instead.
 
-    let copy_options = CopyDirectoryWithProgressOptions {
+    let copy_options = DirectoryCopyWithProgressOptions {
         destination_directory_rule: options.destination_directory_rule,
         read_buffer_size: options.read_buffer_size,
         write_buffer_size: options.write_buffer_size,
@@ -646,10 +646,10 @@ where
         copy_options,
         |progress| {
             let move_operation = match progress.current_operation.clone() {
-                CopyDirectoryOperation::CreatingDirectory {
+                DirectoryCopyOperation::CreatingDirectory {
                     destination_directory_path: target_path,
                 } => DirectoryMoveOperation::CreatingDirectory { target_path },
-                CopyDirectoryOperation::CopyingFile {
+                DirectoryCopyOperation::CopyingFile {
                     destination_file_path: target_path,
                     progress,
                 } => DirectoryMoveOperation::CopyingFile {
@@ -692,7 +692,7 @@ where
     })?;
 
 
-    Ok(MoveDirectoryFinished {
+    Ok(DirectoryMoveFinished {
         directories_moved: directory_copy_result.directories_created,
         total_bytes_moved: directory_copy_result.total_bytes_copied,
         files_moved: directory_copy_result.files_copied,

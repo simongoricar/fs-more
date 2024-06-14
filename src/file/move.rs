@@ -6,9 +6,9 @@ use super::{
     copy::copy_file_with_progress_unchecked,
     validate_destination_file_path,
     validate_source_file_path,
-    CopyFileWithProgressOptions,
     DestinationValidationAction,
     ExistingFileBehaviour,
+    FileCopyWithProgressOptions,
     FileProgress,
 };
 use crate::{
@@ -23,14 +23,14 @@ use crate::{
 
 /// Options that influence the [`move_file`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct MoveFileOptions {
+pub struct FileMoveOptions {
     /// How to behave for destination files that already exist.
     pub existing_destination_file_behaviour: ExistingFileBehaviour,
 }
 
 #[allow(clippy::derivable_impls)]
-impl Default for MoveFileOptions {
-    /// Constructs a default [`MoveFileOptions`]:
+impl Default for FileMoveOptions {
+    /// Constructs a default [`FileMoveOptions`]:
     /// - existing destination files will not be overwritten, and will cause an error ([`ExistingFileBehaviour::Abort`]).
     fn default() -> Self {
         Self {
@@ -45,7 +45,7 @@ impl Default for MoveFileOptions {
 ///
 /// See also: [`move_file`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum MoveFileFinished {
+pub enum FileMoveFinished {
     /// Destination file was freshly created and the contents of the source
     /// file were moved. `method` will describe how the move was made.
     Created {
@@ -53,7 +53,7 @@ pub enum MoveFileFinished {
         bytes_copied: u64,
 
         /// How the move was accomplished.
-        method: MoveFileMethod,
+        method: FileMoveMethod,
     },
 
     /// Destination file existed, and was overwritten with the contents of
@@ -63,7 +63,7 @@ pub enum MoveFileFinished {
         bytes_copied: u64,
 
         /// How the move was accomplished.
-        method: MoveFileMethod,
+        method: FileMoveMethod,
     },
 
     /// File was not moved because the destination file already existed.
@@ -78,7 +78,7 @@ pub enum MoveFileFinished {
 
 /// A method used for moving a file.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum MoveFileMethod {
+pub enum FileMoveMethod {
     /// The source file was renamed to the destination file.
     ///
     /// This is very highly performant on most file systems,
@@ -111,11 +111,11 @@ pub enum MoveFileMethod {
 ///
 ///
 /// # Options
-/// See [`MoveFileOptions`] for available file moving options.
+/// See [`FileMoveOptions`] for available file moving options.
 ///
 ///
 /// # Return value
-/// If the move succeeds, the function returns [`MoveFileFinished`],
+/// If the move succeeds, the function returns [`FileMoveFinished`],
 /// which indicates whether the file was created,
 /// overwritten or skipped. The struct also includes the number of bytes moved,
 /// if relevant.
@@ -166,12 +166,12 @@ pub enum MoveFileMethod {
 /// If the rename fails, for example when the source and destination path are on different
 /// mount points or drives, a copy-and-delete will be performed instead.
 ///
-/// The method used will be reflected in the [`MoveFileMethod`] used in the return value.
+/// The method used will be reflected in the [`FileMoveMethod`] used in the return value.
 ///
 /// </details>
 ///
 ///
-/// [`options.existing_destination_file_behaviour`]: MoveFileOptions::existing_destination_file_behaviour
+/// [`options.existing_destination_file_behaviour`]: FileMoveOptions::existing_destination_file_behaviour
 /// [`SourceFileNotFound`]: FileError::SourceFileNotFound
 /// [`SourcePathNotAFile`]: FileError::SourcePathNotAFile
 /// [`UnableToAccessSourceFile`]: FileError::UnableToAccessSourceFile
@@ -184,8 +184,8 @@ pub enum MoveFileMethod {
 pub fn move_file<S, D>(
     source_file_path: S,
     destination_file_path: D,
-    options: MoveFileOptions,
-) -> Result<MoveFileFinished, FileError>
+    options: FileMoveOptions,
+) -> Result<FileMoveFinished, FileError>
 where
     S: AsRef<Path>,
     D: AsRef<Path>,
@@ -203,7 +203,7 @@ where
             options.existing_destination_file_behaviour,
         )? {
             DestinationValidationAction::SkipCopyOrMove => {
-                return Ok(MoveFileFinished::Skipped);
+                return Ok(FileMoveFinished::Skipped);
             }
             DestinationValidationAction::Continue(info) => {
                 (info.destination_file_path, info.exists)
@@ -235,13 +235,13 @@ where
             .map_err(|error| FileError::OtherIoError { error })?;
 
         match destination_file_exists {
-            true => Ok(MoveFileFinished::Overwritten {
+            true => Ok(FileMoveFinished::Overwritten {
                 bytes_copied: target_file_path_metadata.len(),
-                method: MoveFileMethod::Rename,
+                method: FileMoveMethod::Rename,
             }),
-            false => Ok(MoveFileFinished::Created {
+            false => Ok(FileMoveFinished::Created {
                 bytes_copied: target_file_path_metadata.len(),
-                method: MoveFileMethod::Rename,
+                method: FileMoveMethod::Rename,
             }),
         }
     } else {
@@ -272,13 +272,13 @@ where
 
 
         match destination_file_exists {
-            true => Ok(MoveFileFinished::Overwritten {
+            true => Ok(FileMoveFinished::Overwritten {
                 bytes_copied: num_bytes_copied,
-                method: MoveFileMethod::CopyAndDelete,
+                method: FileMoveMethod::CopyAndDelete,
             }),
-            false => Ok(MoveFileFinished::Created {
+            false => Ok(FileMoveFinished::Created {
                 bytes_copied: num_bytes_copied,
-                method: MoveFileMethod::CopyAndDelete,
+                method: FileMoveMethod::CopyAndDelete,
             }),
         }
     }
@@ -288,7 +288,7 @@ where
 
 /// Options that influence the [`move_file_with_progress`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct MoveFileWithProgressOptions {
+pub struct FileMoveWithProgressOptions {
     /// How to behave for destination files that already exist.
     pub existing_destination_file_behaviour: ExistingFileBehaviour,
 
@@ -317,8 +317,8 @@ pub struct MoveFileWithProgressOptions {
     pub progress_update_byte_interval: u64,
 }
 
-impl Default for MoveFileWithProgressOptions {
-    /// Constructs a default [`MoveFileOptions`]:
+impl Default for FileMoveWithProgressOptions {
+    /// Constructs a default [`FileMoveOptions`]:
     /// - existing destination files will not be overwritten, and will cause an error ([`ExistingFileBehaviour::Abort`]),
     /// - read and write buffers with be 64 KiB large,
     /// - the progress report closure interval will be 512 KiB.
@@ -350,11 +350,11 @@ impl Default for MoveFileWithProgressOptions {
 ///
 ///
 /// # Options
-/// See [`MoveFileWithProgressOptions`] for available file moving options.
+/// See [`FileMoveWithProgressOptions`] for available file moving options.
 ///
 ///
 /// # Return value
-/// If the move succeeds, the function returns [`MoveFileFinished`],
+/// If the move succeeds, the function returns [`FileMoveFinished`],
 /// which indicates whether the file was created,
 /// overwritten or skipped. The struct also includes the number of bytes moved,
 /// if relevant.
@@ -423,13 +423,13 @@ impl Default for MoveFileWithProgressOptions {
 /// If the rename fails, for example when the source and destination path are on different
 /// mount points or drives, a copy-and-delete will be performed instead.
 ///
-/// The method used will be reflected in the [`MoveFileMethod`] used in the return value.
+/// The method used will be reflected in the [`FileMoveMethod`] used in the return value.
 ///
 /// </details>
 ///
 ///
-/// [`options.progress_update_byte_interval`]: MoveFileWithProgressOptions::progress_update_byte_interval
-/// [`options.existing_destination_file_behaviour`]: MoveFileWithProgressOptions::existing_destination_file_behaviour
+/// [`options.progress_update_byte_interval`]: FileMoveWithProgressOptions::progress_update_byte_interval
+/// [`options.existing_destination_file_behaviour`]: FileMoveWithProgressOptions::existing_destination_file_behaviour
 /// [`SourceFileNotFound`]: FileError::SourceFileNotFound
 /// [`SourcePathNotAFile`]: FileError::SourcePathNotAFile
 /// [`UnableToAccessSourceFile`]: FileError::UnableToAccessSourceFile
@@ -442,9 +442,9 @@ impl Default for MoveFileWithProgressOptions {
 pub fn move_file_with_progress<S, D, P>(
     source_file_path: S,
     destination_file_path: D,
-    options: MoveFileWithProgressOptions,
+    options: FileMoveWithProgressOptions,
     mut progress_handler: P,
-) -> Result<MoveFileFinished, FileError>
+) -> Result<FileMoveFinished, FileError>
 where
     S: AsRef<Path>,
     D: AsRef<Path>,
@@ -463,7 +463,7 @@ where
             options.existing_destination_file_behaviour,
         )? {
             DestinationValidationAction::SkipCopyOrMove => {
-                return Ok(MoveFileFinished::Skipped);
+                return Ok(FileMoveFinished::Skipped);
             }
             DestinationValidationAction::Continue(info) => {
                 (info.destination_file_path, info.exists)
@@ -503,13 +503,13 @@ where
 
 
         match destination_file_exists {
-            true => Ok(MoveFileFinished::Overwritten {
+            true => Ok(FileMoveFinished::Overwritten {
                 bytes_copied: target_file_path_size_bytes,
-                method: MoveFileMethod::Rename,
+                method: FileMoveMethod::Rename,
             }),
-            false => Ok(MoveFileFinished::Created {
+            false => Ok(FileMoveFinished::Created {
                 bytes_copied: target_file_path_size_bytes,
-                method: MoveFileMethod::Rename,
+                method: FileMoveMethod::Rename,
             }),
         }
     } else {
@@ -519,7 +519,7 @@ where
         let bytes_written = copy_file_with_progress_unchecked(
             &validated_source_file_path,
             &validated_destination_file_path,
-            CopyFileWithProgressOptions {
+            FileCopyWithProgressOptions {
                 existing_destination_file_behaviour: options.existing_destination_file_behaviour,
                 read_buffer_size: options.read_buffer_size,
                 write_buffer_size: options.write_buffer_size,
@@ -548,13 +548,13 @@ where
 
 
         match destination_file_exists {
-            true => Ok(MoveFileFinished::Overwritten {
+            true => Ok(FileMoveFinished::Overwritten {
                 bytes_copied: bytes_written,
-                method: MoveFileMethod::CopyAndDelete,
+                method: FileMoveMethod::CopyAndDelete,
             }),
-            false => Ok(MoveFileFinished::Created {
+            false => Ok(FileMoveFinished::Created {
                 bytes_copied: bytes_written,
-                method: MoveFileMethod::CopyAndDelete,
+                method: FileMoveMethod::CopyAndDelete,
             }),
         }
     }

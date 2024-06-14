@@ -1,7 +1,7 @@
 use assert_matches::assert_matches;
 use fs_more::{
     error::FileError,
-    file::{CopyFileFinished, CopyFileWithProgressOptions, ExistingFileBehaviour},
+    file::{ExistingFileBehaviour, FileCopyFinished, FileCopyWithProgressOptions},
 };
 use fs_more_test_harness::{
     assertable::{
@@ -41,7 +41,7 @@ pub fn copy_file_with_progress_creates_an_identical_copy_and_reports_sensible_pr
     let copy_result = fs_more::file::copy_file_with_progress(
         harness.yes.hello_world_txt.as_path(),
         &destination_file_path,
-        CopyFileWithProgressOptions {
+        FileCopyWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
             ..Default::default()
         },
@@ -74,7 +74,7 @@ pub fn copy_file_with_progress_creates_an_identical_copy_and_reports_sensible_pr
 
     assert_matches!(
         copy_result.unwrap(),
-        CopyFileFinished::Created { bytes_copied }
+        FileCopyFinished::Created { bytes_copied }
         if bytes_copied == expected_final_file_size_bytes
     );
 
@@ -111,7 +111,7 @@ pub fn copy_file_with_progress_errors_when_trying_to_copy_into_self() -> TestRes
     let copy_result = fs_more::file::copy_file_with_progress(
         harness.yes.hello_world_txt.as_path(),
         harness.yes.hello_world_txt.as_path(),
-        CopyFileWithProgressOptions {
+        FileCopyWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
             ..Default::default()
         },
@@ -176,7 +176,7 @@ pub fn copy_file_with_progress_handles_case_insensitivity_properly() -> TestResu
     let copy_result = fs_more::file::copy_file_with_progress(
         harness.yes.no_bin.as_path(),
         &destination_file_path,
-        CopyFileWithProgressOptions {
+        FileCopyWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
             ..Default::default()
         },
@@ -187,7 +187,7 @@ pub fn copy_file_with_progress_handles_case_insensitivity_properly() -> TestResu
     if is_fs_case_sensitive {
         assert_matches!(
             copy_result.unwrap(),
-            CopyFileFinished::Created { bytes_copied }
+            FileCopyFinished::Created { bytes_copied }
             if bytes_copied == source_file_size_bytes
         );
     } else {
@@ -254,7 +254,7 @@ pub fn copy_file_with_progress_errors_when_trying_to_copy_into_self_even_when_mo
     let copy_result = fs_more::file::copy_file_with_progress(
         harness.yes.hello_world_txt.as_path(),
         &destination_file_path,
-        CopyFileWithProgressOptions {
+        FileCopyWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
             ..Default::default()
         },
@@ -265,7 +265,7 @@ pub fn copy_file_with_progress_errors_when_trying_to_copy_into_self_even_when_mo
     if is_fs_case_sensitive {
         assert_matches!(
             copy_result.unwrap(),
-            CopyFileFinished::Created { bytes_copied }
+            FileCopyFinished::Created { bytes_copied }
             if bytes_copied == source_file_size_bytes
         );
     } else {
@@ -306,7 +306,7 @@ pub fn copy_file_with_progress_overwrites_destination_file_when_behaviour_is_ove
     let copy_result = fs_more::file::copy_file_with_progress(
         harness.yes.no_bin.as_path(),
         harness.yes.hello_world_txt.as_path(),
-        CopyFileWithProgressOptions {
+        FileCopyWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
             ..Default::default()
         },
@@ -316,7 +316,7 @@ pub fn copy_file_with_progress_overwrites_destination_file_when_behaviour_is_ove
 
     assert_matches!(
         copy_result.unwrap(),
-        CopyFileFinished::Overwritten { bytes_copied }
+        FileCopyFinished::Overwritten { bytes_copied }
         if bytes_copied == source_file_size_bytes
     );
 
@@ -346,7 +346,7 @@ pub fn copy_file_with_progress_errors_on_existing_destination_file_when_behaviou
     let copy_result = fs_more::file::copy_file_with_progress(
         harness.yes.no_bin.as_path(),
         harness.yes.hello_world_txt.as_path(),
-        CopyFileWithProgressOptions {
+        FileCopyWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
             ..Default::default()
         },
@@ -383,14 +383,14 @@ pub fn copy_file_with_progress_skips_existing_destination_file_when_behaviour_is
     let copy_result = fs_more::file::copy_file_with_progress(
         harness.yes.hello_world_txt.as_path(),
         harness.yes.no_bin.as_path(),
-        CopyFileWithProgressOptions {
+        FileCopyWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Skip,
             ..Default::default()
         },
         |_| {},
     );
 
-    assert_matches!(copy_result.unwrap(), CopyFileFinished::Skipped);
+    assert_matches!(copy_result.unwrap(), FileCopyFinished::Skipped);
 
 
     harness
@@ -424,7 +424,7 @@ pub fn copy_file_with_progress_errors_when_source_path_is_symlink_to_destination
     let copy_result = fs_more::file::copy_file_with_progress(
         &source_symlink_path,
         harness.yes.hello_world_txt.as_path(),
-        CopyFileWithProgressOptions {
+        FileCopyWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
             ..Default::default()
         },
@@ -468,7 +468,7 @@ pub fn copy_file_with_progress_does_not_preserve_symlinks() -> TestResult {
     let copy_result = fs_more::file::copy_file_with_progress(
         &symlink_path,
         &copy_destination_path,
-        CopyFileWithProgressOptions {
+        FileCopyWithProgressOptions {
             existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
             ..Default::default()
         },
@@ -478,7 +478,7 @@ pub fn copy_file_with_progress_does_not_preserve_symlinks() -> TestResult {
 
     assert_matches!(
         copy_result.unwrap(),
-        CopyFileFinished::Created { bytes_copied }
+        FileCopyFinished::Created { bytes_copied }
         if bytes_copied == symlink_destination_file_size_bytes
     );
 

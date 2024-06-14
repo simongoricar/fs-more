@@ -2,8 +2,8 @@ use assert_matches::assert_matches;
 use fs_more::{
     directory::{
         CopyDirectoryDepthLimit,
-        CopyDirectoryOptions,
         DestinationDirectoryRule,
+        DirectoryCopyOptions,
         DirectoryScanDepthLimit,
         DirectoryScanOptions,
         ExistingSubDirectoryBehaviour,
@@ -14,7 +14,7 @@ use fs_more::{
         DestinationDirectoryPathValidationError,
         DirectoryExecutionPlanError,
     },
-    file::{CopyFileOptions, ExistingFileBehaviour},
+    file::{ExistingFileBehaviour, FileCopyOptions},
 };
 use fs_more_test_harness::{
     assertable::{
@@ -54,7 +54,7 @@ pub fn copy_directory_creates_an_identical_copy() -> TestResult {
     let finished_copy = fs_more::directory::copy_directory(
         deep_harness.as_path(),
         empty_harness.as_path(),
-        CopyDirectoryOptions {
+        DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
             ..Default::default()
         },
@@ -110,7 +110,7 @@ pub fn copy_directory_respects_copy_depth_limit() -> TestResult {
     let finished_copy = fs_more::directory::copy_directory(
         deep_harness.as_path(),
         empty_harness.as_path(),
-        CopyDirectoryOptions {
+        DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
             copy_depth_limit: MAXIMUM_COPY_DEPTH,
         },
@@ -143,7 +143,7 @@ pub fn copy_directory_errors_when_source_and_destination_are_the_same() -> TestR
     let copy_result = fs_more::directory::copy_directory(
         deep_harness.as_path(),
         deep_harness.as_path(),
-        CopyDirectoryOptions {
+        DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
                 existing_destination_subdirectory_behaviour:
@@ -179,7 +179,7 @@ pub fn copy_directory_errors_when_destination_is_inside_source_path() -> TestRes
     let copy_result = fs_more::directory::copy_directory(
         deep_harness.as_path(),
         deep_harness.foo.as_path(),
-        CopyDirectoryOptions {
+        DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
                 existing_destination_subdirectory_behaviour:
@@ -217,7 +217,7 @@ pub fn copy_directory_errors_when_destination_directory_already_exists_and_rule_
     let copy_result = fs_more::directory::copy_directory(
         deep_harness.as_path(),
         empty_harness.as_path(),
-        CopyDirectoryOptions {
+        DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::DisallowExisting,
             ..Default::default()
         },
@@ -268,7 +268,7 @@ pub fn copy_directory_errors_when_destination_file_collides_and_its_behaviour_is
         fs_more::file::copy_file(
             deep_harness.foo.bar.c_bin.as_path(),
             &empty_harness_colliding_file_path,
-            CopyFileOptions {
+            FileCopyOptions {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
             },
         )
@@ -292,7 +292,7 @@ pub fn copy_directory_errors_when_destination_file_collides_and_its_behaviour_is
     let copy_result = fs_more::directory::copy_directory(
         deep_harness.as_path(),
         empty_harness.as_path(),
-        CopyDirectoryOptions {
+        DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
                 existing_destination_subdirectory_behaviour:
@@ -354,7 +354,7 @@ pub fn copy_directory_errors_when_destination_subdirectory_collides_and_its_beha
     let copy_result = fs_more::directory::copy_directory(
         deep_harness.as_path(),
         empty_harness.as_path(),
-        CopyDirectoryOptions {
+        DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
                 existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
@@ -409,7 +409,7 @@ pub fn copy_directory_does_not_preserve_file_symlinks() -> TestResult {
     fs_more::directory::copy_directory(
         deep_harness.as_path(),
         empty_harness.as_path(),
-        CopyDirectoryOptions {
+        DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
             ..Default::default()
         },
@@ -461,7 +461,7 @@ pub fn copy_directory_does_not_preserve_directory_symlinks() -> TestResult {
     fs_more::directory::copy_directory(
         deep_harness.as_path(),
         empty_harness.as_path(),
-        CopyDirectoryOptions {
+        DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
             ..Default::default()
         },
@@ -521,7 +521,7 @@ pub fn copy_directory_respects_copy_depth_limit_even_if_source_contains_symlink(
     fs_more::directory::copy_directory(
         deep_harness.as_path(),
         empty_harness.as_path(),
-        CopyDirectoryOptions {
+        DirectoryCopyOptions {
             copy_depth_limit: CopyDirectoryDepthLimit::Limited { maximum_depth: 1 },
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
         },
@@ -573,7 +573,7 @@ pub fn copy_directory_preemptively_checks_for_directory_collisions() -> TestResu
     let copy_result = fs_more::directory::copy_directory(
         deep_harness.as_path(),
         empty_harness.as_path(),
-        CopyDirectoryOptions {
+        DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
                 existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
@@ -621,7 +621,7 @@ pub fn copy_directory_preemptively_checks_for_file_collisions() -> TestResult {
         fs_more::file::copy_file(
             deep_harness.a_bin.as_path(),
             &remapped_path,
-            CopyFileOptions {
+            FileCopyOptions {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
             },
         )
@@ -636,7 +636,7 @@ pub fn copy_directory_preemptively_checks_for_file_collisions() -> TestResult {
     let copy_result = fs_more::directory::copy_directory(
         deep_harness.as_path(),
         empty_harness.as_path(),
-        CopyDirectoryOptions {
+        DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
                 existing_destination_subdirectory_behaviour:
@@ -697,7 +697,7 @@ pub fn copy_directory_errors_when_source_is_symlink_to_destination() -> TestResu
     let copy_result = fs_more::directory::copy_directory(
         symlink_to_deep_harnesss_path.as_path(),
         deep_harness.as_path(),
-        CopyDirectoryOptions {
+        DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
                 existing_destination_subdirectory_behaviour:
