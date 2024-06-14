@@ -6,8 +6,11 @@ use std::{
 
 use thiserror::Error;
 
+
+
+/// An internal error that can ocurr when comparing files.
 #[derive(Debug, Error)]
-pub enum FileComparisonErrorInner {
+pub(super) enum FileComparisonErrorInner {
     #[error(
         "unable to read metadata for path \"{}\"",
         .path.display()
@@ -62,6 +65,7 @@ pub enum FileComparisonErrorInner {
 
 
 
+/// File comparison options.
 #[derive(Clone, Debug)]
 pub struct FileComparisonOptions {
     /// If `true`, the comparison will require that
@@ -75,10 +79,12 @@ pub struct FileComparisonOptions {
     pub strict_symlink_comparison: bool,
 }
 
+
 /// Given two paths, this method ensures they are file paths
 /// and that their contents are identical.
-/// This handles symlinks leading to files, as well as
-/// does proper error handling if either of the paths is invalid
+///
+/// This handles symlinks leading to files (see `options`), as well as
+/// does proper error handling when either of the paths is invalid
 /// (e.g. points to a directory).
 ///
 /// See [`FileComparisonErrorInner`] for possible errors.

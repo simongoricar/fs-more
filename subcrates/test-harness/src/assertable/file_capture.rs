@@ -6,7 +6,17 @@ use std::{
 };
 
 
-fn format_abbreviated_u8_slice(slice: &[u8], maximum_displayed_length: usize) -> String {
+/// Formats the given byte `slice` up to the specified `maximum_displayed_length`.
+///
+/// If the slice is longer than the maximum length, the "overflowing" bytes are not displayed.
+///
+/// ```ignore
+/// assert_eq!(
+///     abbreviate_u8_slice_as_bytes(&[1, 2, 3, 4], 2),
+///     "[1, 2, ... (2 remaining)]"
+/// );
+/// ```
+fn abbreviate_u8_slice_as_bytes(slice: &[u8], maximum_displayed_length: usize) -> String {
     if slice.len() <= maximum_displayed_length {
         return format!("{:?}", slice);
     }
@@ -26,7 +36,20 @@ fn format_abbreviated_u8_slice(slice: &[u8], maximum_displayed_length: usize) ->
     )
 }
 
-fn format_abbreviated_string(slice: &[u8], maximum_displayed_chars: usize) -> String {
+
+/// Formats the given byte `slice` as an UTF-8 string, up to the specified `maximum_displayed_chars`.
+///
+/// If the parsed string is longer than the maximum allowed characters, the rest are not displayed.
+///
+/// If the slice is not valid UTF-8, the "(not UTF-8)" string is returned.
+///
+/// ```ignore
+/// assert_eq!(
+///     abbreviate_u8_slice_as_string(&[72, 69, 76, 76, 79, 32, 87, 79, 82, 76, 68], 7),
+///     "HELLO W [4 remaining]"
+/// );
+/// ```
+fn abbreviate_u8_slice_as_string(slice: &[u8], maximum_displayed_chars: usize) -> String {
     let Ok(as_string) = String::from_utf8(slice.to_vec()) else {
         return "(not UTF-8)".to_string();
     };
@@ -46,6 +69,9 @@ fn format_abbreviated_string(slice: &[u8], maximum_displayed_chars: usize) -> St
 }
 
 
+/// A file state (non-existent / empty / with some data).
+///
+/// See also: [`CapturedFileState`].
 #[derive(Clone, PartialEq, Eq)]
 pub enum FileState {
     NonExistent,
@@ -54,6 +80,14 @@ pub enum FileState {
 }
 
 impl FileState {
+    /// Captures the file state for the given `file_path`.
+    ///
+    /// # Panics
+    /// Panics if the file cannot be accessed.
+    ///
+    /// Panicking is accepted for this function only because
+    /// this is part of `fs-more`'s testing harness,
+    /// and we *should panic on errors anyway*.
     pub fn capture_from_file_path<P>(file_path: P) -> Self
     where
         P: AsRef<Path>,
@@ -85,11 +119,14 @@ impl FileState {
         }
     }
 
+
+    /// Returns `true` if the file states equal.
     #[inline]
     pub fn equals_other_file_state(&self, other: &Self) -> bool {
         self == other
     }
 }
+
 
 impl Debug for FileState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -104,8 +141,8 @@ impl Debug for FileState {
                         {}\n\
                     }}",
                     humansize::format_size(content.len(), humansize::BINARY),
-                    format_abbreviated_u8_slice(content, 12),
-                    format_abbreviated_string(content, 12)
+                    abbreviate_u8_slice_as_bytes(content, 12),
+                    abbreviate_u8_slice_as_string(content, 12)
                 )
             }
         }
@@ -113,6 +150,12 @@ impl Debug for FileState {
 }
 
 
+
+/// A contextual file state (non-existent / empty / with some data).
+///
+/// Unlike [`FileState`], this struct also carries the information
+/// about the path of the captured file, allowing us to
+/// e.g. [`CapturedFileState::assert_unchanged`].
 pub struct CapturedFileState {
     file_path: PathBuf,
 
@@ -121,6 +164,14 @@ pub struct CapturedFileState {
 
 
 impl CapturedFileState {
+    /// Captures the file state at the given file `path`.
+    ///
+    /// # Panics
+    /// Panics if the file cannot be accessed.
+    ///
+    /// Panicking is accepted for this function only because
+    /// this is part of `fs-more`'s testing harness,
+    /// and we *should panic on errors anyway*.
     pub fn new_with_content_capture<P>(path: P) -> Self
     where
         P: AsRef<Path>,
@@ -131,6 +182,7 @@ impl CapturedFileState {
         }
     }
 
+    /// Initialises a new captured file state by manually providing a [`FileState`].
     pub fn new_with_manual_state<P>(path: P, state: FileState) -> Self
     where
         P: AsRef<Path>,
@@ -141,10 +193,13 @@ impl CapturedFileState {
         }
     }
 
+    /// Returns the path of the captured file.
     pub fn path(&self) -> &Path {
         &self.file_path
     }
 
+    /// Asserts the captured state is equal to the state of the `other` state.
+    /// Does not compare paths, only states.
     pub fn assert_captured_states_equal(&self, other: &Self) {
         assert!(
             self.captured_state
@@ -155,6 +210,8 @@ impl CapturedFileState {
         )
     }
 
+    /// Asserts the `other` file's current state on disk
+    /// matches the captured `self` state.
     pub fn assert_captured_state_matches_other_file<P>(&self, other: P)
     where
         P: AsRef<Path>,
@@ -163,6 +220,8 @@ impl CapturedFileState {
         self.assert_captured_states_equal(&captured_other_file);
     }
 
+    /// Asserts the file's current state on disk
+    /// matches the captured state.
     pub fn assert_unchanged(&self) {
         let now_exists = self
             .file_path
@@ -217,5 +276,27 @@ impl CapturedFileState {
                 );
             }
         }
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn properly_abbreviates_u8_slice() {
+        assert_eq!(
+            abbreviate_u8_slice_as_bytes(&[1, 2, 3, 4], 2),
+            "[1, 2, ... (2 remaining)]"
+        );
+    }
+
+    #[test]
+    fn properly_abbreviates_u8_slice_as_string() {
+        assert_eq!(
+            abbreviate_u8_slice_as_string(&[72, 69, 76, 76, 79, 32, 87, 79, 82, 76, 68], 7),
+            "HELLO W [4 remaining]"
+        );
     }
 }

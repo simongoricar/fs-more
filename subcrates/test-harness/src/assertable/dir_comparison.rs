@@ -14,17 +14,35 @@ use crate::assertable::file_comparison::{
 };
 
 
+/// The type of a path, e.g. a file, a symlink to a directory, etc.
+///
+/// See also: [`PathType::from_path`] or [`PathType::from_path_types`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PathType {
+    /// The path does not exist.
     NotFound,
+
+    /// The path leads to a "bare" file, i.e. a file *and not a symlink to one*.
     BareFile,
+
+    /// The path leads to a symlink to a file.
     SymlinkToFile,
+
+    /// The path leads to a "bare" directory, i.e. a directory *and not a symlink to one*.
     BareDirectory,
+
+    /// The path leads to a symlink to a directory.
     SymlinkToDirectory,
+
+    /// The path exists, but its type is not one of the regocnized ones.
     Unrecognized,
 }
 
+
 impl PathType {
+    /// Computes the type of a `path`.
+    ///
+    /// Returns [`std::io::Error`] if the file's metadata cannot be read.
     pub fn from_path(path: &Path) -> Result<Self, std::io::Error> {
         if !path.try_exists()? {
             return Ok(Self::NotFound);
@@ -50,6 +68,10 @@ impl PathType {
         }
     }
 
+    /// Computes the type of a path from two [`FileType`]s, one previously obtained from
+    /// [`fs::symlink_metadata`], another from [`fs::metadata`].
+    ///
+    /// *This method does not touch the filesystem, unlike [`Self::from_path`].*
     pub fn from_path_types(file_type_no_follow: FileType, file_type_with_follow: FileType) -> Self {
         if file_type_no_follow.is_file() {
             Self::BareFile
@@ -68,6 +90,7 @@ impl PathType {
         }
     }
 
+    /// Returns a short name of the path type, e.g. "a file", or "a symlink to a directory".
     pub fn to_short_name(self) -> &'static str {
         match self {
             PathType::NotFound => "non-existent",
@@ -81,8 +104,12 @@ impl PathType {
 }
 
 
+/// An internal error that can ocurr when comparing directories.
+///
+/// This error type is never returned by itself, see [`DirectoryComparisonError`]
+/// that wraps this type with useful context.
 #[derive(Debug, Error)]
-pub enum DirectoryComparisonErrorInner {
+enum DirectoryComparisonErrorInner {
     #[error(
         "unable to read directory: {}", .directory_path.display()
     )]
@@ -118,70 +145,6 @@ pub enum DirectoryComparisonErrorInner {
         error: std::io::Error,
     },
 
-    /*
-    #[error(
-        "directory contents do not match;\n  \
-          {}\n\
-        is a file inside the secondary (source) directory, \
-        but the corresponding path inside the primary (target) directory\n  \
-          {}\n\
-        does not exist.",
-        .original_path.display(),
-        .expected_path.display()
-    )]
-    PrimaryDirectoryIsMissingFile {
-        original_path: PathBuf,
-
-        expected_path: PathBuf,
-    },
-
-    #[error(
-        "directory contents do not match;\n  \
-          {}\n\
-        is a directory inside the secondary (source) directory, \
-        but the corresponding path inside the primary (target) directory\n  \
-          {}\n\
-        does not exist.",
-        .original_path.display(),
-        .expected_path.display()
-    )]
-    PrimaryDirectoryIsMissingDirectory {
-        original_path: PathBuf,
-
-        expected_path: PathBuf,
-    },
-
-    #[error(
-        "directory contents do not match;\n  \
-          {}\n\
-        is a symlink to a directory inside the secondary (source) directory, \
-        but the corresponding path inside the primary (target) directory\n  \
-          {}\n\
-        is a bare (non-symlink) directory.",
-        .original_path.display(),
-        .expected_path.display()
-    )]
-    PrimaryDirectoryIsIncorrectlyABareDirectory {
-        original_path: PathBuf,
-
-        expected_path: PathBuf,
-    },
-
-    #[error(
-        "directory contents do not match;\n  \
-          {}\n\
-        is a non-symlink directory inside the secondary (source) directory, \
-        but the corresponding path inside the primary (target) directory\n  \
-          {}\n\
-        is a symlink leading to a directory.",
-        .original_path.display(),
-        .expected_path.display()
-    )]
-    PrimaryDirectoryIsIncorrectlyASymlink {
-        original_path: PathBuf,
-
-        expected_path: PathBuf,
-    }, */
     #[error(
         "directory contents do not match;\n  \
           {}\n\
@@ -223,6 +186,8 @@ pub enum DirectoryComparisonErrorInner {
     },
 }
 
+
+/// An error that can ocurr when comparing directories.
 #[derive(Debug, Error)]
 #[error(
     "failed while comparing directory\n  \
@@ -237,16 +202,22 @@ pub enum DirectoryComparisonErrorInner {
      .reason
 )]
 pub struct DirectoryComparisonError {
+    /// Internal reason for the comparison error.
     reason: DirectoryComparisonErrorInner,
 
+    /// The primary directory path being compared.
     primary_directory_path: PathBuf,
 
+    /// The secondary directory path being compared.
     secondary_directory_path: PathBuf,
 }
 
 
 
-
+/// Directory comparison options.
+///
+/// See also: [`assert_primary_directory_precisely_contains_secondary_directory`]
+/// and [`assert_primary_directory_fully_matches_secondary_directory`].
 #[derive(Clone, Debug)]
 pub struct DirectoryComparisonOptions {
     /// If `true`, the comparison will require that
@@ -550,6 +521,8 @@ fn ensure_primary_directory_precisely_contains_secondary_directory_inner(
 
 
 
+/// Given an [`Error`] trait object, this function formats the error
+/// as a string, including writing out its [`Error::source`].
 fn format_error_with_source(error: &dyn Error) -> String {
     let formatted_cause = match error.source() {
         Some(cause) => {
@@ -565,19 +538,26 @@ fn format_error_with_source(error: &dyn Error) -> String {
 }
 
 
-
+/// Asserts that the `primary_directory_path` contains everything that `secondary_directory_path` has,
+/// but not necesarrily the other way around (`primary_directory_path` can have extra entries).
+///
+/// Every file and subdirectory in the `secondary_directory_path` is compared with the corresponding
+/// file and subdirectory in `primary_directory_path`. File contents are fully compared,
+/// erroring on content mismath.
+///
+/// For symlink behaviour, see [`DirectoryComparisonOptions`].
 #[track_caller]
 pub(crate) fn assert_primary_directory_precisely_contains_secondary_directory<F, S>(
-    first_directory_path: F,
-    second_directory_path: S,
+    primary_directory_path: F,
+    secondary_directory_path: S,
     options: DirectoryComparisonOptions,
 ) where
     F: AsRef<Path>,
     S: AsRef<Path>,
 {
     let assertion_result = ensure_primary_directory_precisely_contains_secondary_directory_inner(
-        first_directory_path.as_ref(),
-        second_directory_path.as_ref(),
+        primary_directory_path.as_ref(),
+        secondary_directory_path.as_ref(),
         options,
     );
 
@@ -586,18 +566,30 @@ pub(crate) fn assert_primary_directory_precisely_contains_secondary_directory<F,
     }
 }
 
+
+/// Asserts that the `primary_directory_path` and `secondary_directory_path` fully match content-wise.
+///
+/// This means that, unlike with [`assert_primary_directory_precisely_contains_secondary_directory`],
+/// neither `primary_directory_path` nor `secondary_directory_path` cannot have extra entries -- they
+/// must be fully the same.
+///
+/// Every file and subdirectory in the `secondary_directory_path` is compared with the corresponding
+/// file and subdirectory in `primary_directory_path` (and the other way around).
+/// File contents are fully compared, erroring on content mismath.
+///
+/// For symlink behaviour, see [`DirectoryComparisonOptions`].
 #[track_caller]
 pub(crate) fn assert_primary_directory_fully_matches_secondary_directory<F, S>(
-    first_directory_path: F,
-    second_directory_path: S,
+    primary_directory_path: F,
+    secondary_directory_path: S,
     options: DirectoryComparisonOptions,
 ) where
     F: AsRef<Path>,
     S: AsRef<Path>,
 {
     let assertion_result = ensure_primary_directory_precisely_contains_secondary_directory_inner(
-        first_directory_path.as_ref(),
-        second_directory_path.as_ref(),
+        primary_directory_path.as_ref(),
+        secondary_directory_path.as_ref(),
         options.clone(),
     );
 
@@ -607,8 +599,8 @@ pub(crate) fn assert_primary_directory_fully_matches_secondary_directory<F, S>(
 
 
     let assertion_result = ensure_primary_directory_precisely_contains_secondary_directory_inner(
-        second_directory_path.as_ref(),
-        first_directory_path.as_ref(),
+        secondary_directory_path.as_ref(),
+        primary_directory_path.as_ref(),
         options,
     );
 

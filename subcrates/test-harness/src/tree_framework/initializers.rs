@@ -9,6 +9,14 @@ use rand::{
     prelude::{Rng, SeedableRng},
 };
 
+/// Creates a new empty file at the provided `file_path`.
+///
+/// # Panics
+/// Panics if the file cannot be created or flushed.
+///
+/// Panicking is accepted for this function only because
+/// this is part of `fs-more`'s testing harness,
+/// and we *should panic on errors anyway*.
 pub(crate) fn initialize_empty_file(file_path: &Path) {
     let mut file = OpenOptions::new()
         .create_new(true)
@@ -20,6 +28,16 @@ pub(crate) fn initialize_empty_file(file_path: &Path) {
 }
 
 
+
+/// Creates a new file at the provided `file_path`,
+/// with the provided text `content`.
+///
+/// # Panics
+/// Panics if the file cannot be created, written to, or flushed.
+///
+/// Panicking is accepted for this function only because
+/// this is part of `fs-more`'s testing harness,
+/// and we *should panic on errors anyway*.
 pub(crate) fn initialize_file_with_string<S>(file_path: &Path, content: S)
 where
     S: Into<String>,
@@ -47,6 +65,18 @@ where
     file.flush().expect("failed to flush file");
 }
 
+
+
+/// Creates a new file at the provided `file_path`,
+/// with the provided randomly-generated (but deterministic) data,
+/// as specified by the `seed` and the size (`file_size_bytes`).
+///
+/// # Panics
+/// Panics if the file cannot be created, written to, or flushed.
+///
+/// Panicking is accepted for this function only because
+/// this is part of `fs-more`'s testing harness,
+/// and we *should panic on errors anyway*.
 pub(crate) fn initialize_file_with_random_data(
     file_path: &Path,
     seed: u64,

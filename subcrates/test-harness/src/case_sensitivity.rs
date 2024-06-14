@@ -3,6 +3,15 @@ use std::fs::File;
 use crate::assertable::r#trait::AssertablePath;
 
 
+/// Returns `true` if the temporary directory on the current file system
+/// is case-sensitive.
+///
+/// Internally, this create a temporary directory, creates a file,
+/// and attempts to deduce case-sensitivity from a differently-cased read.
+///
+/// # Panics
+/// Panics on any IO error (when failing to create a temporary directory, creating a file, ...).
+/// This is okay in our case, because this function is part of the test harness.
 pub fn detect_case_sensitivity_for_temp_dir() -> bool {
     let temporary_directory = tempfile::tempdir().expect("failed to create temporary directory");
 
