@@ -125,16 +125,15 @@ pub enum MoveFileMethod {
 /// If the file cannot be moved to the destination, a [`FileError`] is returned;
 /// see its documentation for more details. Here is a non-exhaustive list of error causes:
 /// - If the source path has issues (does not exist, does not have the correct permissions, etc.),
-///   one of [`SourceFileNotFound`], [`SourcePathNotAFile`], [`UnableToAccessSourceFile`],
-///   or [`UnableToCanonicalizeSourceFilePath`] variants will be returned.
+///   one of [`SourceFileNotFound`], [`SourcePathNotAFile`] or [`UnableToAccessSourceFile`]
+///   variants will be returned.
 /// - If the destination already exists, and [`options.existing_destination_file_behaviour`]
 ///   is set to [`ExistingFileBehaviour::Abort`], then a [`DestinationPathAlreadyExists`]
 ///   will be returned.
 /// - If the source and destination paths are canonically actually the same file,
 ///   then copying will be aborted with [`SourceAndDestinationAreTheSame`].
 /// - If the destination path has other issues (is a directory, does not have the correct permissions, etc.),
-///   [`UnableToAccessDestinationFile`] or [`UnableToCanonicalizeDestinationFilePath`]
-///   will be returned.
+///   [`UnableToAccessDestinationFile`] will be returned.
 ///
 /// There do exist other failure points, mostly due to unavoidable
 /// [time-of-check time-of-use](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use)
@@ -176,10 +175,8 @@ pub enum MoveFileMethod {
 /// [`SourceFileNotFound`]: FileError::SourceFileNotFound
 /// [`SourcePathNotAFile`]: FileError::SourcePathNotAFile
 /// [`UnableToAccessSourceFile`]: FileError::UnableToAccessSourceFile
-/// [`UnableToCanonicalizeSourceFilePath`]: FileError::UnableToCanonicalizeSourceFilePath
 /// [`DestinationPathAlreadyExists`]: FileError::DestinationPathAlreadyExists
 /// [`UnableToAccessDestinationFile`]: FileError::UnableToAccessDestinationFile
-/// [`UnableToCanonicalizeDestinationFilePath`]: FileError::UnableToCanonicalizeDestinationFilePath
 /// [`SourceAndDestinationAreTheSame`]: FileError::SourceAndDestinationAreTheSame
 /// [`OtherIoError`]: FileError::OtherIoError
 /// [^unix-mv]: Source for coreutils' `mv` is available
@@ -385,16 +382,15 @@ impl Default for MoveFileWithProgressOptions {
 /// If the file cannot be moved to the destination, a [`FileError`] is returned;
 /// see its documentation for more details. Here is a non-exhaustive list of error causes:
 /// - If the source path has issues (does not exist, does not have the correct permissions, etc.),
-///   one of [`SourceFileNotFound`], [`SourcePathNotAFile`], [`UnableToAccessSourceFile`],
-///   or [`UnableToCanonicalizeSourceFilePath`] variants will be returned.
+///   one of [`SourceFileNotFound`], [`SourcePathNotAFile`], or [`UnableToAccessSourceFile`],
+///   variants will be returned.
 /// - If the destination already exists, and [`options.existing_destination_file_behaviour`]
 ///   is set to [`ExistingFileBehaviour::Abort`], then a [`DestinationPathAlreadyExists`]
 ///   will be returned.
 /// - If the source and destination paths are canonically actually the same file,
 ///   then copying will be aborted with [`SourceAndDestinationAreTheSame`].
 /// - If the destination path has other issues (is a directory, does not have the correct permissions, etc.),
-///   [`UnableToAccessDestinationFile`] or [`UnableToCanonicalizeDestinationFilePath`]
-///   will be returned.
+///   [`UnableToAccessDestinationFile`] will be returned.
 ///
 /// There do exist other failure points, mostly due to unavoidable
 /// [time-of-check time-of-use](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use)
@@ -437,10 +433,8 @@ impl Default for MoveFileWithProgressOptions {
 /// [`SourceFileNotFound`]: FileError::SourceFileNotFound
 /// [`SourcePathNotAFile`]: FileError::SourcePathNotAFile
 /// [`UnableToAccessSourceFile`]: FileError::UnableToAccessSourceFile
-/// [`UnableToCanonicalizeSourceFilePath`]: FileError::UnableToCanonicalizeSourceFilePath
 /// [`DestinationPathAlreadyExists`]: FileError::DestinationPathAlreadyExists
 /// [`UnableToAccessDestinationFile`]: FileError::UnableToAccessDestinationFile
-/// [`UnableToCanonicalizeDestinationFilePath`]: FileError::UnableToCanonicalizeDestinationFilePath
 /// [`SourceAndDestinationAreTheSame`]: FileError::SourceAndDestinationAreTheSame
 /// [`OtherIoError`]: FileError::OtherIoError
 /// [^unix-mv]: Source for coreutils' `mv` is available

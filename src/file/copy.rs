@@ -104,8 +104,7 @@ pub enum CopyFileFinished {
 /// see its documentation for more details.
 /// Here is a non-exhaustive list of error causes:
 /// - If the source path has issues (does not exist, does not have the correct permissions, etc.), one of
-///   [`SourceFileNotFound`], [`SourcePathNotAFile`],
-///   [`UnableToAccessSourceFile`], or [`UnableToCanonicalizeSourceFilePath`]
+///   [`SourceFileNotFound`], [`SourcePathNotAFile`], or [`UnableToAccessSourceFile`]
 ///   variants will be returned.
 /// - If the destination already exists, and [`options.existing_destination_file_behaviour`]
 ///   is set to [`ExistingFileBehaviour::Abort`], then a [`DestinationPathAlreadyExists`]
@@ -113,8 +112,7 @@ pub enum CopyFileFinished {
 /// - If the source and destination paths are canonically actually the same file,
 ///   then copying will be aborted with [`SourceAndDestinationAreTheSame`].
 /// - If the destination path has other issues (is a directory, does not have the correct permissions, etc.),
-///   [`UnableToAccessDestinationFile`] or [`UnableToCanonicalizeDestinationFilePath`]
-///   will be returned.
+///   [`UnableToAccessDestinationFile`] will be returned.
 ///
 /// There do exist other failure points, mostly due to unavoidable
 /// [time-of-check time-of-use](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use)
@@ -151,10 +149,8 @@ pub enum CopyFileFinished {
 /// [`SourceFileNotFound`]: FileError::SourceFileNotFound
 /// [`SourcePathNotAFile`]: FileError::SourcePathNotAFile
 /// [`UnableToAccessSourceFile`]: FileError::UnableToAccessSourceFile
-/// [`UnableToCanonicalizeSourceFilePath`]: FileError::UnableToCanonicalizeSourceFilePath
 /// [`DestinationPathAlreadyExists`]: FileError::DestinationPathAlreadyExists
 /// [`UnableToAccessDestinationFile`]: FileError::UnableToAccessDestinationFile
-/// [`UnableToCanonicalizeDestinationFilePath`]: FileError::UnableToCanonicalizeDestinationFilePath
 /// [`SourceAndDestinationAreTheSame`]: FileError::SourceAndDestinationAreTheSame
 /// [`OtherIoError`]: FileError::OtherIoError
 /// [^unix-cp]: Source for coreutils' `cp` is available
@@ -386,8 +382,7 @@ where
 /// see its documentation for more details.
 /// Here is a non-exhaustive list of error causes:
 /// - If the source path has issues (does not exist, does not have the correct permissions, etc.), one of
-///   [`SourceFileNotFound`], [`SourcePathNotAFile`],
-///   [`UnableToAccessSourceFile`], or [`UnableToCanonicalizeSourceFilePath`]
+///   [`SourceFileNotFound`], [`SourcePathNotAFile`], or [`UnableToAccessSourceFile`]
 ///   variants will be returned.
 /// - If the destination already exists, and [`options.existing_destination_file_behaviour`]
 ///   is set to [`ExistingFileBehaviour::Abort`], then a [`DestinationPathAlreadyExists`]
@@ -395,8 +390,7 @@ where
 /// - If the source and destination paths are canonically actually the same file,
 ///   then copying will be aborted with [`SourceAndDestinationAreTheSame`].
 /// - If the destination path has other issues (is a directory, does not have the correct permissions, etc.),
-///   [`UnableToAccessDestinationFile`] or [`UnableToCanonicalizeDestinationFilePath`]
-///   will be returned.
+///   [`UnableToAccessDestinationFile`] will be returned.
 ///
 /// There do exist other failure points, mostly due to unavoidable
 /// [time-of-check time-of-use](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use)
@@ -433,10 +427,8 @@ where
 /// [`SourceFileNotFound`]: FileError::SourceFileNotFound
 /// [`SourcePathNotAFile`]: FileError::SourcePathNotAFile
 /// [`UnableToAccessSourceFile`]: FileError::UnableToAccessSourceFile
-/// [`UnableToCanonicalizeSourceFilePath`]: FileError::UnableToCanonicalizeSourceFilePath
 /// [`DestinationPathAlreadyExists`]: FileError::DestinationPathAlreadyExists
 /// [`UnableToAccessDestinationFile`]: FileError::UnableToAccessDestinationFile
-/// [`UnableToCanonicalizeDestinationFilePath`]: FileError::UnableToCanonicalizeDestinationFilePath
 /// [`SourceAndDestinationAreTheSame`]: FileError::SourceAndDestinationAreTheSame
 /// [`OtherIoError`]: FileError::OtherIoError
 /// [^unix-cp]: Source for coreutils' `cp` is available
