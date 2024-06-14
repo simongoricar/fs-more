@@ -1,0 +1,86 @@
+[config]
+default_to_workspace = false
+skip_core_tasks = true
+skip_crate_env_info = true
+skip_git_env_info = true
+skip_rust_env_info = true
+min_version = "0.37.9"
+
+[env]
+CARGO_MAKE_USE_WORKSPACE_PROFILE = false
+
+
+
+
+[tasks.build-and-open-full-documentation]
+clear = true
+workspace = false
+command = "cargo"
+args = [
+    "doc",
+    "--workspace",
+    "--all-features",
+    "--open"
+]
+
+[tasks.build-and-watch-workspace-documentation]
+clear = true
+workspace = false
+command = "cargo"
+args = [
+    "watch",
+    "--exec",
+    "doc --workspace --no-deps --all-features"
+]
+
+
+
+[tasks.generate-test-harness-trees]
+clear = true
+workspace = false
+cwd = "."
+command = "cargo"
+args = [
+    "run",
+    "--package",
+    "fs-more-test-harness-generator",
+    "--",
+    "generate-tree-sources",
+    "-i",
+    "./subcrates/test-harness/trees",
+    "-o",
+    "./subcrates/test-harness",
+    "--overwrite-existing-files",
+    "true"
+]
+
+[tasks.generate-test-harness-tree-schema]
+clear = true
+workspace = false
+cwd = "."
+command = "cargo"
+args = [
+    "run",
+    "--package",
+    "fs-more-test-harness-generator",
+    "--",
+    "generate-tree-json-schema",
+    "--json-schema-output-file-path",
+    "./subcrates/test-harness/trees/_schema.json",
+    "--overwrite-existing-file",
+    "true"
+]
+
+
+
+
+[tasks.documentation]
+clear = true
+workspace = false
+dependencies = [
+    "build-and-open-full-documentation",
+    "build-and-watch-workspace-documentation"
+]
+
+[tasks.doc]
+alias = "documentation"
