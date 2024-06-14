@@ -19,6 +19,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4.1.1
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
       - name: Install typos CLI
         run: cargo install typos-cli
       - name: Check for typos
@@ -33,10 +37,10 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
+          toolchain: nightly
           components: rustfmt
       - name: Check with rustfmt
-        run: cargo fmt --all --check -- --config-path rustfmt.toml
+        run: cargo +nightly fmt --all --check -- --config-path rustfmt.toml
 
   deny:
     name: Run cargo-deny
