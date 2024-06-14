@@ -16,7 +16,7 @@ use fs_more::{
         DestinationDirectoryPathValidationError,
         DirectoryExecutionPlanError,
     },
-    file::{FileCopyOptions, ExistingFileBehaviour},
+    file::{ExistingFileBehaviour, FileCopyOptions},
 };
 use fs_more_test_harness::{
     assertable::{

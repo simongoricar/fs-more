@@ -11,9 +11,9 @@ use crate::{
     file::{
         copy_file,
         copy_file_with_progress,
+        ExistingFileBehaviour,
         FileCopyOptions,
         FileCopyWithProgressOptions,
-        ExistingFileBehaviour,
         FileProgress,
     },
     use_enabled_fs_module,
