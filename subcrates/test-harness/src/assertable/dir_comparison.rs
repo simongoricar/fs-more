@@ -620,9 +620,6 @@ pub(crate) fn assert_primary_directory_fully_matches_secondary_directory<F, S>(
 
 #[cfg(test)]
 mod test {
-    // TODO write simple tests for assert_primary_directory_precisely_contains_secondary_directory
-    //      and assert_primary_directory_fully_matches_secondary_directory
-
     use super::*;
     use crate::{assertable::AsPath, tree_framework::FileSystemHarness, trees::deep::DeepTree};
 
@@ -635,6 +632,31 @@ mod test {
         assert_primary_directory_fully_matches_secondary_directory(
             deep_tree.as_path(),
             deep_tree_copy.as_path(),
+            DirectoryComparisonOptions {
+                strict_symlink_comparison: true,
+            },
+        );
+
+        assert_primary_directory_fully_matches_secondary_directory(
+            deep_tree_copy.as_path(),
+            deep_tree.as_path(),
+            DirectoryComparisonOptions {
+                strict_symlink_comparison: true,
+            },
+        );
+
+
+        assert_primary_directory_precisely_contains_secondary_directory(
+            deep_tree.as_path(),
+            deep_tree_copy.as_path(),
+            DirectoryComparisonOptions {
+                strict_symlink_comparison: true,
+            },
+        );
+
+        assert_primary_directory_precisely_contains_secondary_directory(
+            deep_tree_copy.as_path(),
+            deep_tree.as_path(),
             DirectoryComparisonOptions {
                 strict_symlink_comparison: true,
             },
