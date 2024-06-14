@@ -40,7 +40,7 @@ pub trait FileSystemHarnessDirectory: AsPath {
 }
 
 
-/// An [`AsPath`]-adjacent trait generally implemented for indivudal entries
+/// An [`AsPath`]-adjacent trait generally implemented for individual entries
 /// inside a testing harness, allowing us to obtain their path relative to the
 /// base directory of the testing harness.
 pub trait AsRelativePath {

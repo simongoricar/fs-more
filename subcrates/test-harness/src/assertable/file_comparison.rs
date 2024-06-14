@@ -8,7 +8,7 @@ use thiserror::Error;
 
 
 
-/// An internal error that can ocurr when comparing files.
+/// An internal error that can occur when comparing files.
 #[derive(Debug, Error)]
 pub(crate) enum FileComparisonErrorInner {
     #[error(

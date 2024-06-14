@@ -104,7 +104,7 @@ impl PathType {
 }
 
 
-/// An internal error that can ocurr when comparing directories.
+/// An internal error that can occur when comparing directories.
 ///
 /// This error type is never returned by itself, see [`DirectoryComparisonError`]
 /// that wraps this type with useful context.
@@ -187,7 +187,7 @@ enum DirectoryComparisonErrorInner {
 }
 
 
-/// An error that can ocurr when comparing directories.
+/// An error that can occur when comparing directories.
 #[derive(Debug, Error)]
 #[error(
     "failed while comparing directory\n  \
@@ -215,9 +215,6 @@ pub struct DirectoryComparisonError {
 
 
 /// Directory comparison options.
-///
-/// See also: [`assert_primary_directory_precisely_contains_secondary_directory`]
-/// and [`assert_primary_directory_fully_matches_secondary_directory`].
 #[derive(Clone, Debug)]
 pub struct DirectoryComparisonOptions {
     /// If `true`, the comparison will require that
@@ -539,7 +536,7 @@ fn format_error_with_source(error: &dyn Error) -> String {
 
 
 /// Asserts that the `primary_directory_path` contains everything that `secondary_directory_path` has,
-/// but not necesarrily the other way around (`primary_directory_path` can have extra entries).
+/// but not necessarily the other way around (`primary_directory_path` can have extra entries).
 ///
 /// Every file and subdirectory in the `secondary_directory_path` is compared with the corresponding
 /// file and subdirectory in `primary_directory_path`. File contents are fully compared,
