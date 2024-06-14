@@ -97,6 +97,7 @@ println!(
 );
 ```
 
+
 <br>
 
 ## Feature flags
@@ -113,16 +114,16 @@ The following feature flags are available:
 
 ## Project status
 This crate evolved out of a general frustration with the `fs_extra` library 
-and aims to cover many of the same goals with - hopefully - better documentation and tests.
+and aims to cover many of the same goals.
 
-The majority of features needed in day-to-day use are present.
-For now, I plan on keeping the version below `1.0.0` to imply that 
-this hasn't gone though a lot.
+The majority of common features are present. For now, I plan on keeping 
+the version below `1.0.0` to imply that this crate hasn't gone though a lot.
 
 `fs-more` does lack some thorough battle-testing - as such, use it with a reasonable caution and testing.
 However, quite a number of unit, doc and integration tests have been written. 
 They cover a wide array of the base functionality, but fringe cases might not be covered yet — 
-[contributions](https://github.com/simongoricar/fs-more/blob/master/CONTRIBUTING.md) are welcome. The test harness is available in `subcrates/test-harness`.
+[contributions](https://github.com/simongoricar/fs-more/blob/master/CONTRIBUTING.md) are welcome. 
+The quite comprehensive test harness is available in `subcrates/test-harness`.
 
 
 
@@ -134,7 +135,7 @@ Start by going over the contribution guide: [`CONTRIBUTING.md`](https://github.c
 
 
 <details>
-<summary>Missing features</summary>
+<summary>Potential future features</summary>
 
 > Contributions for the ideas below are most welcome!
 >
@@ -176,9 +177,10 @@ Start by going over the contribution guide: [`CONTRIBUTING.md`](https://github.c
   of files and directories.*
 
   This seems like a long shot and would need some concrete use cases before proceeding. Maybe [`windows-acl`](https://github.com/trailofbits/windows-acl)
-  could help? If this feature is to be developed, I think we should not expose any underlying ACL API and allow purely for mirroring it when copying or moving. This should almost definitely be under a feature flag.
+  could help? If this feature is to be developed, I think we should not expose any underlying ACL API and allow purely for mirroring it when copying or moving. This should definitely be under a feature flag.
 
 </details>
+
 
 
 <br>

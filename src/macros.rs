@@ -1,4 +1,4 @@
-/// Imports (`use`s) `fs`.
+/// Imports (`use`s) `fs`. This is **only for internal use!**
 ///
 /// If the user enables the `fs-err` feature,
 /// this will import [`fs_err as fs`](https://docs.rs/fs-err).

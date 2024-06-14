@@ -11,8 +11,8 @@
 //!
 //! <br>
 //!
-//! To start off, visit the [`directory`] and [`file`][mod@file] modules
-//! for more information and a list of functions.
+//! Visit the [`directory`] and [`file`][mod@file] modules
+//! for more information and a list of available functions.
 //!
 //!
 //! <br>
@@ -22,7 +22,7 @@
 //! - `dunce` (*enabled by default*): enables the optional [`dunce`](../dunce/index.html) support:
 //!   This automatically strips Windows' UNC paths if they can be represented
 //!   using the usual type of path (e.g. `\\?\C:\foo -> C:\foo`) both internally
-//!   and in e.g. `DirectoryScan`'s file and directory paths (this is recommended because path canonicalization
+//!   and in e.g. [`DirectoryScan`]'s file and directory paths (this is recommended because path canonicalization
 //!   very commonly returns UNC paths).
 //!   This crate only has an effect when compiling for Windows targets.
 //! - `fs-err` (*disabled by default*): enables the optional [`fs-err`](../fs_err/index.html) support.
@@ -118,6 +118,7 @@
 //! # }
 //! ```
 //!
+//! [`DirectoryScan`]: crate::directory::DirectoryScan
 
 #![warn(missing_docs)]
 
