@@ -1,5 +1,4 @@
 pub mod assertable;
-mod content_assertion;
 pub mod error;
 
 #[path = "generated_trees/mod.rs"]

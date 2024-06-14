@@ -10,7 +10,7 @@ use thiserror::Error;
 
 /// An internal error that can ocurr when comparing files.
 #[derive(Debug, Error)]
-pub(super) enum FileComparisonErrorInner {
+pub(crate) enum FileComparisonErrorInner {
     #[error(
         "unable to read metadata for path \"{}\"",
         .path.display()
