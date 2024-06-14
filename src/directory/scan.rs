@@ -340,8 +340,6 @@ impl DirectoryScan {
                             directory_list.push(resolved_symlink_path);
                         }
                     } else {
-                        // TODO Test this.
-
                         if resolved_symlink_metadata.is_file() {
                             file_list.push(directory_entry.path());
                         } else if resolved_symlink_metadata.is_dir() {

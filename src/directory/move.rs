@@ -655,8 +655,7 @@ where
                 },
             };
 
-            // TODO It should be possible to further optimize constructing this differently
-            //      so we don't need to do it every time (we only send a reference anyway).
+
             let move_progress = DirectoryMoveProgress {
                 bytes_total: progress.bytes_total,
                 bytes_finished: progress.bytes_finished,

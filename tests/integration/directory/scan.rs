@@ -5,10 +5,13 @@ use std::{
 
 use fs_more::directory::DirectoryScanDepthLimit;
 use fs_more_test_harness::{
-    assertable::{r#trait::ManageablePath, AsPath},
+    assertable::{
+        r#trait::{AssertablePath, ManageablePath},
+        AsPath,
+    },
     error::TestResult,
-    tree_framework::FileSystemHarness,
-    trees::simple::SimpleTree,
+    tree_framework::{FileSystemHarness, FileSystemHarnessDirectory},
+    trees::{deep::DeepTree, simple::SimpleTree},
 };
 
 
@@ -24,7 +27,7 @@ where
     D: IntoIterator<Item = DP>,
     DP: AsRef<Path>,
 {
-    let mut scanned_path_set: HashSet<PathBuf> = HashSet::from_iter(
+    let scanned_path_set: HashSet<PathBuf> = HashSet::from_iter(
         scanned_paths
             .into_iter()
             .map(|path| path.as_ref().to_path_buf()),
@@ -37,11 +40,23 @@ where
     );
 
 
-    let _ = scanned_path_set.drain().map(|scanned_path| {
-        if !expected_path_set.contains(&scanned_path) {
-            panic!("path \"{}\" was not present in scanned paths", scanned_path.display());
+    for scanned_path in scanned_path_set.iter() {
+        if !expected_path_set.contains(scanned_path.as_path()) {
+            panic!(
+                "path \"{}\" was scanned, but not present in expected paths",
+                scanned_path.display()
+            );
         }
-    });
+    }
+
+    for expected_path in expected_path_set.iter() {
+        if !scanned_path_set.contains(expected_path.as_path()) {
+            panic!(
+                "path \"{}\" was expected, but not present in scanned paths",
+                expected_path.display()
+            );
+        }
+    }
 }
 
 
@@ -178,6 +193,123 @@ pub fn directory_scan_calculates_correct_size_with_depth_limit() -> TestResult<(
     Ok(())
 }
 
+
+
+#[test]
+pub fn directory_scan_follows_file_and_directory_symlink_when_configured() -> TestResult {
+    let deep_harness = DeepTree::initialize();
+    let simple_harness = SimpleTree::initialize();
+
+
+    let symlinked_file_original_path = {
+        let symlink_path = deep_harness.child_path("symlink.file");
+        symlink_path.assert_not_exists();
+        symlink_path.symlink_to_file(simple_harness.empty_txt.as_path());
+
+        symlink_path
+    };
+
+    let symlinked_dir_original_path = {
+        let symlink_path = deep_harness.child_path("symlink.dir");
+        symlink_path.assert_not_exists();
+        symlink_path.symlink_to_directory(simple_harness.yes.as_path());
+
+        symlink_path
+    };
+
+
+    let scan_results = fs_more::directory::DirectoryScan::scan_with_options(
+        deep_harness.as_path(),
+        DirectoryScanDepthLimit::Unlimited,
+        false,
+    )
+    .unwrap();
+
+
+    assert_path_list_fully_matches_set(
+        scan_results.files(),
+        [
+            deep_harness.a_bin.as_path(),
+            deep_harness.foo.b_bin.as_path(),
+            deep_harness.foo.bar.c_bin.as_path(),
+            deep_harness.foo.bar.hello.world.d_bin.as_path(),
+            symlinked_file_original_path.as_path(),
+        ],
+    );
+
+    assert_path_list_fully_matches_set(
+        scan_results.directories(),
+        [
+            deep_harness.foo.as_path(),
+            deep_harness.foo.bar.as_path(),
+            deep_harness.foo.bar.hello.as_path(),
+            deep_harness.foo.bar.hello.world.as_path(),
+            symlinked_dir_original_path.as_path(),
+        ],
+    );
+
+
+    deep_harness.destroy();
+    simple_harness.destroy();
+    Ok(())
+}
+
+#[test]
+pub fn directory_scan_does_not_follow_file_and_directory_symlink_when_configured() -> TestResult {
+    let deep_harness = DeepTree::initialize();
+    let simple_harness = SimpleTree::initialize();
+
+
+    {
+        let symlink_path = deep_harness.child_path("symlink.file");
+        symlink_path.assert_not_exists();
+        symlink_path.symlink_to_file(simple_harness.empty_txt.as_path());
+    }
+
+    {
+        let symlink_path = deep_harness.child_path("symlink.dir");
+        symlink_path.assert_not_exists();
+        symlink_path.symlink_to_directory(simple_harness.yes.as_path());
+    }
+
+
+    let scan_results = fs_more::directory::DirectoryScan::scan_with_options(
+        deep_harness.as_path(),
+        DirectoryScanDepthLimit::Unlimited,
+        true,
+    )
+    .unwrap();
+
+
+    assert_path_list_fully_matches_set(
+        scan_results.files(),
+        [
+            deep_harness.a_bin.as_path(),
+            deep_harness.foo.b_bin.as_path(),
+            deep_harness.foo.bar.c_bin.as_path(),
+            deep_harness.foo.bar.hello.world.d_bin.as_path(),
+            simple_harness.empty_txt.as_path(),
+            simple_harness.yes.hello_world_txt.as_path(),
+            simple_harness.yes.no_bin.as_path(),
+        ],
+    );
+
+    assert_path_list_fully_matches_set(
+        scan_results.directories(),
+        [
+            deep_harness.foo.as_path(),
+            deep_harness.foo.bar.as_path(),
+            deep_harness.foo.bar.hello.as_path(),
+            deep_harness.foo.bar.hello.world.as_path(),
+            simple_harness.yes.as_path(),
+        ],
+    );
+
+
+    deep_harness.destroy();
+    simple_harness.destroy();
+    Ok(())
+}
 
 
 #[test]
