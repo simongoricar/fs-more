@@ -1,4 +1,4 @@
-//! Errors provided by this library.
+//! Error types provided by this library.
 
 mod directory;
 mod file;

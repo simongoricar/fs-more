@@ -5,12 +5,9 @@ use thiserror::Error;
 use super::FileError;
 use crate::directory::DestinationDirectoryRule;
 
-// TODO Make the miette feature flag useful (add help text, etc.).
-
 
 /// Source directory path validation error.
 #[derive(Error, Debug)]
-#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum SourceDirectoryPathValidationError {
     /// The source directory (path to the directory you want to copy)
     /// does not exist.
@@ -68,7 +65,6 @@ pub enum SourceDirectoryPathValidationError {
 
 /// Destination directory path validation error.
 #[derive(Error, Debug)]
-#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum DestinationDirectoryPathValidationError {
     /// The base source path (path to the directory you want to copy)
     /// exists, but does not point to a directory.
@@ -165,7 +161,6 @@ pub enum DestinationDirectoryPathValidationError {
 
 /// Directory copy or move planning error.
 #[derive(Error, Debug)]
-#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum CopyDirectoryPlanError {
     /// A source or destination directory, one of its sub-directories or a file
     /// in it (or its metadata) cannot be read.
@@ -232,7 +227,6 @@ pub enum CopyDirectoryPlanError {
 /// an extreme measure due to the many types of filesystems that exist.
 /// Instead, treat this as a truly fatal error.
 #[derive(Error, Debug)]
-#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 #[error(
     "a directory entry inside the source directory escaped out of it: {}",
     .path.display()
@@ -245,7 +239,6 @@ pub(crate) struct SourceSubPathNotUnderBaseSourceDirectory {
 
 /// Directory copy preparation error.
 #[derive(Error, Debug)]
-#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum CopyDirectoryPreparationError {
     /// A source directory validation error.
     #[error(transparent)]
@@ -263,7 +256,6 @@ pub enum CopyDirectoryPreparationError {
 
 /// Directory copy execution error.
 #[derive(Error, Debug)]
-#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum CopyDirectoryExecutionError {
     /// Failed to create a directory inside the destination folder.
     ///
@@ -330,7 +322,6 @@ pub enum CopyDirectoryExecutionError {
 ///
 /// [`copy_directory`]: [crate::directory::copy_directory]
 #[derive(Error, Debug)]
-#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum CopyDirectoryError {
     /// Directory copy preparation error.
     #[error(transparent)]
@@ -344,7 +335,6 @@ pub enum CopyDirectoryError {
 
 /// Directory move preparation error.
 #[derive(Error, Debug)]
-#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum MoveDirectoryPreparationError {
     /// Source directory validation error.
     #[error(transparent)]
@@ -371,7 +361,6 @@ pub enum MoveDirectoryPreparationError {
 
 /// Directory move execution error.
 #[derive(Error, Debug)]
-#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum MoveDirectoryExecutionError {
     /// A file or directory inside the source directory could not be accessed.
     #[error("unable to access source path: {}", .path.display())]
@@ -442,7 +431,6 @@ pub enum MoveDirectoryExecutionError {
 ///
 /// [`move_directory_with_progress`]: [crate::directory::move_directory_with_progress]
 #[derive(Error, Debug)]
-#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum MoveDirectoryError {
     /// Directory move preparation error.
     #[error(transparent)]
@@ -457,7 +445,6 @@ pub enum MoveDirectoryError {
 
 /// An error that can occur when copying or moving a directory.
 #[derive(Error, Debug)]
-#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum DirectoryError {
     /// The base source directory (i.e. the directory you want to copy from) does not exist.
     #[error(
@@ -591,7 +578,6 @@ pub enum DirectoryError {
 
 /// An error that can occur when scanning a directory.
 #[derive(Error, Debug)]
-#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum DirectoryScanError {
     /// The provided directory path to scan doesn't exist.
     #[error("path doesn't exist: {}", .path.display())]
@@ -641,7 +627,6 @@ pub enum DirectoryScanError {
 
 /// An error that can occur when querying size of a scanned directory.
 #[derive(Error, Debug)]
-#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum DirectorySizeScanError {
     /// The provided directory path does not exist.
     #[error("the provided scan directory path doesn't exist: {}", .path.display())]
@@ -708,7 +693,6 @@ pub enum DirectorySizeScanError {
 
 /// An error that can occur when checking whether a directory is empty.
 #[derive(Error, Debug)]
-#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum IsDirectoryEmptyError {
     /// The provided path doesn't exist.
     #[error("given path does not exist: {}", .directory_path.display())]

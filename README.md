@@ -103,9 +103,12 @@ println!(
 The following feature flags are available:
 - `fs-err`: enables [`fs-err`](https://docs.rs/fs-err) support, which means more helpful underlying IO error messages
   (though `fs-more` already provides many on its own).
-- `miette`: derives [`miette::Diagnostic`](https://docs.rs/miette/latest/miette/derive.Diagnostic.html) on all 
-  [error types](https://docs.rs/fs-more/latest/fs_more/error/index.html), 
-  allowing users to conveniently call e.g. [`wrap_err`](https://docs.rs/miette/latest/miette/trait.Context.html#tymethod.wrap_err) on the error.
+- `dunce` (*enabled by default*): enables the optional [`dunce`](../dunce/index.html) support:
+  This automatically strips Windows' UNC paths if they can be represented
+  using the usual type of path (e.g. `\\?\C:\foo -> C:\foo`) both internally
+  and in e.g. `DirectoryScan`'s file and directory paths (this is recommended because path canonicalization
+  very commonly returns UNC paths).
+  This crate only has an effect when compiling for Windows targets.
 
 
 ## Project status

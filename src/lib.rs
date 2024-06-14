@@ -24,17 +24,11 @@
 //!   using the usual type of path (e.g. `\\?\C:\foo -> C:\foo`) both internally
 //!   and in e.g. `DirectoryScan`'s file and directory paths (this is recommended because path canonicalization
 //!   very commonly returns UNC paths).
-//!   This only has an effect when compiling for Windows targets.
+//!   This crate only has an effect when compiling for Windows targets.
 //! - `fs-err` (*disabled by default*): enables the optional [`fs-err`](../fs_err/index.html) support.
 //!   While `fs-more` already provides quite extensive [error types](crate::error),
 //!   this does enable more helpful error messages for underlying IO errors.
-//! - `miette` (*disabled by default*): derives [`miette::Diagnostic`](../miette/derive.Diagnostic.html) on all
-//!   [error types](crate::error), allowing users to conveniently
-//!   use e.g. [`wrap_err`](../miette/trait.Context.html#tymethod.wrap_err) on the errors returned by this crate.
 //!
-//! // TODO update feature flags: camino has been added (but is not implemented yet)
-//! // TODO either use advanced miette diagnostic features, or remove the feature flag
-//! // TODO (also update this in the README)
 //!
 //! <br>
 //!
