@@ -8,15 +8,15 @@ fs-more
 
 
 Convenient file and directory operations built on top of `std::fs` with improved error handling.
-Includes copying or moving files and directories with progress reporting.
+Includes copying and moving files or directories with progress reporting.
+
 
 ## Main features
-- copying or moving files and directories with in-depth configuration options (including IO buffering settings, copying depth, etc.),
-- copying or moving files and directories **with progress reporting**, if needed,
-- scanning directories with depth and other options, and
-- calculating file or directory sizes.
-
-
+- copying and moving files or directories with:
+  - in-depth configuration options (existing destination file behaviour, IO buffering settings, copying depth, etc.), and
+  - **progress reporting**, if needed,
+- scan directories (with options such as scan depth and symlink behaviour), and
+- calculate file or directory sizes.
 
 <br>
 
@@ -24,11 +24,12 @@ Includes copying or moving files and directories with progress reporting.
 ## Usage
 To add `fs-more` into your project, specify it as a dependency in your `Cargo.toml` file:
 ```toml
-fs-more = "0.5.0"
+fs-more = "0.5.1"
 ```
 
 
 ## Examples
+
 Copying a file and getting updates on the progress:
 
 ```rust,no_run
@@ -40,7 +41,7 @@ use fs_more::file::FileCopyFinished;
 
 
 let source_path = Path::new("./source-file.txt");
-let destination_path = Path::new("./target-file.txt");
+let destination_path = Path::new("./destination-file.txt");
 
 let finished_copy = fs_more::file::copy_file_with_progress(
     source_path,
@@ -70,7 +71,10 @@ match finished_copy {
 };
 ```
 
+<br>
+
 Moving a directory and getting updates on the progress:
+
 ```rust,no_run
 use std::path::Path;
 use fs_more::directory::DirectoryMoveWithProgressOptions;
@@ -78,7 +82,7 @@ use fs_more::directory::DestinationDirectoryRule;
 
 
 let source_path = Path::new("./source-directory");
-let destination_path = Path::new("./target-directory");
+let destination_path = Path::new("./destination-directory");
 
 let moved = fs_more::directory::move_directory_with_progress(
     source_path,
@@ -114,25 +118,22 @@ println!(
 
 ## Feature flags
 The following feature flags are available:
-- `fs-err`: enables [`fs-err`](https://docs.rs/fs-err) support, which means more helpful underlying IO error messages
-  (though `fs-more` already provides many on its own).
 - `dunce` (*enabled by default*): enables the optional [`dunce`](https://docs.rs/dunce) support:
   This automatically strips Windows' UNC paths if they can be represented
   using the usual type of path (e.g. `\\?\C:\foo -> C:\foo`).
   This is used both internally and in e.g. `DirectoryScan`'s file and directory paths. This feature flag is enabled by default and recommended 
   because because path canonicalization very commonly returns UNC paths.
   This crate only has an effect when compiling for Windows targets.
+- `fs-err` (*disabled by default*): enables [`fs-err`](https://docs.rs/fs-err) support, which means more helpful underlying IO error messages
+  (though `fs-more` already provides many on its own).
 
 
 ## Project status
-This crate evolved out of a general frustration with the `fs_extra` library 
-and aims to cover many of the same goals.
+`fs-more` does lack some thorough battle-testing; as such, use it with care.
+The majority of common features are present. For now, we plan on keeping 
+the version below stable (`1.0.0`) to imply that this crate hasn't gone through a lot.
 
-The majority of common features are present. For now, I plan on keeping 
-the version below `1.0.0` to imply that this crate hasn't gone though a lot.
-
-`fs-more` does lack some thorough battle-testing - as such, use it with a reasonable caution and testing.
-However, quite a number of unit, doc and integration tests have been written. 
+Quite a number of unit-, doc- and integration tests have been written. 
 They cover a wide array of the base functionality, but fringe cases might not be covered yet — 
 [contributions](https://github.com/simongoricar/fs-more/blob/master/CONTRIBUTING.md) are welcome. 
 The quite comprehensive test harness is available in `subcrates/test-harness`.
@@ -147,14 +148,17 @@ Start by going over the contribution guide: [`CONTRIBUTING.md`](https://github.c
 
 
 <details>
-<summary>Potential future features</summary>
+<summary>🧵 Potential future features</summary>
 
-> Contributions for the ideas below are most welcome!
->
-> Some of these ideas and/or missing features are simpler, some are more of a long shot.
-> However, note that even though they are stated below, they probably haven't been thought out deeply enough.
-> If you decide to contribute, it would probably be best to first open an issue so various approaches 
-> can be discussed before something is developed.
+<br>
+
+
+Contributions for the ideas below are most welcome!
+
+Some of these ideas and/or missing features are simpler, some are more of a long shot.
+However, note that even though they are stated below, they probably haven't been thought out deeply enough.
+If you decide to contribute, it would probably be best to first open an issue, 
+so various approaches can be discussed before something is developed.
 
 - [ ] *Cross-platform: allow copying file and directory permissions.*
 
@@ -192,7 +196,6 @@ Start by going over the contribution guide: [`CONTRIBUTING.md`](https://github.c
   could help? If this feature is to be developed, I think we should not expose any underlying ACL API and allow purely for mirroring it when copying or moving. This should definitely be under a feature flag.
 
 </details>
-
 
 
 <br>

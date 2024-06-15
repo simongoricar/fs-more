@@ -3,10 +3,10 @@
 //!
 //!
 //! # Main features
-//! - copy and move files or directories with:
+//! - copying and moving files or directories with:
 //!     - in-depth configuration options (existing destination file behaviour, IO buffering settings, copying depth, etc.), and
 //!     - **progress reporting**, if needed,
-//! - scan directories (with options such as scan depth), and
+//! - scan directories (with options such as scan depth and symlink behaviour), and
 //! - calculate file or directory sizes.
 //!
 //! <br>
