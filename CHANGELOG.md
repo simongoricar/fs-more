@@ -9,6 +9,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.5.1] - 2024-06-15
+
+### Added
+- Doctests in `README.md` are now included when testing, including in CI, to keep those examples from going out of date.
+
+### Fixed
+- Fixed code examples in `README.md` that previously wouldn't compile.
+- Fixed GitHub Pages publishing workflow (previously redirected to a sub-page incorrectly).
+
+
+
 ## [0.5.0] - 2024-06-14
 
 This is a rather big (and breaking) release - a substantial amount of the API surface has been reworked.
@@ -119,7 +130,8 @@ Initial development release with the API mostly stable.
 
 
 
-[Unreleased]: https://github.com/simongoricar/fs-more/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/simongoricar/fs-more/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/simongoricar/fs-more/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/simongoricar/fs-more/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/simongoricar/fs-more/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/simongoricar/fs-more/compare/v0.2.2...v0.3.0
