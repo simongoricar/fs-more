@@ -31,7 +31,14 @@ fs-more = "0.5.0"
 ## Examples
 Copying a file and getting updates on the progress:
 
-```rust
+```rust,no_run
+use std::path::Path;
+
+use fs_more::file::ExistingFileBehaviour;
+use fs_more::file::FileCopyWithProgressOptions;
+use fs_more::file::FileCopyFinished;
+
+
 let source_path = Path::new("./source-file.txt");
 let destination_path = Path::new("./target-file.txt");
 
@@ -44,12 +51,12 @@ let finished_copy = fs_more::file::copy_file_with_progress(
     },
     |progress| {
         let percent_copied =
-            (progress.bytes_finished as f64) / (progress.bytes_total as 
-            * 100.0;
+            (progress.bytes_finished as f64) 
+            / (progress.bytes_total as f64 * 100.0);
 
         println!("Copied {:.2}% of the file!", percent_copied);
     }
-)?;
+).unwrap();
 
 match finished_copy {
     FileCopyFinished::Created { bytes_copied } => {
@@ -64,7 +71,12 @@ match finished_copy {
 ```
 
 Moving a directory and getting updates on the progress:
-```rust
+```rust,no_run
+use std::path::Path;
+use fs_more::directory::DirectoryMoveWithProgressOptions;
+use fs_more::directory::DestinationDirectoryRule;
+
+
 let source_path = Path::new("./source-directory");
 let destination_path = Path::new("./target-directory");
 
@@ -86,7 +98,7 @@ let moved = fs_more::directory::move_directory_with_progress(
             progress.directories_created
         );
     }
-)?;
+).unwrap();
 
 println!(
     "Moved {} bytes ({} files, {} directories)! Underlying strategy: {:?}.",
