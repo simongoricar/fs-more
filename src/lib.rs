@@ -123,6 +123,12 @@
 #![warn(missing_docs)]
 
 
+/// This brings in the README's doctests (and is present only when testing).
+#[doc = include_str!("../README.md")]
+#[cfg(doctest)]
+pub struct ReadmeDoctests;
+
+
 /// 64 KiB
 const DEFAULT_READ_BUFFER_SIZE: usize = 1024 * 64;
 
