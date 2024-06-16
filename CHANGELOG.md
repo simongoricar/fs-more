@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- Updated `file` and `directory` module documentation with tables showing an overview of the features.
+- Reworded some documentation and improved how feature flags are structured in the documentation.
+
+### Removed
+- The `use_enabled_fs_module!` macro is no longer visible externally (it was not meant to be used anyway).
 
 
 ---
