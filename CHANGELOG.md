@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+
+---
+
+## [0.6.0] - 2024-06-16
+
 ### Changed
 - Updated `file` and `directory` module documentation with tables showing an overview of the features.
 - Reworded some documentation and improved how feature flags are structured in the documentation.
@@ -18,7 +23,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   This way the tests do not depend on the `dunce` feature flag being enabled.
 
 
----
 
 ## [0.5.1] - 2024-06-15
 
@@ -141,7 +145,8 @@ Initial development release with the API mostly stable.
 
 
 
-[Unreleased]: https://github.com/simongoricar/fs-more/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/simongoricar/fs-more/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/simongoricar/fs-more/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/simongoricar/fs-more/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/simongoricar/fs-more/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/simongoricar/fs-more/compare/v0.3.0...v0.4.0
