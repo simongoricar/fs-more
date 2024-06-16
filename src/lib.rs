@@ -162,6 +162,8 @@ const DEFAULT_WRITE_BUFFER_SIZE: usize = 1024 * 64;
 /// - [`DirectoryMoveWithProgressOptions`][crate::directory::DirectoryMoveWithProgressOptions]
 const DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL: u64 = 1024 * 512;
 
+#[macro_use]
+mod macros;
 
 
 pub mod directory;

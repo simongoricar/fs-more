@@ -19,7 +19,6 @@ use crate::{
         DirectoryExecutionPlanError,
         SourceDirectoryPathValidationError,
     },
-    use_enabled_fs_module,
 };
 
 /// Represents a file copy or directory creation operation.

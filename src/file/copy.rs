@@ -16,7 +16,6 @@ use super::{
 };
 use crate::{
     error::FileError,
-    use_enabled_fs_module,
     DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL,
     DEFAULT_READ_BUFFER_SIZE,
     DEFAULT_WRITE_BUFFER_SIZE,

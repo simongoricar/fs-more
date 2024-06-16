@@ -2,7 +2,7 @@ use std::path::Path;
 
 use_enabled_fs_module!();
 
-use crate::{error::FileSizeError, use_enabled_fs_module};
+use crate::error::FileSizeError;
 
 /// Retrieve the size of a file in bytes.
 ///

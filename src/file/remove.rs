@@ -2,7 +2,7 @@ use std::path::Path;
 
 use_enabled_fs_module!();
 
-use crate::{error::FileRemoveError, use_enabled_fs_module};
+use crate::error::FileRemoveError;
 
 /// Removes a single file.
 ///

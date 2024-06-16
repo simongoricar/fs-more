@@ -5,7 +5,6 @@ use_enabled_fs_module!();
 use crate::{
     error::{DirectoryScanError, DirectorySizeScanError, FileSizeError, IsDirectoryEmptyError},
     file::file_size_in_bytes,
-    use_enabled_fs_module,
 };
 
 

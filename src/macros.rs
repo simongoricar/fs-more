@@ -12,7 +12,6 @@
 /// #[cfg(feature = "fs-err")]
 /// use fs_err as fs;
 /// ```
-#[macro_export]
 macro_rules! use_enabled_fs_module {
     () => {
         #[cfg(not(feature = "fs-err"))]

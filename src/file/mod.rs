@@ -35,7 +35,7 @@ pub use r#move::*;
 pub use remove::*;
 pub use size::*;
 
-use crate::{error::FileError, use_enabled_fs_module};
+use crate::error::FileError;
 
 
 /// Controls behaviour for existing destination files when copying or moving.
