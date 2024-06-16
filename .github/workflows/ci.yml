@@ -85,6 +85,10 @@ jobs:
           toolchain: ${{ matrix.rust-version }}
       - name: Set up cache
         uses: Swatinem/rust-cache@v2
+      - name: Install nextest and cargo-hack
+        uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.70,cargo-hack@0.6.28
       - name: Build fs-more
         run: cargo build -p fs-more --lib --all-features
       - name: Build tests
@@ -93,9 +97,5 @@ jobs:
         run: cargo build --all-targets --all-features
       - name: Run doctests
         run: cargo test --workspace --doc --all-features
-      - name: Install nextest
-        uses: taiki-e/install-action@v2
-        with:
-          tool: nextest@0.9.70
       - name: Run tests
-        run: cargo nextest run --color always --workspace --all-targets --all-features --no-fail-fast
+        run: cargo hack --keep-going --feature-powerset --workspace nextest run --color always --all-targets --no-fail-fast
