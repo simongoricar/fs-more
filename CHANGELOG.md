@@ -12,6 +12,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Removed
 - The `use_enabled_fs_module!` macro is no longer visible externally (it was not meant to be used anyway).
 
+### Fixed
+- Fixed source file paths not being validated properly. They are now always canonicalized before proceeding.
+- Fixed tests incorrectly comparing paths. We now attempt to strip UNC prefixes from paths when comparing them. 
+  This way the tests do not depend on the `dunce` feature flag being enabled.
+
 
 ---
 
