@@ -1,4 +1,23 @@
-//! File sizing, copying, moving and removal operations. Includes progress monitoring variants.
+//! File copying, moving, sizing and removal operations.
+//! *Includes progress monitoring variants.*
+//!
+//! <br>
+//!
+//! ##### Feature Overview
+//!
+//! | | <span style="font-weight:normal"><i>configured by</i></span> | <span style="font-weight:normal"><i>returns</i></span> |
+//! |-----------------------------|---------------------------------|:--------------------:|
+//! | [`copy_file`]               | [`FileCopyOptions`]             | [`FileCopyFinished`] <br><sup style="text-align: right">(or [`FileError`])</sup> |
+//! | [`copy_file_with_progress`] | [`FileCopyWithProgressOptions`] | [`FileCopyFinished`] <br><sup style="text-align: right">(or [`FileError`])</sup> |
+//! | [`move_file`]               | [`FileMoveOptions`]             | [`FileMoveFinished`] <br><sup style="text-align: right">(or [`FileError`])</sup> |
+//! | [`move_file_with_progress`] | [`FileMoveWithProgressOptions`] | [`FileMoveFinished`] <br><sup style="text-align: right">(or [`FileError`])</sup> |
+//! | [`remove_file`]             |                                 | `()` <br><sup style="text-align: right">(or [`FileRemoveError`])</sup> |
+//! | [`file_size_in_bytes`]      |                                 | `()` <br><sup style="text-align: right">(or [`FileSizeError`])</sup> |
+//!
+//!
+//! [`FileError`]: crate::error::FileError
+//! [`FileRemoveError`]: crate::error::FileRemoveError
+//! [`FileSizeError`]: crate::error::FileSizeError
 
 use std::path::{Path, PathBuf};
 

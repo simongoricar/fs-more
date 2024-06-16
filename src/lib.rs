@@ -3,7 +3,7 @@
 //!
 //!
 //! # Main features
-//! - copying and moving files or directories with:
+//! - copy and move files or directories with:
 //!     - in-depth configuration options (existing destination file behaviour, IO buffering settings, copying depth, etc.), and
 //!     - **progress reporting**, if needed,
 //! - scan directories (with options such as scan depth and symlink behaviour), and
@@ -11,8 +11,8 @@
 //!
 //! <br>
 //!
-//! Visit the [`directory`] and [`file`][mod@file] modules
-//! for more information and a list of available functions.
+//! Visit the **[`directory`]** and **[`file`][mod@file]** modules
+//! for a deeper overview of the available features.
 //!
 //!
 //! <br>
@@ -129,13 +129,37 @@
 pub struct ReadmeDoctests;
 
 
-/// 64 KiB
+
+/// Default file read buffer size, used as a default in progress tracking functions.
+/// Currently equals 64 KiB.
+///
+/// See also:
+/// - [`FileCopyWithProgressOptions`][crate::file::FileCopyWithProgressOptions]
+/// - [`FileMoveWithProgressOptions`][crate::file::FileMoveWithProgressOptions]
+/// - [`DirectoryCopyWithProgressOptions`][crate::directory::DirectoryCopyWithProgressOptions]
+/// - [`DirectoryMoveWithProgressOptions`][crate::directory::DirectoryMoveWithProgressOptions]
 const DEFAULT_READ_BUFFER_SIZE: usize = 1024 * 64;
 
-/// 64 KiB
+
+/// Default file write buffer size, used as a default in progress tracking functions.
+/// Currently equals 64 KiB.
+///
+/// See also:
+/// - [`FileCopyWithProgressOptions`][crate::file::FileCopyWithProgressOptions]
+/// - [`FileMoveWithProgressOptions`][crate::file::FileMoveWithProgressOptions]
+/// - [`DirectoryCopyWithProgressOptions`][crate::directory::DirectoryCopyWithProgressOptions]
+/// - [`DirectoryMoveWithProgressOptions`][crate::directory::DirectoryMoveWithProgressOptions]
 const DEFAULT_WRITE_BUFFER_SIZE: usize = 1024 * 64;
 
-/// 512 KiB
+
+/// Default progress reporting interval, used as a default in progress tracking functions.
+/// Currently equals 512 KiB.
+///
+/// See also:
+/// - [`FileCopyWithProgressOptions`][crate::file::FileCopyWithProgressOptions]
+/// - [`FileMoveWithProgressOptions`][crate::file::FileMoveWithProgressOptions]
+/// - [`DirectoryCopyWithProgressOptions`][crate::directory::DirectoryCopyWithProgressOptions]
+/// - [`DirectoryMoveWithProgressOptions`][crate::directory::DirectoryMoveWithProgressOptions]
 const DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL: u64 = 1024 * 512;
 
 
@@ -143,4 +167,3 @@ const DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL: u64 = 1024 * 512;
 pub mod directory;
 pub mod error;
 pub mod file;
-mod macros;

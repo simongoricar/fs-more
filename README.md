@@ -12,7 +12,7 @@ Includes copying and moving files or directories with progress reporting.
 
 
 ## Main features
-- copying and moving files or directories with:
+- copy and move files or directories with:
   - in-depth configuration options (existing destination file behaviour, IO buffering settings, copying depth, etc.), and
   - **progress reporting**, if needed,
 - scan directories (with options such as scan depth and symlink behaviour), and
