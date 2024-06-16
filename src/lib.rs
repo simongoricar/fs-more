@@ -1,4 +1,4 @@
-//! Convenient file and directory operations built on top of [`std::fs`] with improved error handling.
+//! Convenient file and directory operations built on top of [`std::fs`] with improved error handling and in-depth configuration.
 //! Includes copying or moving files and directories with progress reporting.
 //!
 //!
@@ -18,16 +18,55 @@
 //! <br>
 //!
 //! # Feature flags
-//! The following feature flags enable optional functionality:
-//! - `dunce` (*enabled by default*): enables the optional [`dunce`](../dunce/index.html) support:
-//!   This automatically strips Windows' UNC paths if they can be represented
-//!   using the usual type of path (e.g. `\\?\C:\foo -> C:\foo`) both internally
-//!   and in e.g. [`DirectoryScan`]'s file and directory paths (this is recommended because path canonicalization
-//!   very commonly returns UNC paths).
-//!   This crate only has an effect when compiling for Windows targets.
-//! - `fs-err` (*disabled by default*): enables the optional [`fs-err`](../fs_err/index.html) support.
-//!   While `fs-more` already provides quite extensive [error types](crate::error),
-//!   this does enable more helpful error messages for underlying IO errors.
+//! The following feature flags contain optional functionality:
+//!
+//! <table>
+//!  <thead style="background-color: rgba(0, 0, 0, 0.18)">
+//!   <tr>
+//!    <th style="text-align:left">
+//!
+//! **`dunce`**
+//! <span style="font-weight: normal">&nbsp;(<i>enabled</i> by default)</span>
+//!    </th>
+//!   </tr>
+//!  </thead>
+//!  <tbody>
+//!   <tr>
+//!    <td>
+//!
+//! Enables the optional support for [`dunce`](https://docs.rs/dunce) which automatically strips Windows' UNC paths
+//! if they can be represented as non-UNC paths (e.g., `\\?\C:\foo` as `C:\foo`). This is done both
+//! internally and in external results from e.g., [`DirectoryScan`].
+//!
+//! This feature is enabled by default and recommended because path canonicalization on Windows very commonly returns UNC paths.
+//! `dunce` only has an effect when compiling for Windows targets.
+//!    </td>
+//!   </tr>
+//!  </tbody>
+//! </table>
+//!    
+//!
+//! <table>
+//!  <thead style="background-color: rgba(0, 0, 0, 0.18)">
+//!   <tr>
+//!    <th style="text-align:left">
+//!
+//! **`fs-err`**
+//! <span style="font-weight: normal">&nbsp;(disabled by default)</span>
+//!    </th>
+//!   </tr>
+//!  </thead>
+//!  <tbody>
+//!   <tr>
+//!    <td>
+//!
+//! Enables the optional support for [`fs-err`](https://docs.rs/fs-err) which provides more helpful
+//! error messages for underlying IO errors. It should be noted that `fs-more` does already provide plenty
+//! of context on errors by itself, which is why this is disabled by default.
+//!    </td>
+//!   </tr>
+//!  </tbody>
+//! </table>
 //!
 //!
 //! <br>

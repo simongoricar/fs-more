@@ -7,7 +7,7 @@ fs-more
 
 
 
-Convenient file and directory operations built on top of `std::fs` with improved error handling.
+Convenient file and directory operations built on top of `std::fs` with improved error handling and in-depth configuration.
 Includes copying and moving files or directories with progress reporting.
 
 
@@ -117,27 +117,53 @@ println!(
 <br>
 
 ## Feature flags
-The following feature flags are available:
-- `dunce` (*enabled by default*): enables the optional [`dunce`](https://docs.rs/dunce) support:
-  This automatically strips Windows' UNC paths if they can be represented
-  using the usual type of path (e.g. `\\?\C:\foo -> C:\foo`).
-  This is used both internally and in e.g. `DirectoryScan`'s file and directory paths. This feature flag is enabled by default and recommended 
-  because because path canonicalization very commonly returns UNC paths.
-  This crate only has an effect when compiling for Windows targets.
-- `fs-err` (*disabled by default*): enables [`fs-err`](https://docs.rs/fs-err) support, which means more helpful underlying IO error messages
-  (though `fs-more` already provides many on its own).
+The following feature flags contain optional functionality:
 
+<table>
+<thead>
+  <tr>
+  <th align="left">
+<strong><code>dunce</code></strong>
+<span style="font-weight: normal">&nbsp;(<i>enabled</i> by default)</span>
+  </th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+  <td>
 
-## Project status
-`fs-more` does lack some thorough battle-testing; as such, use it with care.
-The majority of common features are present. For now, we plan on keeping 
-the version below stable (`1.0.0`) to imply that this crate hasn't gone through a lot.
+Enables the optional support for [`dunce`](https://docs.rs/dunce) which automatically strips Windows' UNC paths
+if they can be represented as non-UNC paths (e.g., `\\?\C:\foo` as `C:\foo`). This is done both
+internally and in external results from e.g., [`DirectoryScan`].
 
-Quite a number of unit-, doc- and integration tests have been written. 
-They cover a wide array of the base functionality, but fringe cases might not be covered yet — 
-[contributions](https://github.com/simongoricar/fs-more/blob/master/CONTRIBUTING.md) are welcome. 
-The quite comprehensive test harness is available in `subcrates/test-harness`.
+This feature is enabled by default and recommended because path canonicalization on Windows very commonly returns UNC paths.
+`dunce` only has an effect when compiling for Windows targets.
+  </td>
+  </tr>
+</tbody>
+</table>
+  
 
+<table>
+<thead>
+  <tr>
+  <th align="left">
+<strong><code>fs-err</code></strong>
+<span style="font-weight: normal">&nbsp;(disabled by default)</span>
+  </th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+  <td>
+
+Enables the optional support for [`fs-err`](https://docs.rs/fs-err) which provides more helpful
+error messages for underlying IO errors. It should be noted that `fs-more` does already provide plenty
+of context on errors by itself, which is why this is disabled by default.
+  </td>
+  </tr>
+</tbody>
+</table>
 
 
 <br>
