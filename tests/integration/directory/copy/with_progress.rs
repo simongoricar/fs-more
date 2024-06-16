@@ -1,4 +1,3 @@
-use assert_matches::assert_matches;
 use fs_more::{
     directory::{
         CopyDirectoryDepthLimit,
@@ -19,11 +18,13 @@ use fs_more::{
     file::{ExistingFileBehaviour, FileCopyOptions},
 };
 use fs_more_test_harness::{
+    assert_matches,
     assertable::{
         r#trait::{AssertablePath, ManageablePath},
         AsPath,
     },
     error::TestResult,
+    paths_equal_no_unc,
     tree_framework::{
         AsRelativePath,
         AssertableInitialFileCapture,
@@ -278,7 +279,8 @@ pub fn copy_directory_with_progress_errors_when_source_and_destination_are_the_s
                 DestinationDirectoryPathValidationError::DescendantOfSourceDirectory { destination_directory_path, source_directory_path }
             )
         )
-        if source_directory_path == deep_harness.as_path() && destination_directory_path == deep_harness.as_path()
+        if paths_equal_no_unc(&source_directory_path, deep_harness.as_path())
+            && paths_equal_no_unc(&destination_directory_path, deep_harness.as_path())
     );
 
 
@@ -315,7 +317,8 @@ pub fn copy_directory_with_progress_errors_when_destination_is_inside_source_pat
                 DestinationDirectoryPathValidationError::DescendantOfSourceDirectory { destination_directory_path, source_directory_path }
             )
         )
-        if source_directory_path == deep_harness.as_path() && destination_directory_path == deep_harness.foo.as_path()
+        if paths_equal_no_unc(&source_directory_path, deep_harness.as_path())
+            && paths_equal_no_unc(&destination_directory_path, deep_harness.foo.as_path())
     );
 
 
@@ -350,7 +353,8 @@ pub fn copy_directory_with_progress_errors_when_destination_directory_already_ex
                 DestinationDirectoryPathValidationError::AlreadyExists { path, destination_directory_rule }
             )
         )
-        if path == empty_harness.as_path() && destination_directory_rule == DestinationDirectoryRule::DisallowExisting
+        if paths_equal_no_unc(&path, empty_harness.as_path())
+            && destination_directory_rule == DestinationDirectoryRule::DisallowExisting
     );
 
 
@@ -430,7 +434,7 @@ pub fn copy_directory_with_progress_errors_when_destination_file_collides_and_it
             CopyDirectoryPreparationError::CopyPlanningError(
                 DirectoryExecutionPlanError::DestinationItemAlreadyExists { path }
             )
-        ) if path == colliding_file_path
+        ) if paths_equal_no_unc(&path, &colliding_file_path)
     );
 
 
@@ -491,7 +495,8 @@ pub fn copy_directory_with_progress_errors_when_destination_subdirectory_collide
             CopyDirectoryPreparationError::CopyPlanningError(
                 DirectoryExecutionPlanError::DestinationItemAlreadyExists { path }
             )
-        ) if path == colliding_directory_path
+        )
+        if paths_equal_no_unc(&path, &colliding_directory_path)
     );
 
 
@@ -718,7 +723,7 @@ pub fn copy_directory_with_progress_preemptively_checks_for_directory_collisions
                 DirectoryExecutionPlanError::DestinationItemAlreadyExists { path }
             )
         )
-        if path == remapped_colliding_directory_path
+        if paths_equal_no_unc(&path, &remapped_colliding_directory_path)
     );
 
 
@@ -788,7 +793,8 @@ pub fn copy_directory_with_progress_preemptively_checks_for_file_collisions() ->
             CopyDirectoryPreparationError::CopyPlanningError(
                 DirectoryExecutionPlanError::DestinationItemAlreadyExists { path }
             )
-        ) if path == remapped_colliding_file_path
+        )
+        if paths_equal_no_unc(&path, &remapped_colliding_file_path)
     );
 
 
@@ -856,7 +862,8 @@ pub fn copy_directory_with_progress_errors_when_source_is_symlink_to_destination
                 DestinationDirectoryPathValidationError::DescendantOfSourceDirectory { destination_directory_path, source_directory_path }
             )
         )
-        if source_directory_path == deep_harness.as_path() && destination_directory_path == deep_harness.as_path()
+        if paths_equal_no_unc(&source_directory_path, deep_harness.as_path())
+            && paths_equal_no_unc(&destination_directory_path, deep_harness.as_path())
     );
 
 

@@ -213,7 +213,6 @@ dependencies = [
 name = "fs-more"
 version = "0.5.1"
 dependencies = [
- "assert_matches",
  "dunce",
  "fs-err",
  "fs-more-test-harness",
@@ -224,6 +223,8 @@ dependencies = [
 name = "fs-more-test-harness"
 version = "0.5.1"
 dependencies = [
+ "assert_matches",
+ "dunce",
  "fs-more-test-harness-generator",
  "humansize",
  "rand",

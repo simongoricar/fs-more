@@ -1,11 +1,12 @@
-use assert_matches::assert_matches;
 use fs_more::error::FileRemoveError;
 use fs_more_test_harness::{
+    assert_matches,
     assertable::{
         r#trait::{AssertablePath, CaptureableFilePath, ManageablePath},
         AsPath,
     },
     error::TestResult,
+    paths_equal_no_unc,
     tree_framework::{FileSystemHarness, FileSystemHarnessDirectory},
     trees::{empty::EmptyTree, simple::SimpleTree},
 };
@@ -86,7 +87,7 @@ pub fn remove_file_errors_on_non_existent_file() -> TestResult {
     assert_matches!(
         removal_result.unwrap_err(),
         FileRemoveError::NotFound { path }
-        if path == non_existent_file
+        if paths_equal_no_unc(&path, non_existent_file)
     );
 
 

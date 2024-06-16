@@ -4,7 +4,12 @@ pub mod error;
 #[path = "generated_trees/mod.rs"]
 pub mod trees;
 
-pub mod case_sensitivity;
+mod case_sensitivity;
+pub use case_sensitivity::*;
+mod path_comparison;
+pub use assert_matches::{assert_matches, debug_assert_matches};
+pub use path_comparison::*;
+
 
 pub mod tree_framework;
 

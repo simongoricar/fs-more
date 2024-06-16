@@ -1,4 +1,3 @@
-use assert_matches::assert_matches;
 use fs_more::{
     error::FileError,
     file::{
@@ -10,12 +9,14 @@ use fs_more::{
     },
 };
 use fs_more_test_harness::{
+    assert_matches,
     assertable::{
         r#trait::{AssertablePath, CaptureableFilePath, ManageablePath},
         AsPath,
     },
-    case_sensitivity::detect_case_sensitivity_for_temp_dir,
+    detect_case_sensitivity_for_temp_dir,
     error::TestResult,
+    paths_equal_no_unc,
     tree_framework::{FileSystemHarness, FileSystemHarnessDirectory},
     trees::simple::SimpleTree,
 };
@@ -103,7 +104,7 @@ pub fn move_file_with_progress_errors_when_trying_to_copy_into_self() -> TestRes
     assert_matches!(
         move_result.unwrap_err(),
         FileError::SourceAndDestinationAreTheSame { path }
-        if path == harness.yes.no_bin.as_path()
+        if paths_equal_no_unc(&path, harness.yes.no_bin.as_path())
     );
 
 
@@ -138,7 +139,7 @@ pub fn move_file_with_progress_errors_when_trying_to_copy_into_self_even_with_ov
     assert_matches!(
         move_result.unwrap_err(),
         FileError::SourceAndDestinationAreTheSame { path }
-        if path == harness.yes.no_bin.as_path()
+        if paths_equal_no_unc(&path, harness.yes.no_bin.as_path())
     );
 
 
@@ -219,7 +220,8 @@ pub fn move_file_with_progress_errors_when_trying_to_copy_into_case_insensitive_
         assert_matches!(
             file_move_result.unwrap_err(),
             FileError::SourceAndDestinationAreTheSame { path }
-            if path == hello_world_uppercased_file_path.as_path() || path == harness.yes.hello_world_txt.as_path()
+            if paths_equal_no_unc(&path, hello_world_uppercased_file_path.as_path())
+                || paths_equal_no_unc(&path, harness.yes.hello_world_txt.as_path())
         );
 
         captured_hello_world.assert_unchanged();
@@ -272,7 +274,8 @@ pub fn move_file_with_progress_errors_when_source_is_symlink_to_destination() ->
     assert_matches!(
         move_result.unwrap_err(),
         FileError::SourceAndDestinationAreTheSame { path }
-        if path == harness.yes.hello_world_txt.as_path() || path == symlink_path
+        if paths_equal_no_unc(&path, harness.yes.hello_world_txt.as_path())
+            || paths_equal_no_unc(&path, &symlink_path)
     );
 
 
@@ -344,7 +347,7 @@ pub fn move_file_with_progress_errors_on_existing_destination_file_when_behaviou
     assert_matches!(
         move_result.unwrap_err(),
         FileError::DestinationPathAlreadyExists { path }
-        if path == harness.yes.no_bin.as_path()
+        if paths_equal_no_unc(&path, harness.yes.no_bin.as_path())
     );
 
 

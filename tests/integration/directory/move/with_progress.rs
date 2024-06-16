@@ -1,4 +1,3 @@
-use assert_matches::assert_matches;
 use fs_more::{
     directory::{
         CopyDirectoryDepthLimit,
@@ -19,11 +18,13 @@ use fs_more::{
     file::ExistingFileBehaviour,
 };
 use fs_more_test_harness::{
+    assert_matches,
     assertable::{
         r#trait::{AssertablePath, ManageablePath},
         AsPath,
     },
     error::TestResult,
+    paths_equal_no_unc,
     tree_framework::{FileSystemHarness, FileSystemHarnessDirectory},
     trees::{deep::DeepTree, empty::EmptyTree, simple::SimpleTree},
 };
@@ -227,7 +228,9 @@ pub fn move_directory_with_progress_errors_when_source_is_symlink_to_destination
             MoveDirectoryPreparationError::DestinationDirectoryValidationError(
                 DestinationDirectoryPathValidationError::DescendantOfSourceDirectory { destination_directory_path, source_directory_path }
             )
-        ) if source_directory_path == deep_harness.as_path() && destination_directory_path == deep_harness.as_path()
+        )
+        if paths_equal_no_unc(&source_directory_path, deep_harness.as_path())
+            && paths_equal_no_unc(&destination_directory_path, deep_harness.as_path())
     );
 
 
