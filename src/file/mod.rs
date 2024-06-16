@@ -94,57 +94,53 @@ fn validate_source_file_path(
     // instead of `exists` to catch permission and other IO errors
     // as distinct from the `FileError::NotFound` error.
 
-    match source_file_path.try_exists() {
-        Ok(exists) => {
-            if !exists {
-                return Err(FileError::SourceFileNotFound {
-                    path: source_file_path.to_path_buf(),
-                });
-            }
-
-            if !source_file_path.is_file() {
-                return Err(FileError::SourcePathNotAFile {
-                    path: source_file_path.to_path_buf(),
-                });
-            }
-
-            if source_file_path.is_symlink() {
-                let canonicalized_path = fs::canonicalize(source_file_path).map_err(|error| {
-                    FileError::UnableToAccessSourceFile {
-                        path: source_file_path.to_path_buf(),
-                        error,
-                    }
-                })?;
-
-                #[cfg(feature = "dunce")]
-                {
-                    let de_unced_canonicalized_path =
-                        dunce::simplified(&canonicalized_path).to_path_buf();
-
-                    return Ok(ValidatedSourceFilePath {
-                        source_file_path: de_unced_canonicalized_path,
-                        original_was_symlink_to_file: true,
-                    });
-                }
-
-                #[cfg(not(feature = "dunce"))]
-                {
-                    return Ok(ValidatedSourceFilePath {
-                        source_file_path: canonicalized_path,
-                        original_was_symlink_to_file: true,
-                    });
-                }
-            }
-
-            Ok(ValidatedSourceFilePath {
-                source_file_path: source_file_path.to_path_buf(),
-                original_was_symlink_to_file: false,
-            })
+    let source_file_exists = match source_file_path.try_exists() {
+        Ok(exists) => exists,
+        Err(error) => {
+            return Err(FileError::UnableToAccessSourceFile {
+                path: source_file_path.to_path_buf(),
+                error,
+            });
         }
-        Err(error) => Err(FileError::UnableToAccessSourceFile {
+    };
+
+
+    if !source_file_exists {
+        return Err(FileError::SourceFileNotFound {
+            path: source_file_path.to_path_buf(),
+        });
+    }
+
+    if !source_file_path.is_file() {
+        return Err(FileError::SourcePathNotAFile {
+            path: source_file_path.to_path_buf(),
+        });
+    }
+
+
+    let canonical_path = fs::canonicalize(source_file_path).map_err(|error| {
+        FileError::UnableToAccessSourceFile {
             path: source_file_path.to_path_buf(),
             error,
-        }),
+        }
+    })?;
+
+    #[cfg(feature = "dunce")]
+    {
+        let de_unced_canonical_path = dunce::simplified(&canonical_path).to_path_buf();
+
+        Ok(ValidatedSourceFilePath {
+            source_file_path: de_unced_canonical_path,
+            original_was_symlink_to_file: true,
+        })
+    }
+
+    #[cfg(not(feature = "dunce"))]
+    {
+        Ok(ValidatedSourceFilePath {
+            source_file_path: canonical_path,
+            original_was_symlink_to_file: true,
+        })
     }
 }
 
