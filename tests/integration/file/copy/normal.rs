@@ -2,23 +2,7 @@ use fs_more::{
     error::FileError,
     file::{ExistingFileBehaviour, FileCopyFinished, FileCopyOptions},
 };
-use fs_more_test_harness::{
-    assert_matches,
-    assertable::{
-        r#trait::{AssertablePath, CaptureableFilePath, ManageablePath},
-        AsPath,
-    },
-    error::TestResult,
-    is_temporary_directory_case_sensitive,
-    paths_equal_no_unc,
-    tree_framework::{
-        AsRelativePath,
-        AssertableInitialFileCapture,
-        FileSystemHarness,
-        FileSystemHarnessDirectory,
-    },
-    trees::simple::SimpleTree,
-};
+use fs_more_test_harness::{prelude::*, trees::structures::simple::SimpleTree};
 
 
 
@@ -95,7 +79,7 @@ pub fn copy_file_errors_when_trying_to_copy_into_self() -> TestResult {
 #[test]
 pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
     let harness = SimpleTree::initialize();
-    let is_fs_case_sensitive = is_temporary_directory_case_sensitive();
+    let is_fs_case_sensitive = detect_case_sensitivity_for_temp_dir();
 
 
     let hello_world_uppercased_file_name = harness
@@ -169,7 +153,7 @@ pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
 #[test]
 pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated() -> TestResult {
     let harness = SimpleTree::initialize();
-    let is_fs_case_sensitive = is_temporary_directory_case_sensitive();
+    let is_fs_case_sensitive = detect_case_sensitivity_for_temp_dir();
 
 
     let source_file_size_bytes = harness.yes.hello_world_txt.size_in_bytes();

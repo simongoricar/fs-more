@@ -1,14 +1,7 @@
 use fs_more::error::FileRemoveError;
 use fs_more_test_harness::{
-    assert_matches,
-    assertable::{
-        r#trait::{AssertablePath, CaptureableFilePath, ManageablePath},
-        AsPath,
-    },
-    error::TestResult,
-    paths_equal_no_unc,
-    tree_framework::{FileSystemHarness, FileSystemHarnessDirectory},
-    trees::{empty::EmptyTree, simple::SimpleTree},
+    prelude::*,
+    trees::structures::{empty::EmptyTree, simple::SimpleTree},
 };
 
 

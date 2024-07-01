@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use crate::assertable::r#trait::AssertablePath;
+use crate::assertable::AssertablePath;
 
 
 /// Returns `true` if the temporary directory on the current file system

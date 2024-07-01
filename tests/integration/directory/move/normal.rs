@@ -16,15 +16,8 @@ use fs_more::{
     file::ExistingFileBehaviour,
 };
 use fs_more_test_harness::{
-    assert_matches,
-    assertable::{
-        r#trait::{AssertablePath, ManageablePath},
-        AsPath,
-    },
-    error::TestResult,
-    paths_equal_no_unc,
-    tree_framework::{FileSystemHarness, FileSystemHarnessDirectory},
-    trees::{deep::DeepTree, empty::EmptyTree, simple::SimpleTree},
+    prelude::*,
+    trees::structures::{deep::DeepTree, empty::EmptyTree, simple::SimpleTree},
 };
 
 

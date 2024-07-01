@@ -18,20 +18,8 @@ use fs_more::{
     file::{ExistingFileBehaviour, FileCopyOptions},
 };
 use fs_more_test_harness::{
-    assert_matches,
-    assertable::{
-        r#trait::{AssertablePath, ManageablePath},
-        AsPath,
-    },
-    error::TestResult,
-    paths_equal_no_unc,
-    tree_framework::{
-        AsRelativePath,
-        AssertableInitialFileCapture,
-        FileSystemHarness,
-        FileSystemHarnessDirectory,
-    },
-    trees::{deep::DeepTree, empty::EmptyTree},
+    prelude::*,
+    trees::structures::{deep::DeepTree, empty::EmptyTree},
 };
 
 

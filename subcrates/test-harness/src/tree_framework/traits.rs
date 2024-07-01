@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::assertable::{file_capture::FileState, AsPath};
+use crate::assertable::{file::FileState, AsPath};
 
 
 /// A trait defining the root of the testing harness.

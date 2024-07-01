@@ -29,19 +29,19 @@
 use std::fs;
 use std::path::{PathBuf, Path};
 use tempfile::TempDir;
-use crate::tree_framework::FileSystemHarness;
-use crate::tree_framework::AsInitialFileStateRef;
-use crate::tree_framework::AssertableInitialFileCapture;
-use crate::tree_framework::FileSystemHarnessDirectory;
-use crate::tree_framework::AsRelativePath;
-use crate::tree_framework::initialize_empty_file;
-use crate::tree_framework::initialize_file_with_string;
-use crate::tree_framework::initialize_file_with_random_data;
+use crate::trees::framework::FileSystemHarness;
+use crate::trees::framework::AsInitialFileStateRef;
+use crate::trees::framework::AssertableInitialFileCapture;
+use crate::trees::framework::FileSystemHarnessDirectory;
+use crate::trees::framework::AsRelativePath;
+use crate::trees::framework::initialize_empty_file;
+use crate::trees::framework::initialize_file_with_string;
+use crate::trees::framework::initialize_file_with_random_data;
 use crate::assertable::AsPath;
-use crate::assertable::r#trait::AssertablePath;
-use crate::assertable::r#trait::CaptureableFilePath;
-use crate::assertable::file_capture::CapturedFileState;
-use crate::assertable::file_capture::FileState;
+use crate::assertable::AssertablePath;
+use crate::assertable::CaptureableFilePath;
+use crate::assertable::file::CapturedFileState;
+use crate::assertable::file::FileState;
 use fs_more_test_harness_generator::schema::FileDataConfiguration;
 /**This is a file residing at `./a.bin` (relative to the root of the test harness).
 

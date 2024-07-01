@@ -2,18 +2,7 @@ use fs_more::{
     error::FileError,
     file::{ExistingFileBehaviour, FileMoveFinished, FileMoveMethod, FileMoveOptions},
 };
-use fs_more_test_harness::{
-    assert_matches,
-    assertable::{
-        r#trait::{AssertablePath, CaptureableFilePath, ManageablePath},
-        AsPath,
-    },
-    detect_case_sensitivity_for_temp_dir,
-    error::TestResult,
-    paths_equal_no_unc,
-    tree_framework::{FileSystemHarness, FileSystemHarnessDirectory},
-    trees::simple::SimpleTree,
-};
+use fs_more_test_harness::{prelude::*, trees::structures::simple::SimpleTree};
 
 
 

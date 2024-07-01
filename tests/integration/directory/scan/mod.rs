@@ -7,9 +7,8 @@ use std::{
 
 use fs_more::directory::{DirectoryScanDepthLimit, DirectoryScanOptionsV2, DirectoryScanner};
 use fs_more_test_harness::{
-    assertable::{r#trait::ManageablePath, AsPath},
-    tree_framework::FileSystemHarness,
-    trees::{deep::DeepTree, simple::SimpleTree},
+    prelude::*,
+    trees::structures::{deep::DeepTree, simple::SimpleTree},
 };
 
 

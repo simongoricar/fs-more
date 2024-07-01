@@ -1,9 +1,11 @@
 use std::path::Path;
 
-// TODO use these in tests so we don't have issues with mixed UNC paths
 
 /// Returns `true` if the provided paths are the same
 /// (ignoring UNC, if possible).
+///
+/// Use this function to compare paths in tests, to avoid
+/// inconsistent results when disabling the `dunce` feature on `fs-more`.
 #[track_caller]
 pub fn paths_equal_no_unc<A, B>(first_path: A, second_path: B) -> bool
 where
