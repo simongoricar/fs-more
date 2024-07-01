@@ -697,3 +697,53 @@ pub enum IsDirectoryEmptyError {
         error: std::io::Error,
     },
 }
+
+
+/// An error that can occur when scanning a directory.
+#[derive(Error, Debug)]
+pub enum DirectoryScanErrorV2 {
+    /// The provided directory path to scan doesn't exist.
+    #[error("path doesn't exist: {}", .path.display())]
+    NotFound {
+        /// The directory path that couldn't be scanned.
+        path: PathBuf,
+    },
+
+    /// The provided directory path exists, but is not a directory.
+    #[error(
+        "path exists, but is not a directory nor a symlink to one: {}",
+        .path.display()
+    )]
+    NotADirectory {
+        /// The directory path that couldn't be scanned.
+        path: PathBuf,
+    },
+
+    /// The provided directory path is a directory,
+    /// but could not be read due to an IO error.
+    ///
+    /// The inner [`std::io::Error`] will likely describe a more precise cause of this error.
+    #[error("unable to read directory: {}", .directory_path.display())]
+    UnableToReadDirectory {
+        /// Directory path that could not be read.
+        directory_path: PathBuf,
+
+        /// IO error describing why the given root directory could not be read.
+        #[source]
+        error: std::io::Error,
+    },
+
+    /// A directory contains an entry (i.e. directory or file)
+    /// that could not be read due to an IO error.
+    ///
+    /// The inner [`std::io::Error`] will likely describe a more precise cause of this error.
+    #[error("unable to read directory entry for {}", .directory_path.display())]
+    UnableToReadDirectoryEntry {
+        /// Directory path whose entries could not be read.
+        directory_path: PathBuf,
+
+        /// IO error describing why the given file or directory could not be read.
+        #[source]
+        error: std::io::Error,
+    },
+}
