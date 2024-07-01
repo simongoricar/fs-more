@@ -191,8 +191,7 @@ this section will focus on one of them - `DeepTree`.
 
 To initialize a filesystem tree, call its `initialize` method, like so:
 ```rust
-use fs_more_test_harness::tree_framework::FileSystemHarness;
-use fs_more_test_harness::trees::deep::DeepTree;
+use fs_more_test_harness::prelude::*;
 
 let deep_harness = DeepTree::initialize();
 ```
@@ -229,12 +228,7 @@ Here's a few examples on how we can "traverse" and inspect
 this tree in our tests:
 ```rust
 use std::path::Path;
-use fs_more_test_harness::assertable::AsPath;
-use fs_more_test_harness::assertable::AssertablePath;
-use fs_more_test_harness::assertable::CaptureableFilePath;
-use fs_more_test_harness::tree_framework::AsRelativePath;
-use fs_more_test_harness::tree_framework::FileSystemHarnessDirectory;
-use fs_more_test_harness::tree_framework::AssertableInitialFileCapture;
+use fs_more_test_harness::prelude::*;
 
 deep_harness.assert_is_directory_and_not_empty();
 
