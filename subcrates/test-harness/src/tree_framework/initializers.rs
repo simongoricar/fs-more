@@ -9,6 +9,10 @@ use rand::{
     prelude::{Rng, SeedableRng},
 };
 
+use crate::assertable::{symlink_to_directory, symlink_to_file};
+
+
+
 /// Creates a new empty file at the provided `file_path`.
 ///
 /// # Panics
@@ -115,4 +119,26 @@ pub(crate) fn initialize_file_with_random_data(
     file.flush().expect("failed to flush file");
 
     random_data
+}
+
+
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum SymlinkDestinationType {
+    File,
+    Directory,
+}
+
+
+pub(crate) fn initialize_symbolic_link(
+    symlink_file_path: &Path,
+    destination_file_path: &Path,
+    symlink_type: SymlinkDestinationType,
+) {
+    match symlink_type {
+        SymlinkDestinationType::File => symlink_to_file(symlink_file_path, destination_file_path),
+        SymlinkDestinationType::Directory => {
+            symlink_to_directory(symlink_file_path, destination_file_path)
+        }
+    }
 }

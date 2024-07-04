@@ -250,6 +250,7 @@ dependencies = [
  "serde",
  "serde_json",
  "syn",
+ "thiserror",
 ]
 
 [[package]]

@@ -124,8 +124,6 @@ pub trait AssertablePath {
 
 
     /// Asserts the path points to a symlink to a directory.
-    ///
-    /// This method does not ensure that the link destination is valid.
     fn assert_is_symlink_to_directory(&self);
 
     /// Asserts the path points to a symlink to a directory,
@@ -142,8 +140,6 @@ pub trait AssertablePath {
 
 
     /// Asserts the path points to a symlink to a file.
-    ///
-    /// This method does not ensure that the link destination is valid.
     fn assert_is_symlink_to_file(&self);
 
     /// Asserts the path points to a symlink to a file,

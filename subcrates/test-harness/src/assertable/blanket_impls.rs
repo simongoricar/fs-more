@@ -354,8 +354,12 @@ where
 ///
 /// `source_path` should point to a non-existent path where the symlink will be created.
 /// `target_path` should point to an existing directory to which the symlink will point.
+///
+/// # Panics
+/// This function will panic if the symbolic link cannot be created for any reason.
+/// This is acceptable in our case because this code is used for the test harness.
 #[track_caller]
-fn symlink_to_directory(source_path: &Path, target_path: &Path) {
+pub(crate) fn symlink_to_directory(source_path: &Path, target_path: &Path) {
     #[cfg(windows)]
     {
         std::os::windows::fs::symlink_dir(target_path, source_path)
@@ -382,8 +386,12 @@ fn symlink_to_directory(source_path: &Path, target_path: &Path) {
 ///
 /// `source_path` should point to a non-existent path where the symlink will be created.
 /// `target_path` should point to an existing file to which the symlink will point.
+///
+/// # Panics
+/// This function will panic if the symbolic link cannot be created for any reason.
+/// This is acceptable in our case because this code is used for the test harness.
 #[track_caller]
-fn symlink_to_file(source_path: &Path, target_path: &Path) {
+pub(crate) fn symlink_to_file(source_path: &Path, target_path: &Path) {
     #[cfg(windows)]
     {
         std::os::windows::fs::symlink_file(target_path, source_path)

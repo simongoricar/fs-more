@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
 
+
 #[derive(Args, Debug)]
 pub(crate) struct GenerateTreeJsonSchemaCommandArguments {
     #[arg(short = 'o', long = "json-schema-output-file-path")]
@@ -10,6 +11,7 @@ pub(crate) struct GenerateTreeJsonSchemaCommandArguments {
     #[arg(long = "overwrite-existing-file")]
     pub(crate) overwrite_existing_file: Option<bool>,
 }
+
 
 #[derive(Args, Debug)]
 pub(crate) struct GenerateTreeSourcesCommandArguments {
@@ -23,6 +25,7 @@ pub(crate) struct GenerateTreeSourcesCommandArguments {
     pub(crate) overwrite_existing_files: Option<bool>,
 }
 
+
 #[derive(Subcommand, Debug)]
 pub(crate) enum CliCommand {
     #[command(name = "generate-tree-json-schema")]
@@ -31,6 +34,8 @@ pub(crate) enum CliCommand {
     #[command(name = "generate-tree-sources")]
     GenerateTreeSources(GenerateTreeSourcesCommandArguments),
 }
+
+
 
 #[derive(Parser, Debug)]
 #[command(version)]

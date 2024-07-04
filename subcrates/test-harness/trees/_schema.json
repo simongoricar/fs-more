@@ -119,6 +119,13 @@
                 }
               ]
             },
+            "id": {
+              "description": "Optional tree-unique entry ID.\n\nUser to refer to entries in the symlink file type, for example.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "name": {
               "description": "File name (including extension).",
               "type": "string"
@@ -148,6 +155,13 @@
                 "$ref": "#/definitions/FileSystemHarnessEntry"
               }
             },
+            "id": {
+              "description": "Optional tree-unique entry ID.\n\nUser to refer to entries in the symlink file type, for example.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "name": {
               "description": "Directory name.",
               "type": "string"
@@ -156,6 +170,37 @@
               "type": "string",
               "enum": [
                 "directory"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "destination_entry_id",
+            "name",
+            "type"
+          ],
+          "properties": {
+            "destination_entry_id": {
+              "description": "Entry ID of the destination in the tree (its `id` value).",
+              "type": "string"
+            },
+            "id": {
+              "description": "Optional tree-unique entry ID. User to refer to entries in the symlink file type, for example.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "name": {
+              "description": "Symlink name (including extension).",
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "symlink"
               ]
             }
           }

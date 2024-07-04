@@ -11,13 +11,14 @@ use cli::{
     GenerateTreeJsonSchemaCommandArguments,
     GenerateTreeSourcesCommandArguments,
 };
-use generator::generate_rust_source_file_for_schema;
+use codegen::final_source_file::generate_rust_source_file_for_schema;
 use miette::{miette, Context, IntoDiagnostic, Result};
 use schema::FileSystemHarnessSchema;
 use schemars::gen::SchemaGenerator;
 
 mod cli;
-mod generator;
+mod codegen;
+mod name_collision;
 mod schema;
 
 
@@ -157,6 +158,7 @@ fn generate_trees(options: GenerateTreeSourcesCommandArguments) -> Result<()> {
             &output_file_path,
             options.overwrite_existing_files.unwrap_or(false),
         )
+        .into_diagnostic()
         .wrap_err_with(|| miette!("Failed to generate source file for schema {}.", schema_name))?;
     }
 
