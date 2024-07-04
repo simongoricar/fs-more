@@ -1,5 +1,5 @@
 //! @generated
-//! 
+//!
 //! This code was automatically generated from "simple.json",
 //! a file that describes this filesystem tree harness for testing.
 //!
@@ -13,178 +13,172 @@
 //! |   |-- hello-world.txt (text data, 12 B)
 //! ```
 //!
-//! DO NOT MODIFY THIS FILE. INSTEAD, MODIFY THE SOURCE JSON DATA FILE,
-//! AND REGENERATE THIS FILE (see the CLI provided by the 
-//! test-harness-schema crate).
-    
+//! <sup>DO NOT MODIFY THIS FILE. INSTEAD, MODIFY THE SOURCE JSON DATA FILE,
+//! AND REGENERATE THIS FILE (see the CLI provided by the
+//! test-harness-schema crate).</sup>
+
 #![allow(unused_imports)]
 #![allow(clippy::disallowed_names)]
 #![allow(dead_code)]
 
 
 use std::fs;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 use tempfile::TempDir;
-use crate::trees::framework::FileSystemHarness;
-use crate::trees::framework::AsInitialFileStateRef;
-use crate::trees::framework::AssertableInitialFileCapture;
-use crate::trees::framework::FileSystemHarnessDirectory;
-use crate::trees::framework::AsRelativePath;
-use crate::trees::framework::initialize_empty_file;
-use crate::trees::framework::initialize_file_with_string;
-use crate::trees::framework::initialize_file_with_random_data;
-use crate::assertable::AsPath;
-use crate::assertable::AssertablePath;
-use crate::assertable::CaptureableFilePath;
-use crate::assertable::file::CapturedFileState;
-use crate::assertable::file::FileState;
+use crate::prelude::*;
+use crate::trees::{
+    initialize_empty_file, initialize_file_with_string, initialize_file_with_random_data,
+    initialize_symbolic_link, SymlinkDestinationType, AsInitialFileStateRef,
+};
 use fs_more_test_harness_generator::schema::FileDataConfiguration;
-/**This is a file residing at `./empty.txt` (relative to the root of the test harness).
+/**This is a file residing at `./empty.txt` (relative to the root of the tree).
 
 <br>
 
 <sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
 pub struct EmptyTxt {
-    path: PathBuf,
-    initial_state: FileState,
+    file_path: PathBuf,
+    state_at_initialization: FileState,
 }
 impl EmptyTxt {
     #[track_caller]
-    fn new<S>(parent_path: PathBuf, file_name: S) -> Self
-    where
-        S: Into<String>,
-    {
-        let path = parent_path.join(file_name.into());
-        path.assert_not_exists();
-        initialize_empty_file(&path);
-        let initial_state = FileState::Empty;
-        path.assert_is_file();
-        Self { path, initial_state }
+    fn initialize(parent_directory_path: &Path) -> Self {
+        let file_path = parent_directory_path.join("EmptyTxt");
+        file_path.assert_not_exists();
+        initialize_empty_file(&file_path);
+        file_path.assert_is_file_and_not_symlink();
+        let state_at_initialization = FileState::Empty;
+        Self {
+            file_path,
+            state_at_initialization,
+        }
     }
 }
 impl AsPath for EmptyTxt {
     fn as_path(&self) -> &Path {
-        &self.path
+        &self.file_path
     }
 }
-impl CaptureableFilePath for EmptyTxt {}
-impl AsInitialFileStateRef for EmptyTxt {
-    fn initial_state(&self) -> &FileState {
-        &self.initial_state
-    }
-}
-impl AssertableInitialFileCapture for EmptyTxt {}
 impl AsRelativePath for EmptyTxt {
     fn as_path_relative_to_harness_root(&self) -> &Path {
         Path::new("./empty.txt")
     }
 }
-/**This is a file residing at `./yes/hello-world.txt` (relative to the root of the test harness).
+impl AsInitialFileStateRef for EmptyTxt {
+    fn initial_state(&self) -> &FileState {
+        &self.state_at_initialization
+    }
+}
+impl AssertableInitialFileCapture for EmptyTxt {}
+impl CaptureableFilePath for EmptyTxt {}
+/**This is a file residing at `./yes/hello-world.txt` (relative to the root of the tree).
 
 <br>
 
 <sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
 pub struct HelloWorldTxt {
-    path: PathBuf,
-    initial_state: FileState,
+    file_path: PathBuf,
+    state_at_initialization: FileState,
 }
 impl HelloWorldTxt {
     #[track_caller]
-    fn new<S>(parent_path: PathBuf, file_name: S) -> Self
-    where
-        S: Into<String>,
-    {
-        let path = parent_path.join(file_name.into());
-        path.assert_not_exists();
-        initialize_file_with_string(&path, "Hello world!");
-        let initial_state = FileState::NonEmpty {
+    fn initialize(parent_directory_path: &Path) -> Self {
+        let file_path = parent_directory_path.join("HelloWorldTxt");
+        file_path.assert_not_exists();
+        initialize_file_with_string(&file_path, "Hello world!");
+        file_path.assert_is_file_and_not_symlink();
+        let state_at_initialization = FileState::NonEmpty {
             content: Vec::from("Hello world!".as_bytes()),
         };
-        path.assert_is_file();
-        Self { path, initial_state }
+        Self {
+            file_path,
+            state_at_initialization,
+        }
     }
 }
 impl AsPath for HelloWorldTxt {
     fn as_path(&self) -> &Path {
-        &self.path
+        &self.file_path
     }
 }
-impl CaptureableFilePath for HelloWorldTxt {}
-impl AsInitialFileStateRef for HelloWorldTxt {
-    fn initial_state(&self) -> &FileState {
-        &self.initial_state
-    }
-}
-impl AssertableInitialFileCapture for HelloWorldTxt {}
 impl AsRelativePath for HelloWorldTxt {
     fn as_path_relative_to_harness_root(&self) -> &Path {
         Path::new("./yes/hello-world.txt")
     }
 }
-/**This is a file residing at `./yes/no.bin` (relative to the root of the test harness).
+impl AsInitialFileStateRef for HelloWorldTxt {
+    fn initial_state(&self) -> &FileState {
+        &self.state_at_initialization
+    }
+}
+impl AssertableInitialFileCapture for HelloWorldTxt {}
+impl CaptureableFilePath for HelloWorldTxt {}
+/**This is a file residing at `./yes/no.bin` (relative to the root of the tree).
 
 <br>
 
 <sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
 pub struct NoBin {
-    path: PathBuf,
-    initial_state: FileState,
+    file_path: PathBuf,
+    state_at_initialization: FileState,
 }
 impl NoBin {
     #[track_caller]
-    fn new<S>(parent_path: PathBuf, file_name: S) -> Self
-    where
-        S: Into<String>,
-    {
-        let path = parent_path.join(file_name.into());
-        path.assert_not_exists();
+    fn initialize(parent_directory_path: &Path) -> Self {
+        let file_path = parent_directory_path.join("NoBin");
+        file_path.assert_not_exists();
         let binary_file_data = initialize_file_with_random_data(
-            &path,
+            &file_path,
             39581913123u64,
             16384usize,
         );
-        let initial_state = FileState::NonEmpty {
+        file_path.assert_is_file_and_not_symlink();
+        let state_at_initialization = FileState::NonEmpty {
             content: binary_file_data,
         };
-        path.assert_is_file();
-        Self { path, initial_state }
+        Self {
+            file_path,
+            state_at_initialization,
+        }
     }
 }
 impl AsPath for NoBin {
     fn as_path(&self) -> &Path {
-        &self.path
+        &self.file_path
     }
 }
-impl CaptureableFilePath for NoBin {}
-impl AsInitialFileStateRef for NoBin {
-    fn initial_state(&self) -> &FileState {
-        &self.initial_state
-    }
-}
-impl AssertableInitialFileCapture for NoBin {}
 impl AsRelativePath for NoBin {
     fn as_path_relative_to_harness_root(&self) -> &Path {
         Path::new("./yes/no.bin")
     }
 }
+impl AsInitialFileStateRef for NoBin {
+    fn initial_state(&self) -> &FileState {
+        &self.state_at_initialization
+    }
+}
+impl AssertableInitialFileCapture for NoBin {}
+impl CaptureableFilePath for NoBin {}
 /**This is a sub-directory residing at `./yes` (relative to the root of the test harness).
 
-This directory has the following entries:
-- `hello_world_txt` (see [`HelloWorldTxt`])
-- `no_bin` (see [`NoBin`])
+
+It contains the following files:
+- `HelloWorldTxt` (field `hello_world_txt`; see [`HelloWorldTxt`])
+- `NoBin` (field `no_bin`; see [`NoBin`])
+
 
 <br>
 
 <sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
 pub struct Yes {
     directory_path: PathBuf,
-    /**This is a file residing at `./yes/hello-world.txt` (relative to the root of the test harness).
+    /**This is a file residing at `./yes/hello-world.txt` (relative to the root of the tree).
 
 <br>
 
 <sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
     pub hello_world_txt: HelloWorldTxt,
-    /**This is a file residing at `./yes/no.bin` (relative to the root of the test harness).
+    /**This is a file residing at `./yes/no.bin` (relative to the root of the tree).
 
 <br>
 
@@ -193,19 +187,13 @@ pub struct Yes {
 }
 impl Yes {
     #[track_caller]
-    fn new<S>(parent_path: PathBuf, directory_name: S) -> Self
-    where
-        S: Into<String>,
-    {
-        let directory_path = parent_path.join(directory_name.into());
+    fn initialize(parent_directory_path: &Path) -> Self {
+        let directory_path = parent_directory_path.join("yes");
         directory_path.assert_not_exists();
         fs::create_dir(&directory_path).expect("failed to create directory");
         directory_path.assert_is_directory_and_empty();
-        let hello_world_txt = <HelloWorldTxt>::new(
-            directory_path.clone(),
-            "hello-world.txt",
-        );
-        let no_bin = <NoBin>::new(directory_path.clone(), "no.bin");
+        let hello_world_txt = <HelloWorldTxt>::initialize(&directory_path);
+        let no_bin = <NoBin>::initialize(&directory_path);
         Self {
             directory_path,
             hello_world_txt,
@@ -218,20 +206,21 @@ impl AsPath for Yes {
         &self.directory_path
     }
 }
-impl FileSystemHarnessDirectory for Yes {}
 impl AsRelativePath for Yes {
     fn as_path_relative_to_harness_root(&self) -> &Path {
         Path::new("./yes")
     }
 }
-/**A fs-more filesystem testing harness. Upon calling [`Self::initialize`],
-it sets up a temporary directory and initializes the entire configured file tree.
-When it's dropped or when [`Self::destroy`] is called, the temporary directory is removed.
+impl FileSystemHarnessDirectory for Yes {}
+/**`fs-more` filesystem tree for testing. Upon calling [`SimpleTree::initialize`],
+a temporary directory is set up, and the entire pre-defined filesystem tree is initialized.
+When [`SimpleTree::destroy`] is called (or when the struct is dropped), the temporary directory is removed,
+along with all of its contents.
 
-In addition to initializing the configured files and directories, a snapshot ("capture")
-is created for each file. This is the same as [`CaptureableFilePath::capture_with_content`],but the snapshot is created as tree initialization
+In addition to initializing the configured files and directories, a snapshot is created
+for each file (also called a "capture"). This is the same as [`CaptureableFilePath::capture_with_content`],but the snapshot is recorded at tree initialization.
 
-This harness has the following entries at the top level:
+This harness has the following sub-entries at the top level (files, sub-directories, ...):
 - `empty_txt` (see [`EmptyTxt`])
 - `yes` (see [`Yes`])
 
@@ -251,22 +240,8 @@ The full file tree is as follows:
 <sup>This tree and related code was automatically generated from the structure described in `simple.json`.</sup>*/
 pub struct SimpleTree {
     temporary_directory: TempDir,
-    /**This is a file residing at `./empty.txt` (relative to the root of the test harness).
-
-<br>
-
-<sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
-    pub empty_txt: EmptyTxt,
-    /**This is a sub-directory residing at `./yes` (relative to the root of the test harness).
-
-This directory has the following entries:
-- `hello_world_txt` (see [`HelloWorldTxt`])
-- `no_bin` (see [`NoBin`])
-
-<br>
-
-<sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
-    pub yes: Yes,
+    empty_txt: EmptyTxt,
+    yes: Yes,
 }
 impl FileSystemHarness for SimpleTree {
     #[track_caller]
@@ -275,11 +250,8 @@ impl FileSystemHarness for SimpleTree {
             .expect("failed to initialize temporary directory");
         let temporary_directory_path = temporary_directory.path();
         temporary_directory_path.assert_is_directory_and_empty();
-        let empty_txt = <EmptyTxt>::new(
-            temporary_directory_path.to_owned(),
-            "empty.txt",
-        );
-        let yes = <Yes>::new(temporary_directory_path.to_owned(), "yes");
+        let empty_txt = <EmptyTxt>::initialize(temporary_directory_path);
+        let yes = <Yes>::initialize(temporary_directory_path);
         Self {
             temporary_directory,
             empty_txt,
@@ -305,9 +277,9 @@ impl AsPath for SimpleTree {
         self.temporary_directory.path()
     }
 }
-impl FileSystemHarnessDirectory for SimpleTree {}
 impl AsRelativePath for SimpleTree {
     fn as_path_relative_to_harness_root(&self) -> &Path {
         Path::new(".")
     }
 }
+impl FileSystemHarnessDirectory for SimpleTree {}

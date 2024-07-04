@@ -1,0 +1,74 @@
+{
+  "name": "DeepSymlinkedTree",
+  "file_name": "deep_symlinked",
+  "structure": {
+    "entries": [
+      {
+        "type": "file",
+        "name": "a.bin",
+        "data": {
+          "type": "seeded-random",
+          "seed": 12345,
+          "file_size_bytes": 32768
+        }
+      },
+      {
+        "type": "directory",
+        "name": "foo",
+        "entries": [
+          {
+            "type": "file",
+            "name": "b.bin",
+            "data": {
+              "type": "seeded-random",
+              "seed": 54321,
+              "file_size_bytes": 65536
+            }
+          },
+          {
+            "type": "symlink",
+            "name": "symlink-to-d.bin",
+            "destination_entry_id": "d.bin"
+          },
+          {
+            "type": "directory",
+            "name": "bar",
+            "entries": [
+              {
+                "type": "file",
+                "name": "c.bin",
+                "data": {
+                  "type": "seeded-random",
+                  "seed": 54321,
+                  "file_size_bytes": 131072
+                }
+              },
+              {
+                "type": "directory",
+                "name": "hello",
+                "entries": [
+                  {
+                    "type": "directory",
+                    "name": "world",
+                    "entries": [
+                      {
+                        "type": "file",
+                        "name": "d.bin",
+                        "id": "d.bin",
+                        "data": {
+                          "type": "seeded-random",
+                          "seed": 54321,
+                          "file_size_bytes": 262144
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

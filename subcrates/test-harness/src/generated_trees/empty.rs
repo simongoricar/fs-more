@@ -1,5 +1,5 @@
 //! @generated
-//! 
+//!
 //! This code was automatically generated from "empty.json",
 //! a file that describes this filesystem tree harness for testing.
 //!
@@ -9,40 +9,33 @@
 //! .
 //! ```
 //!
-//! DO NOT MODIFY THIS FILE. INSTEAD, MODIFY THE SOURCE JSON DATA FILE,
-//! AND REGENERATE THIS FILE (see the CLI provided by the 
-//! test-harness-schema crate).
-    
+//! <sup>DO NOT MODIFY THIS FILE. INSTEAD, MODIFY THE SOURCE JSON DATA FILE,
+//! AND REGENERATE THIS FILE (see the CLI provided by the
+//! test-harness-schema crate).</sup>
+
 #![allow(unused_imports)]
 #![allow(clippy::disallowed_names)]
 #![allow(dead_code)]
 
 
 use std::fs;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 use tempfile::TempDir;
-use crate::trees::framework::FileSystemHarness;
-use crate::trees::framework::AsInitialFileStateRef;
-use crate::trees::framework::AssertableInitialFileCapture;
-use crate::trees::framework::FileSystemHarnessDirectory;
-use crate::trees::framework::AsRelativePath;
-use crate::trees::framework::initialize_empty_file;
-use crate::trees::framework::initialize_file_with_string;
-use crate::trees::framework::initialize_file_with_random_data;
-use crate::assertable::AsPath;
-use crate::assertable::AssertablePath;
-use crate::assertable::CaptureableFilePath;
-use crate::assertable::file::CapturedFileState;
-use crate::assertable::file::FileState;
+use crate::prelude::*;
+use crate::trees::{
+    initialize_empty_file, initialize_file_with_string, initialize_file_with_random_data,
+    initialize_symbolic_link, SymlinkDestinationType, AsInitialFileStateRef,
+};
 use fs_more_test_harness_generator::schema::FileDataConfiguration;
-/**A fs-more filesystem testing harness. Upon calling [`Self::initialize`],
-it sets up a temporary directory and initializes the entire configured file tree.
-When it's dropped or when [`Self::destroy`] is called, the temporary directory is removed.
+/**`fs-more` filesystem tree for testing. Upon calling [`EmptyTree::initialize`],
+a temporary directory is set up, and the entire pre-defined filesystem tree is initialized.
+When [`EmptyTree::destroy`] is called (or when the struct is dropped), the temporary directory is removed,
+along with all of its contents.
 
-In addition to initializing the configured files and directories, a snapshot ("capture")
-is created for each file. This is the same as [`CaptureableFilePath::capture_with_content`],but the snapshot is created as tree initialization
+In addition to initializing the configured files and directories, a snapshot is created
+for each file (also called a "capture"). This is the same as [`CaptureableFilePath::capture_with_content`],but the snapshot is recorded at tree initialization.
 
-This harness has the following entries at the top level:
+This harness has the following sub-entries at the top level (files, sub-directories, ...):
 
 
 
@@ -86,9 +79,9 @@ impl AsPath for EmptyTree {
         self.temporary_directory.path()
     }
 }
-impl FileSystemHarnessDirectory for EmptyTree {}
 impl AsRelativePath for EmptyTree {
     fn as_path_relative_to_harness_root(&self) -> &Path {
         Path::new(".")
     }
 }
+impl FileSystemHarnessDirectory for EmptyTree {}

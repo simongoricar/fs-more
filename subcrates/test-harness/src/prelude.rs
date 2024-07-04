@@ -1,4 +1,5 @@
 pub use crate::assert_matches;
+pub use crate::assertable::file::{CapturedFileState, FileState};
 pub use crate::assertable::{
     AsPath,
     AssertablePath,

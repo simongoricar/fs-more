@@ -21,6 +21,7 @@ use crate::assertable::{symlink_to_directory, symlink_to_file};
 /// Panicking is accepted for this function only because
 /// this is part of `fs-more`'s testing harness,
 /// and we *should panic on errors anyway*.
+#[allow(dead_code)]
 pub(crate) fn initialize_empty_file(file_path: &Path) {
     let mut file = OpenOptions::new()
         .create_new(true)
@@ -42,6 +43,7 @@ pub(crate) fn initialize_empty_file(file_path: &Path) {
 /// Panicking is accepted for this function only because
 /// this is part of `fs-more`'s testing harness,
 /// and we *should panic on errors anyway*.
+#[allow(dead_code)]
 pub(crate) fn initialize_file_with_string<S>(file_path: &Path, content: S)
 where
     S: Into<String>,
@@ -81,6 +83,7 @@ where
 /// Panicking is accepted for this function only because
 /// this is part of `fs-more`'s testing harness,
 /// and we *should panic on errors anyway*.
+#[allow(dead_code)]
 pub(crate) fn initialize_file_with_random_data(
     file_path: &Path,
     seed: u64,
@@ -124,12 +127,14 @@ pub(crate) fn initialize_file_with_random_data(
 
 
 #[derive(Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum SymlinkDestinationType {
     File,
     Directory,
 }
 
 
+#[allow(dead_code)]
 pub(crate) fn initialize_symbolic_link(
     symlink_file_path: &Path,
     destination_file_path: &Path,
