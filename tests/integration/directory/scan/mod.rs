@@ -1,71 +1,9 @@
-// pub mod old;
-
-use std::{
-    collections::HashSet,
-    path::{Path, PathBuf},
-};
-
 use fs_more::directory::{DirectoryScanDepthLimit, DirectoryScanOptionsV2, DirectoryScanner};
 use fs_more_test_harness::{
+    assert_path_list_fully_matches_set,
     prelude::*,
     trees::structures::{deep::DeepTree, simple::SimpleTree},
 };
-
-
-/// Asserts that all paths in the `scanned_paths` iterator
-/// appear in the `expected_set_of_paths` iterator (order is ignored).
-///
-/// If a path is missing, this function panics with the details.
-#[track_caller]
-fn assert_path_list_fully_matches_set<S, SP, D, DP>(scanned_paths: S, expected_set_of_paths: D)
-where
-    S: IntoIterator<Item = SP>,
-    SP: AsRef<Path>,
-    D: IntoIterator<Item = DP>,
-    DP: AsRef<Path>,
-{
-    let scanned_path_set: HashSet<PathBuf> = HashSet::from_iter(
-        scanned_paths
-            .into_iter()
-            .map(|path| path.as_ref().to_path_buf()),
-    );
-
-    let expected_path_set: HashSet<PathBuf> = HashSet::from_iter(
-        expected_set_of_paths
-            .into_iter()
-            .map(|path| path.as_ref().to_path_buf()),
-    );
-
-
-    for scanned_path in scanned_path_set.iter() {
-        if !expected_path_set.contains(scanned_path.as_path()) {
-            panic!(
-                "path \"{}\" was scanned, but not present in expected paths:\n\n\
-                {:?}\n  \
-                  (scanned) versus (expected)\n\
-                {:?}\n",
-                scanned_path.display(),
-                scanned_path_set,
-                expected_path_set
-            );
-        }
-    }
-
-    for expected_path in expected_path_set.iter() {
-        if !scanned_path_set.contains(expected_path.as_path()) {
-            panic!(
-                "path \"{}\" was expected, but not present in scanned paths:\n\n\
-                {:?}\n  \
-                  (scanned) versus (expected)\n\
-                {:?}\n",
-                expected_path.display(),
-                scanned_path_set,
-                expected_path_set
-            );
-        }
-    }
-}
-
 
 
 

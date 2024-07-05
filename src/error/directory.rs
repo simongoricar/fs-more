@@ -316,11 +316,12 @@ pub enum MoveDirectoryPreparationError {
 
     /// Source directory entry scanning error.
     #[error(transparent)]
-    DirectoryScanError(#[from] DirectoryScanError),
+    DirectoryScanError(#[from] DirectoryScanErrorV2),
 
+    // TODO remove
     /// Source directory size scanning error.
-    #[error(transparent)]
-    DirectorySizeScanError(#[from] DirectorySizeScanError),
+    // #[error(transparent)]
+    // DirectorySizeScanError(#[from] DirectorySizeScanErrorV2),
 
     /// Directory copy planning error. These errors can happen
     /// when a move-by-rename fails and a copy-and-delete is attempted instead.
@@ -599,8 +600,10 @@ pub enum DirectoryScanError {
 
 
 
+/*
 /// An error that can occur when querying size of a scanned directory.
 #[derive(Error, Debug)]
+#[deprecated]
 pub enum DirectorySizeScanError {
     /// The provided directory path does not exist.
     #[error("the provided scan directory path doesn't exist: {}", .path.display())]
@@ -664,11 +667,80 @@ pub enum DirectorySizeScanError {
         error: std::io::Error,
     },
 }
+ */
+
+
+/// An error that can occur when querying size of a scanned directory.
+#[derive(Error, Debug)]
+pub enum DirectorySizeScanErrorV2 {
+    /// An error ocurred while scanning the directory.
+    #[error("failed while scanning directory: {}", .directory_path.display())]
+    ScanError {
+        /// The scanning error.
+        #[source]
+        error: DirectoryScanErrorV2,
+
+        /// Base directory path for the scan.
+        directory_path: PathBuf,
+    },
+}
 
 
 
 /// An error that can occur when checking whether a directory is empty.
 #[derive(Error, Debug)]
+pub enum DirectoryEmptinessScanErrorV2 {
+    /// The provided directory path to scan doesn't exist.
+    #[error("path doesn't exist: {}", .path.display())]
+    NotFound {
+        /// The directory path that couldn't be scanned.
+        path: PathBuf,
+    },
+
+    /// The provided directory path exists, but is not a directory.
+    #[error(
+        "path exists, but is not a directory nor a symlink to one: {}",
+        .path.display()
+    )]
+    NotADirectory {
+        /// The directory path that couldn't be scanned.
+        path: PathBuf,
+    },
+
+    /// The provided directory path is a directory,
+    /// but could not be read due to an IO error.
+    ///
+    /// The inner [`std::io::Error`] will likely describe a more precise cause of this error.
+    #[error("unable to read directory: {}", .directory_path.display())]
+    UnableToReadDirectory {
+        /// Directory path that could not be read.
+        directory_path: PathBuf,
+
+        /// IO error describing why the given root directory could not be read.
+        #[source]
+        error: std::io::Error,
+    },
+
+    /// A directory contains an entry (i.e. directory or file)
+    /// that could not be read due to an IO error.
+    ///
+    /// The inner [`std::io::Error`] will likely describe a more precise cause of this error.
+    #[error("unable to read directory entry for {}", .directory_path.display())]
+    UnableToReadDirectoryEntry {
+        /// Directory path whose entries could not be read.
+        directory_path: PathBuf,
+
+        /// IO error describing why the given file or directory could not be read.
+        #[source]
+        error: std::io::Error,
+    },
+}
+
+
+/*
+/// An error that can occur when checking whether a directory is empty.
+#[derive(Error, Debug)]
+#[deprecated]
 pub enum IsDirectoryEmptyError {
     /// The provided path doesn't exist.
     #[error("given path does not exist: {}", .directory_path.display())]
@@ -696,7 +768,7 @@ pub enum IsDirectoryEmptyError {
         #[source]
         error: std::io::Error,
     },
-}
+} */
 
 
 /// An error that can occur when scanning a directory.

@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use_enabled_fs_module!();
 
 use super::{
+    collected::collect_directory_statistics_via_scan,
     copy_directory_unchecked,
     execute_prepared_copy_directory_with_progress_unchecked,
     prepared::{
@@ -19,9 +20,6 @@ use super::{
     DirectoryCopyOperation,
     DirectoryCopyOptions,
     DirectoryCopyWithProgressOptions,
-    DirectoryScan,
-    DirectoryScanDepthLimit,
-    DirectoryScanOptions,
 };
 use crate::{
     error::{MoveDirectoryError, MoveDirectoryExecutionError, MoveDirectoryPreparationError},
@@ -119,23 +117,12 @@ struct DirectoryContentDetails {
 fn collect_source_directory_details(
     source_directory_path: &Path,
 ) -> Result<DirectoryContentDetails, MoveDirectoryPreparationError> {
-    let scan = DirectoryScan::scan_with_options(
-        source_directory_path,
-        DirectoryScanOptions {
-            maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
-            follow_symbolic_links: false,
-        },
-    )
-    .map_err(MoveDirectoryPreparationError::DirectoryScanError)?;
-
-    let total_size_in_bytes = scan
-        .total_size_in_bytes()
-        .map_err(MoveDirectoryPreparationError::DirectorySizeScanError)?;
+    let directory_statistics = collect_directory_statistics_via_scan(source_directory_path)?;
 
     Ok(DirectoryContentDetails {
-        total_bytes: total_size_in_bytes,
-        total_files: scan.files().len(),
-        total_directories: scan.directories().len(),
+        total_bytes: directory_statistics.total_bytes,
+        total_files: directory_statistics.total_files,
+        total_directories: directory_statistics.total_directories,
     })
 }
 

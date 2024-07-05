@@ -21,3 +21,19 @@ macro_rules! use_enabled_fs_module {
         use fs_err as fs;
     };
 }
+
+macro_rules! try_some {
+    ($expression:expr) => {
+        match $expression {
+            Ok(value) => value,
+            Err(error) => return Some(Err(error)),
+        }
+    };
+
+    ($expression:expr, $error_mapper:expr) => {
+        match $expression {
+            Ok(value) => value,
+            Err(error) => return Some(Err(error).map_err($error_mapper)),
+        }
+    };
+}
