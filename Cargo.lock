@@ -235,7 +235,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fs-more-test-harness-generator"
+name = "fs-more-test-harness-tree-generator"
 version = "0.6.0"
 dependencies = [
  "clap",

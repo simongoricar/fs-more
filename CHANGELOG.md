@@ -102,7 +102,7 @@ This changelog likely doesn't cover all of the changes that the crate got, but h
 - The `miette` feature flag has been removed. It previously just derived `Diagnostic` on all error types,
   we did not take advantage of anything that the end user could not do with `into_diagnostic` themselves.
 - The `fs_more_test_harness_macros` procedural macro crate has been removed in favor of the new
-  `fs_more_test_harness_generator` CLI crate, which is part of the new test harness.
+  `fs_more_test_harness_tree_generator` CLI crate, which is part of the new test harness.
 
 
 

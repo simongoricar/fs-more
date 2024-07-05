@@ -43,7 +43,7 @@ command = "cargo"
 args = [
     "run",
     "--package",
-    "fs-more-test-harness-generator",
+    "fs-more-test-harness-tree-generator",
     "--",
     "generate-tree-sources",
     "-i",
@@ -62,7 +62,7 @@ command = "cargo"
 args = [
     "run",
     "--package",
-    "fs-more-test-harness-generator",
+    "fs-more-test-harness-tree-generator",
     "--",
     "generate-tree-json-schema",
     "--json-schema-output-file-path",

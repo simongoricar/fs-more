@@ -18,7 +18,7 @@ pub trait FileSystemHarness: AsPath {
     /// see the [harness generator] for more info.
     ///
     ///
-    /// [harness generator]: fs_more_test_harness_generator
+    /// [harness generator]: fs_more_test_harness_tree_generator
     fn initialize() -> Self;
 
     /// Consumes `self` and cleans up the entire temporary directory
