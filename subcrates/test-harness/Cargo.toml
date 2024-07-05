@@ -6,8 +6,10 @@ publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+
 [dependencies]
-fs-more-test-harness-generator = { path = "../test-harness-generator" }
+fs-more = { path = "../.." }
+fs-more-test-harness-tree-schema = { path = "../test-harness-tree-schema" }
 
 dunce = { version = "1.0.4" }
 rand = "0.8.5"

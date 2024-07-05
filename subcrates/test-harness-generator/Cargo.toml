@@ -4,7 +4,11 @@ version = "0.6.0"
 edition = "2021"
 publish = false
 
+
 [dependencies]
+fs-more-test-harness-tree-schema = { path = "../test-harness-tree-schema", features = ["serializable_tree_schema"] }
+
+
 thiserror = "1.0.58"
 miette = { version = "7.2.0", features = ["fancy"] }
 

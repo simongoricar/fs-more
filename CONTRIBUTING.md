@@ -177,9 +177,9 @@ It provides:
 
 
 Currently, three filesystem tree harnesses are available:
-- `DeepTree` (`subcrates/test-harness/src/generated_trees/deep.rs`),
-- `SimpleTree` (`subcrates/test-harness/src/generated_trees/simple.rs`), and
-- `EmptyTree` (`subcrates/test-harness/src/generated_trees/empty.rs`),
+- `DeepTree` (`subcrates/test-harness/src/trees/generated/deep.rs`),
+- `SimpleTree` (`subcrates/test-harness/src/trees/generated/simple.rs`), and
+- `EmptyTree` (`subcrates/test-harness/src/trees/generated/empty.rs`),
 
 > If you're looking for more context about how this harness is constructed
 > and generated, take a look at the next chapter.
@@ -313,7 +313,7 @@ cargo make generate-test-harness-trees
 ```
 
 This will collect all the JSON tree definitions inside `subcrates/test-harness/trees`
-and generate Rust modules inside `subcrates/test-harness/src/generated_trees`.
+and generate Rust modules inside `subcrates/test-harness/src/trees/generated`.
 Those are, in turn, exposed for usage in tests as `fs_more_test_harness::trees`.
 
 

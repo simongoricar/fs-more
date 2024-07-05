@@ -1,6 +1,3 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
 mod file;
 pub use file::*;
 mod directory;
@@ -9,28 +6,37 @@ mod symlink;
 pub use symlink::*;
 
 
+// TODO refactor this out into either the main test harness or a separate crate (to avoid compiling the entire generator crate for testing)
 
 
 /// Describes an entry in a tree - a file or a directory.
 ///
 /// A directory can additionally contain one or more files
 /// or subdirectories.
-#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
-#[serde(tag = "type")]
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "serializable_tree_schema",
+    derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema)
+)]
+#[cfg_attr(feature = "serializable_tree_schema", serde(tag = "type"))]
 pub enum FileSystemHarnessEntry {
-    #[serde(rename = "file")]
+    #[cfg_attr(feature = "serializable_tree_schema", serde(rename = "file"))]
     File(FileEntry),
 
-    #[serde(rename = "directory")]
+    #[cfg_attr(feature = "serializable_tree_schema", serde(rename = "directory"))]
     Directory(DirectoryEntry),
 
-    #[serde(rename = "symlink")]
+    #[cfg_attr(feature = "serializable_tree_schema", serde(rename = "symlink"))]
     Symlink(SymlinkEntry),
 }
 
 
 
-#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "serializable_tree_schema",
+    derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema)
+)]
 pub struct FileSystemHarnessStructure {
     /// A list of hiearhical filesystem entries.
     /// The first level of these entries will reside in the root directory
@@ -41,7 +47,11 @@ pub struct FileSystemHarnessStructure {
 
 
 
-#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "serializable_tree_schema",
+    derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema)
+)]
 pub struct FileSystemHarnessSchema {
     /// Name of the root struct for the generated filesystem harness.
     /// Will be converted to upper camel case if not already.

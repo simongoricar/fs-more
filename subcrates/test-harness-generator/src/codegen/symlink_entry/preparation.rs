@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use fs_more_test_harness_tree_schema::schema::SymlinkEntry;
 use heck::{ToSnakeCase, ToUpperCamelCase};
 use itertools::Itertools;
 use path_slash::PathBufExt;
@@ -7,7 +8,7 @@ use quote::format_ident;
 use syn::Ident;
 
 use super::SymlinkEntryError;
-use crate::{codegen::CodeGenerationContext, schema::SymlinkEntry};
+use crate::codegen::CodeGenerationContext;
 
 
 

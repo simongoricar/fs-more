@@ -32,7 +32,8 @@ include = [
 [workspace]
 members = [
     "subcrates/test-harness",
-    "subcrates/test-harness-generator"
+    "subcrates/test-harness-generator",
+    "subcrates/test-harness-tree-schema"
 ]
 
 [features]

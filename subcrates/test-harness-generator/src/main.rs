@@ -12,14 +12,13 @@ use cli::{
     GenerateTreeSourcesCommandArguments,
 };
 use codegen::final_source_file::generate_rust_source_file_for_schema;
+use fs_more_test_harness_tree_schema::schema::FileSystemHarnessSchema;
 use miette::{miette, Context, IntoDiagnostic, Result};
-use schema::FileSystemHarnessSchema;
 use schemars::gen::SchemaGenerator;
 
 mod cli;
 mod codegen;
 mod name_collision;
-mod schema;
 
 
 
@@ -115,15 +114,15 @@ fn get_generated_tree_directory(
         ));
     }
 
-    let generated_trees_directory_path = src_directory_path.join("generated_trees");
+    let generated_trees_directory_path = src_directory_path.join("trees/generated");
     if !generated_trees_directory_path.exists() {
         if create_missing_generated_trees_directory {
             fs::create_dir(&generated_trees_directory_path)
                 .into_diagnostic()
-                .wrap_err("Unable to create missing src/generated_trees directory.")?;
+                .wrap_err("Unable to create missing src/trees/generated directory.")?;
         } else {
             return Err(miette!(
-                "Invalid test harness crate directory path: missing src/generated_trees path"
+                "Invalid test harness crate directory path: missing src/trees/generated path"
             ));
         }
     }

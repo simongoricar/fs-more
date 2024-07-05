@@ -11,6 +11,7 @@ use entry_preparation::{
     construct_field_post_initializer_code,
     prepare_tree_entries,
 };
+use fs_more_test_harness_tree_schema::schema::FileSystemHarnessSchema;
 use heck::ToUpperCamelCase;
 use quote::{format_ident, quote};
 use thiserror::Error;
@@ -19,7 +20,6 @@ use super::{directory_entry::DirectoryEntryError, symlink_entry::SymlinkEntryErr
 use crate::{
     codegen::{CodeGenerationContext, PreparedEntryRegistry},
     name_collision::NameCollisionAvoider,
-    schema::FileSystemHarnessSchema,
 };
 
 
@@ -197,7 +197,7 @@ pub fn generate_rust_source_file_for_schema(
             AsInitialFileStateRef
         };
 
-        use fs_more_test_harness_generator::schema::FileDataConfiguration;
+        use fs_more_test_harness_tree_schema::schema::FileDataConfiguration;
 
 
         #token_stream_to_prepend_to_output

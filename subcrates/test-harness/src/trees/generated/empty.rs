@@ -26,7 +26,7 @@ use crate::trees::{
     initialize_empty_file, initialize_file_with_string, initialize_file_with_random_data,
     initialize_symbolic_link, SymlinkDestinationType, AsInitialFileStateRef,
 };
-use fs_more_test_harness_generator::schema::FileDataConfiguration;
+use fs_more_test_harness_tree_schema::schema::FileDataConfiguration;
 /**`fs-more` filesystem tree for testing. Upon calling [`EmptyTree::initialize`],
 a temporary directory is set up, and the entire pre-defined filesystem tree is initialized.
 When [`EmptyTree::destroy`] is called (or when the struct is dropped), the temporary directory is removed,

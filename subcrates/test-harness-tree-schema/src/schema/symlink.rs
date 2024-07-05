@@ -1,7 +1,8 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "serializable_tree_schema",
+    derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema)
+)]
 pub struct SymlinkEntry {
     /// Symlink name (including extension).
     pub name: String,

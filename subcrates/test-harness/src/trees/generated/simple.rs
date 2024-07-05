@@ -30,7 +30,7 @@ use crate::trees::{
     initialize_empty_file, initialize_file_with_string, initialize_file_with_random_data,
     initialize_symbolic_link, SymlinkDestinationType, AsInitialFileStateRef,
 };
-use fs_more_test_harness_generator::schema::FileDataConfiguration;
+use fs_more_test_harness_tree_schema::schema::FileDataConfiguration;
 /**This is a file residing at `./empty.txt` (relative to the root of the tree).
 
 <br>
@@ -240,8 +240,8 @@ The full file tree is as follows:
 <sup>This tree and related code was automatically generated from the structure described in `simple.json`.</sup>*/
 pub struct SimpleTree {
     temporary_directory: TempDir,
-    empty_txt: EmptyTxt,
-    yes: Yes,
+    pub empty_txt: EmptyTxt,
+    pub yes: Yes,
 }
 impl FileSystemHarness for SimpleTree {
     #[track_caller]

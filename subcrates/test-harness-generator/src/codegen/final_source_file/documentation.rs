@@ -1,11 +1,13 @@
 use std::collections::VecDeque;
 
+use fs_more_test_harness_tree_schema::schema::{
+    FileDataConfiguration,
+    FileSystemHarnessEntry,
+    FileSystemHarnessSchema,
+};
 use itertools::Itertools;
 
-use crate::{
-    codegen::AnyGeneratedEntry,
-    schema::{FileDataConfiguration, FileSystemHarnessEntry, FileSystemHarnessSchema},
-};
+use crate::codegen::AnyGeneratedEntry;
 
 
 

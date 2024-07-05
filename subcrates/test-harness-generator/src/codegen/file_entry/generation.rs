@@ -1,9 +1,9 @@
+use fs_more_test_harness_tree_schema::schema::FileDataConfiguration;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::Ident;
 
 use super::PreparedFileEntry;
-use crate::schema::FileDataConfiguration;
 
 
 

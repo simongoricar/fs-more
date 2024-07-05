@@ -1,9 +1,10 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
 use super::FileSystemHarnessEntry;
 
-#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "serializable_tree_schema",
+    derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema)
+)]
 pub struct DirectoryEntry {
     /// Directory name.
     pub name: String,

@@ -63,7 +63,7 @@ pub(super) fn generate_code_for_all_tree_sub_entries(
 
 
                 let struct_field_specifier = quote! {
-                    #actual_field_name_ident_on_parent: #field_type_ident
+                    pub #actual_field_name_ident_on_parent: #field_type_ident
                 };
 
                 let struct_field_name = quote! {
@@ -91,7 +91,7 @@ pub(super) fn generate_code_for_all_tree_sub_entries(
 
 
                 let struct_field_specifier = quote! {
-                    #actual_field_name_ident_on_parent: #field_type_ident
+                    pub #actual_field_name_ident_on_parent: #field_type_ident
                 };
 
                 let struct_field_name = quote! {
@@ -129,7 +129,7 @@ pub(super) fn generate_code_for_all_tree_sub_entries(
 
 
                 let struct_field_specifier = quote! {
-                    #actual_field_name_ident_on_parent: #field_type_ident
+                    pub #actual_field_name_ident_on_parent: #field_type_ident
                 };
 
                 let struct_field_name = quote! {

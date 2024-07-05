@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use fs_more_test_harness_tree_schema::schema::{FileSystemHarnessEntry, FileSystemHarnessSchema};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Ident;
@@ -14,7 +15,6 @@ use crate::{
         CodeGenerationContext,
     },
     name_collision::NameCollisionAvoider,
-    schema::{FileSystemHarnessEntry, FileSystemHarnessSchema},
 };
 
 

@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use fs_more_test_harness_tree_schema::schema::{DirectoryEntry, FileSystemHarnessEntry};
 use heck::{ToSnakeCase, ToUpperCamelCase};
 use itertools::Itertools;
 use path_slash::PathBufExt;
@@ -15,7 +16,6 @@ use crate::{
         CodeGenerationContext,
     },
     name_collision::NameCollisionAvoider,
-    schema::{DirectoryEntry, FileSystemHarnessEntry},
 };
 
 

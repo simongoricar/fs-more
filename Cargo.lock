@@ -225,7 +225,8 @@ version = "0.6.0"
 dependencies = [
  "assert_matches",
  "dunce",
- "fs-more-test-harness-generator",
+ "fs-more",
+ "fs-more-test-harness-tree-schema",
  "humansize",
  "rand",
  "rand_chacha",
@@ -238,6 +239,7 @@ name = "fs-more-test-harness-generator"
 version = "0.6.0"
 dependencies = [
  "clap",
+ "fs-more-test-harness-tree-schema",
  "heck",
  "humansize",
  "itertools",
@@ -251,6 +253,14 @@ dependencies = [
  "serde_json",
  "syn",
  "thiserror",
+]
+
+[[package]]
+name = "fs-more-test-harness-tree-schema"
+version = "0.1.0"
+dependencies = [
+ "schemars",
+ "serde",
 ]
 
 [[package]]
