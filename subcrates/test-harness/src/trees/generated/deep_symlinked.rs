@@ -48,7 +48,7 @@ pub struct ABin {
 impl ABin {
     #[track_caller]
     fn initialize(parent_directory_path: &Path) -> Self {
-        let file_path = parent_directory_path.join("ABin");
+        let file_path = parent_directory_path.join("a.bin");
         file_path.assert_not_exists();
         let binary_file_data = initialize_file_with_random_data(
             &file_path,
@@ -94,7 +94,7 @@ pub struct BBin {
 impl BBin {
     #[track_caller]
     fn initialize(parent_directory_path: &Path) -> Self {
-        let file_path = parent_directory_path.join("BBin");
+        let file_path = parent_directory_path.join("b.bin");
         file_path.assert_not_exists();
         let binary_file_data = initialize_file_with_random_data(
             &file_path,
@@ -183,7 +183,7 @@ pub struct CBin {
 impl CBin {
     #[track_caller]
     fn initialize(parent_directory_path: &Path) -> Self {
-        let file_path = parent_directory_path.join("CBin");
+        let file_path = parent_directory_path.join("c.bin");
         file_path.assert_not_exists();
         let binary_file_data = initialize_file_with_random_data(
             &file_path,
@@ -229,7 +229,7 @@ pub struct DBin {
 impl DBin {
     #[track_caller]
     fn initialize(parent_directory_path: &Path) -> Self {
-        let file_path = parent_directory_path.join("DBin");
+        let file_path = parent_directory_path.join("d.bin");
         file_path.assert_not_exists();
         let binary_file_data = initialize_file_with_random_data(
             &file_path,
@@ -267,7 +267,7 @@ impl CaptureableFilePath for DBin {}
 
 
 It contains the following files:
-- `DBin` (field `d_bin`; see [`DBin`])
+- `d.bin` (field `d_bin`; see [`DBin`])
 
 
 <br>
@@ -320,7 +320,7 @@ pub struct Hello {
 
 
 It contains the following files:
-- `DBin` (field `d_bin`; see [`DBin`])
+- `d.bin` (field `d_bin`; see [`DBin`])
 
 
 <br>
@@ -356,7 +356,7 @@ impl FileSystemHarnessDirectory for Hello {}
 It contains the following sub-directories:
 - `hello` (field `hello`; see [`Hello`])
 It contains the following files:
-- `CBin` (field `c_bin`; see [`CBin`])
+- `c.bin` (field `c_bin`; see [`CBin`])
 
 
 <br>
@@ -415,7 +415,7 @@ impl FileSystemHarnessDirectory for Bar {}
 It contains the following sub-directories:
 - `bar` (field `bar`; see [`Bar`])
 It contains the following files:
-- `BBin` (field `b_bin`; see [`BBin`])
+- `b.bin` (field `b_bin`; see [`BBin`])
 It contains the following symlinks:
 - `symlink-to-d.bin` (field `symlink_to_d_bin`; see [`SymlinkToDBin`])
 
@@ -444,7 +444,7 @@ pub struct Foo {
 It contains the following sub-directories:
 - `hello` (field `hello`; see [`Hello`])
 It contains the following files:
-- `CBin` (field `c_bin`; see [`CBin`])
+- `c.bin` (field `c_bin`; see [`CBin`])
 
 
 <br>

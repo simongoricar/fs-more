@@ -67,7 +67,7 @@ pub(crate) fn prepare_file_entry(
 
     PreparedFileEntry {
         entry_id: file.id.to_owned(),
-        file_name: file_struct_name,
+        file_name: file.name.clone(),
         file_path_relative_to_tree_root: file_relative_path_string,
         file_data: file
             .data

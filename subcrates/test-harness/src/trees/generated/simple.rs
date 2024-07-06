@@ -43,7 +43,7 @@ pub struct EmptyTxt {
 impl EmptyTxt {
     #[track_caller]
     fn initialize(parent_directory_path: &Path) -> Self {
-        let file_path = parent_directory_path.join("EmptyTxt");
+        let file_path = parent_directory_path.join("empty.txt");
         file_path.assert_not_exists();
         initialize_empty_file(&file_path);
         file_path.assert_is_file_and_not_symlink();
@@ -83,7 +83,7 @@ pub struct HelloWorldTxt {
 impl HelloWorldTxt {
     #[track_caller]
     fn initialize(parent_directory_path: &Path) -> Self {
-        let file_path = parent_directory_path.join("HelloWorldTxt");
+        let file_path = parent_directory_path.join("hello-world.txt");
         file_path.assert_not_exists();
         initialize_file_with_string(&file_path, "Hello world!");
         file_path.assert_is_file_and_not_symlink();
@@ -125,7 +125,7 @@ pub struct NoBin {
 impl NoBin {
     #[track_caller]
     fn initialize(parent_directory_path: &Path) -> Self {
-        let file_path = parent_directory_path.join("NoBin");
+        let file_path = parent_directory_path.join("no.bin");
         file_path.assert_not_exists();
         let binary_file_data = initialize_file_with_random_data(
             &file_path,
@@ -163,8 +163,8 @@ impl CaptureableFilePath for NoBin {}
 
 
 It contains the following files:
-- `HelloWorldTxt` (field `hello_world_txt`; see [`HelloWorldTxt`])
-- `NoBin` (field `no_bin`; see [`NoBin`])
+- `hello-world.txt` (field `hello_world_txt`; see [`HelloWorldTxt`])
+- `no.bin` (field `no_bin`; see [`NoBin`])
 
 
 <br>
