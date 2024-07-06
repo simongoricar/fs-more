@@ -673,7 +673,7 @@ pub enum DirectorySizeScanError {
 /// An error that can occur when querying size of a scanned directory.
 #[derive(Error, Debug)]
 pub enum DirectorySizeScanErrorV2 {
-    /// An error ocurred while scanning the directory.
+    /// An error occurred while scanning the directory.
     #[error("failed while scanning directory: {}", .directory_path.display())]
     ScanError {
         /// The scanning error.
