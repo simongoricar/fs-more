@@ -118,7 +118,7 @@ impl DestinationDirectoryRule {
         )
     }
 
-    pub(crate) fn ignores_existing_destination_sub_directories(&self) -> bool {
+    pub(crate) fn allows_existing_destination_subdirectories(&self) -> bool {
         matches!(
             self,
             Self::AllowNonEmpty {

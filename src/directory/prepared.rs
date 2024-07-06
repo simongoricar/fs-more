@@ -527,14 +527,14 @@ fn check_operation_queue_for_collisions(
     queue: &[QueuedOperation],
     destination_directory_rules: DestinationDirectoryRule,
 ) -> Result<(), DirectoryExecutionPlanError> {
-    let can_overwrite_existing_destination_files =
+    let overwriting_existing_destination_files_allowed =
         destination_directory_rules.allows_overwriting_existing_destination_files();
 
-    let should_ignore_existing_destination_sub_directory =
-        destination_directory_rules.ignores_existing_destination_sub_directories();
+    let existing_destination_subdirectories_allowed =
+        destination_directory_rules.allows_existing_destination_subdirectories();
 
 
-    if can_overwrite_existing_destination_files && should_ignore_existing_destination_sub_directory
+    if overwriting_existing_destination_files_allowed && existing_destination_subdirectories_allowed
     {
         // There is nothing to check, as we can have any collisions we want
         // if we allow everything to be overwritten.
@@ -548,7 +548,7 @@ fn check_operation_queue_for_collisions(
                 destination_file_path,
                 ..
             } => {
-                if !can_overwrite_existing_destination_files {
+                if !overwriting_existing_destination_files_allowed {
                     let destination_file_exists =
                         destination_file_path.try_exists().map_err(|error| {
                             DirectoryExecutionPlanError::UnableToAccess {
@@ -568,7 +568,7 @@ fn check_operation_queue_for_collisions(
                 destination_directory_path,
                 ..
             } => {
-                if !should_ignore_existing_destination_sub_directory {
+                if !existing_destination_subdirectories_allowed {
                     let destination_directory_exists = destination_directory_path
                         .try_exists()
                         .map_err(|error| DirectoryExecutionPlanError::UnableToAccess {

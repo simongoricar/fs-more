@@ -129,7 +129,7 @@ pub(crate) fn copy_directory_unchecked(
 
     let can_ignore_existing_sub_directories = options
         .destination_directory_rule
-        .ignores_existing_destination_sub_directories();
+        .allows_existing_destination_subdirectories();
 
 
     // We have the entire queue of operations, and we've made sure there are
