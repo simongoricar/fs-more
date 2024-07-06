@@ -6,7 +6,7 @@ use fs_more::{
         DirectoryCopyProgress,
         DirectoryCopyWithProgressOptions,
         DirectoryScanDepthLimit,
-        DirectoryScanOptions,
+        DirectoryScanOptionsV2,
         ExistingSubDirectoryBehaviour,
     },
     error::{
@@ -18,6 +18,8 @@ use fs_more::{
     file::{ExistingFileBehaviour, FileCopyOptions},
 };
 use fs_more_test_harness::{
+    collect_directory_statistics_via_scan,
+    collect_directory_statistics_via_scan_with_options,
     prelude::*,
     trees::structures::{deep::DeepTree, empty::EmptyTree},
 };
@@ -30,16 +32,7 @@ pub fn copy_directory_with_progress_creates_an_identical_copy() -> TestResult {
     let empty_harness = EmptyTree::initialize();
 
 
-    let deep_harness_scan = fs_more::directory::DirectoryScan::scan_with_options(
-        deep_harness.as_path(),
-        DirectoryScanOptions {
-            maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
-            follow_symbolic_links: false,
-        },
-    )
-    .unwrap();
-
-    let deep_harness_size_bytes = deep_harness_scan.total_size_in_bytes().unwrap();
+    let deep_harness_stats = collect_directory_statistics_via_scan(deep_harness.as_path()).unwrap();
 
 
     let mut last_progress_report: Option<DirectoryCopyProgress> = None;
@@ -144,24 +137,24 @@ pub fn copy_directory_with_progress_creates_an_identical_copy() -> TestResult {
         last_progress_report.total_operations,
     );
 
-    assert_eq!(last_progress_report.bytes_total, deep_harness_size_bytes);
+    assert_eq!(last_progress_report.bytes_total, deep_harness_stats.total_bytes);
 
-    assert_eq!(last_progress_report.bytes_total, last_progress_report.bytes_finished,);
+    assert_eq!(last_progress_report.bytes_total, last_progress_report.bytes_finished);
 
-    assert_eq!(finished_copy.total_bytes_copied, last_progress_report.bytes_finished,);
+    assert_eq!(finished_copy.total_bytes_copied, last_progress_report.bytes_finished);
 
-    assert_eq!(last_progress_report.files_copied, finished_copy.files_copied,);
+    assert_eq!(last_progress_report.files_copied, finished_copy.files_copied);
 
     assert_eq!(
         last_progress_report.directories_created,
         finished_copy.directories_created
     );
 
-    assert_eq!(deep_harness_scan.files().len(), finished_copy.files_copied,);
+    assert_eq!(deep_harness_stats.total_files, finished_copy.files_copied);
 
     assert_eq!(
-        deep_harness_scan.directories().len(),
-        finished_copy.directories_created,
+        deep_harness_stats.total_directories,
+        finished_copy.directories_created
     );
 
 
@@ -181,21 +174,22 @@ pub fn copy_directory_with_progress_respects_copy_depth_limit() -> TestResult {
     let empty_harness = EmptyTree::initialize();
 
 
-    const MAXIMUM_DEPTH: usize = 2;
+    const MAXIMUM_SCAN_DEPTH: DirectoryScanDepthLimit =
+        DirectoryScanDepthLimit::Limited { maximum_depth: 2 };
+
+    const MAXIMUM_COPY_DEPTH: CopyDirectoryDepthLimit =
+        CopyDirectoryDepthLimit::Limited { maximum_depth: 2 };
 
 
-    let deep_harness_scan = fs_more::directory::DirectoryScan::scan_with_options(
+    let deep_harness_stats = collect_directory_statistics_via_scan_with_options(
         deep_harness.as_path(),
-        DirectoryScanOptions {
-            maximum_scan_depth: DirectoryScanDepthLimit::Limited {
-                maximum_depth: MAXIMUM_DEPTH,
-            },
-            follow_symbolic_links: false,
+        DirectoryScanOptionsV2 {
+            yield_base_directory: false,
+            maximum_scan_depth: MAXIMUM_SCAN_DEPTH,
+            ..Default::default()
         },
     )
     .unwrap();
-
-    let deep_harness_size_bytes = deep_harness_scan.total_size_in_bytes().unwrap();
 
 
     let finished_copy = fs_more::directory::copy_directory_with_progress(
@@ -203,9 +197,7 @@ pub fn copy_directory_with_progress_respects_copy_depth_limit() -> TestResult {
         empty_harness.as_path(),
         DirectoryCopyWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
-            copy_depth_limit: CopyDirectoryDepthLimit::Limited {
-                maximum_depth: MAXIMUM_DEPTH,
-            },
+            copy_depth_limit: MAXIMUM_COPY_DEPTH,
             ..Default::default()
         },
         |_| {},
@@ -213,22 +205,14 @@ pub fn copy_directory_with_progress_respects_copy_depth_limit() -> TestResult {
     .unwrap();
 
 
-    assert_eq!(finished_copy.total_bytes_copied, deep_harness_size_bytes);
+    assert_eq!(finished_copy.total_bytes_copied, deep_harness_stats.total_bytes);
 
 
-    let destination_harness_scan = fs_more::directory::DirectoryScan::scan_with_options(
-        empty_harness.as_path(),
-        DirectoryScanOptions {
-            maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
-            follow_symbolic_links: false,
-        },
-    )
-    .unwrap();
-
-    let destination_harness_size_bytes = destination_harness_scan.total_size_in_bytes().unwrap();
+    let destination_harness_stats =
+        collect_directory_statistics_via_scan(empty_harness.as_path()).unwrap();
 
 
-    assert_eq!(deep_harness_size_bytes, destination_harness_size_bytes);
+    assert_eq!(deep_harness_stats.total_bytes, destination_harness_stats.total_bytes);
 
 
     empty_harness.destroy();

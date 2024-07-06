@@ -5,7 +5,6 @@ use fs_more::{
         DirectoryCopyOptions,
         DirectoryMoveOptions,
         DirectoryMoveStrategy,
-        DirectoryScanOptions,
         ExistingSubDirectoryBehaviour,
     },
     error::{
@@ -16,6 +15,7 @@ use fs_more::{
     file::ExistingFileBehaviour,
 };
 use fs_more_test_harness::{
+    collect_directory_statistics_via_scan,
     prelude::*,
     trees::structures::{deep::DeepTree, empty::EmptyTree, simple::SimpleTree},
 };
@@ -29,13 +29,8 @@ pub fn move_directory_moves_all_files_and_subdirectories() -> TestResult {
     let empty_harness = EmptyTree::initialize();
 
 
-    let source_scan = fs_more::directory::DirectoryScan::scan_with_options(
-        deep_harness.as_path(),
-        DirectoryScanOptions::default(),
-    )
-    .unwrap();
-
-    let source_scan_bytes = source_scan.total_size_in_bytes().unwrap();
+    let source_harness_stats =
+        collect_directory_statistics_via_scan(deep_harness.as_path()).unwrap();
 
 
 
@@ -49,7 +44,7 @@ pub fn move_directory_moves_all_files_and_subdirectories() -> TestResult {
     .unwrap();
 
 
-    assert_eq!(finished_move.total_bytes_moved, source_scan_bytes,);
+    assert_eq!(finished_move.total_bytes_moved, source_harness_stats.total_bytes);
 
 
     deep_harness.assert_not_exists();

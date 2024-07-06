@@ -7,7 +7,6 @@ use fs_more::{
         DirectoryMoveProgress,
         DirectoryMoveStrategy,
         DirectoryMoveWithProgressOptions,
-        DirectoryScanOptions,
         ExistingSubDirectoryBehaviour,
     },
     error::{
@@ -18,6 +17,7 @@ use fs_more::{
     file::ExistingFileBehaviour,
 };
 use fs_more_test_harness::{
+    collect_directory_statistics_via_scan,
     prelude::*,
     trees::structures::{deep::DeepTree, empty::EmptyTree, simple::SimpleTree},
 };
@@ -31,13 +31,9 @@ pub fn move_directory_with_progress_moves_all_files_and_subdirectories() -> Test
     let empty_harness = EmptyTree::initialize();
 
 
-    let source_scan = fs_more::directory::DirectoryScan::scan_with_options(
-        deep_harness.as_path(),
-        DirectoryScanOptions::default(),
-    )
-    .unwrap();
+    let source_harness_stats =
+        collect_directory_statistics_via_scan(deep_harness.as_path()).unwrap();
 
-    let source_scan_bytes = source_scan.total_size_in_bytes().unwrap();
 
 
     let mut last_progress_report: Option<DirectoryMoveProgress> = None;
@@ -154,15 +150,18 @@ pub fn move_directory_with_progress_moves_all_files_and_subdirectories() -> Test
     let last_progress_report = last_progress_report.unwrap();
 
 
-    assert_eq!(finished_move.total_bytes_moved, source_scan_bytes);
+    assert_eq!(finished_move.total_bytes_moved, source_harness_stats.total_bytes);
 
     assert_eq!(finished_move.total_bytes_moved, last_progress_report.bytes_total);
 
     assert_eq!(last_progress_report.bytes_total, last_progress_report.bytes_finished);
 
-    assert_eq!(source_scan.files().len(), finished_move.files_moved);
+    assert_eq!(source_harness_stats.total_files, finished_move.files_moved);
 
-    assert_eq!(source_scan.directories().len(), finished_move.directories_moved);
+    assert_eq!(
+        source_harness_stats.total_directories,
+        finished_move.directories_moved
+    );
 
 
 
