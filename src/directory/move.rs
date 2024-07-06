@@ -63,7 +63,7 @@ impl Default for DirectoryMoveOptions {
 pub enum DirectoryMoveStrategy {
     /// The source directory was simply renamed from the source path to the target path.
     ///
-    /// **This is the fastest method**, to the point of being near instantenous,
+    /// **This is the fastest method**, to the point of being near instantaneous,
     /// but generally works only if both paths are on the same mount point or drive.
     Rename,
 
