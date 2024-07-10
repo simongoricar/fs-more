@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.6.1] - 2024-07-10
+
+### Added
+- Added tests for `is_directory_empty` to avoid such large errors.
+
+### Changed
+- Updated directory module documentation to include `DirectoryScan`.
+
+### Fixed
+- Fixed `is_directory_empty` returning incorrect results.
+- Fixed invalid link to `DirectoryScan` in `README.md`.
+
+
+
 ## [0.6.0] - 2024-06-16
 
 ### Changed
