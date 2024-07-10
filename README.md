@@ -24,7 +24,7 @@ Includes copying and moving files or directories with progress reporting.
 ## Usage
 To add `fs-more` into your project, specify it as a dependency in your `Cargo.toml` file:
 ```toml
-fs-more = "0.5.1"
+fs-more = "0.6.1"
 ```
 
 
