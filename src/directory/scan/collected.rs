@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use super::{DirectoryScanDepthLimit, DirectoryScanOptionsV2, DirectoryScanner};
-use crate::error::DirectoryScanErrorV2;
+use crate::error::DirectoryScanError;
 
 pub(crate) struct DirectoryStatistics {
     pub(crate) total_bytes: u64,
@@ -11,7 +11,7 @@ pub(crate) struct DirectoryStatistics {
 
 pub(crate) fn collect_directory_statistics_via_scan(
     directory_path: &Path,
-) -> Result<DirectoryStatistics, DirectoryScanErrorV2> {
+) -> Result<DirectoryStatistics, DirectoryScanError> {
     let scanner = DirectoryScanner::new(
         directory_path,
         DirectoryScanOptionsV2 {

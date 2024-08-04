@@ -2,7 +2,7 @@ use std::path::Path;
 
 use fs_more::{
     directory::{DirectoryScanDepthLimit, DirectoryScanOptionsV2, DirectoryScanner},
-    error::DirectoryScanErrorV2,
+    error::DirectoryScanError,
 };
 
 
@@ -16,7 +16,7 @@ pub struct DirectoryStatistics {
 
 pub fn collect_directory_statistics_via_scan(
     directory_path: &Path,
-) -> Result<DirectoryStatistics, DirectoryScanErrorV2> {
+) -> Result<DirectoryStatistics, DirectoryScanError> {
     let scanner = DirectoryScanner::new(
         directory_path,
         DirectoryScanOptionsV2 {
@@ -59,7 +59,7 @@ pub fn collect_directory_statistics_via_scan(
 pub fn collect_directory_statistics_via_scan_with_options(
     directory_path: &Path,
     scan_options: DirectoryScanOptionsV2,
-) -> Result<DirectoryStatistics, DirectoryScanErrorV2> {
+) -> Result<DirectoryStatistics, DirectoryScanError> {
     let scanner = DirectoryScanner::new(directory_path, scan_options).into_iter();
 
 

@@ -7,7 +7,7 @@ use std::{
 
 use_enabled_fs_module!();
 
-use crate::error::{DirectoryEmptinessScanErrorV2, DirectoryScanErrorV2};
+use crate::error::{DirectoryEmptinessScanError, DirectoryScanError};
 
 pub(crate) mod collected;
 mod iter;
@@ -257,7 +257,7 @@ impl DirectoryScanner {
 
 impl IntoIterator for DirectoryScanner {
     type IntoIter = BreadthFirstDirectoryIter;
-    type Item = Result<ScanEntry, DirectoryScanErrorV2>;
+    type Item = Result<ScanEntry, DirectoryScanError>;
 
     fn into_iter(self) -> Self::IntoIter {
         BreadthFirstDirectoryIter::new(self.base_path, self.options)
@@ -290,7 +290,7 @@ pub(crate) fn is_directory_empty_unchecked(directory_path: &Path) -> std::io::Re
 ///
 /// Permission and other errors will *not* be coerced into `false`,
 /// but will instead raise a distinct error (see [`DirectoryEmptinessScanErrorV2`]).
-pub fn is_directory_empty<P>(directory_path: P) -> Result<bool, DirectoryEmptinessScanErrorV2>
+pub fn is_directory_empty<P>(directory_path: P) -> Result<bool, DirectoryEmptinessScanError>
 where
     P: AsRef<Path>,
 {
@@ -299,19 +299,19 @@ where
     let directory_path: &Path = directory_path.as_ref();
 
     let directory_metadata =
-        fs::metadata(directory_path).map_err(|_| DirectoryEmptinessScanErrorV2::NotFound {
+        fs::metadata(directory_path).map_err(|_| DirectoryEmptinessScanError::NotFound {
             path: directory_path.to_path_buf(),
         })?;
 
     if !directory_metadata.is_dir() {
-        return Err(DirectoryEmptinessScanErrorV2::NotADirectory {
+        return Err(DirectoryEmptinessScanError::NotADirectory {
             path: directory_path.to_path_buf(),
         });
     }
 
 
     let mut directory_read = fs::read_dir(directory_path).map_err(|error| {
-        DirectoryEmptinessScanErrorV2::UnableToReadDirectory {
+        DirectoryEmptinessScanError::UnableToReadDirectory {
             directory_path: directory_path.to_path_buf(),
             error,
         }
@@ -323,7 +323,7 @@ where
     };
 
     if let Err(first_entry_error) = first_entry_result {
-        return Err(DirectoryEmptinessScanErrorV2::UnableToReadDirectoryEntry {
+        return Err(DirectoryEmptinessScanError::UnableToReadDirectoryEntry {
             directory_path: directory_path.to_path_buf(),
             error: first_entry_error,
         });

@@ -7,7 +7,7 @@ use std::{
 use_enabled_fs_module!();
 
 use super::{DirectoryScanDepthLimit, DirectoryScanOptionsV2, ScanEntry};
-use crate::{directory::ScanEntryDepth, error::DirectoryScanErrorV2};
+use crate::{directory::ScanEntryDepth, error::DirectoryScanError};
 
 
 /// A currently open directory that is being iterated over (scanned).
@@ -181,7 +181,7 @@ impl BreadthFirstDirectoryIter {
     /// no more elements to scan and yield.
     fn current_or_next_directory_handle_mut(
         &mut self,
-    ) -> Result<Option<&mut OpenDirectory>, DirectoryScanErrorV2> {
+    ) -> Result<Option<&mut OpenDirectory>, DirectoryScanError> {
         if self.currently_open_directory.is_some() {
             let handle = self
                 .currently_open_directory
@@ -210,10 +210,10 @@ impl BreadthFirstDirectoryIter {
     fn ensure_directory_path_does_not_lead_to_a_tree_cycle(
         &self,
         directory_path: &Path,
-    ) -> Result<(), DirectoryScanErrorV2> {
+    ) -> Result<(), DirectoryScanError> {
         for ancestor_directory_handle in &self.current_directory_ancestors {
             if directory_path.eq(&ancestor_directory_handle.path) {
-                return Err(DirectoryScanErrorV2::SymlinkCycleEncountered {
+                return Err(DirectoryScanError::SymlinkCycleEncountered {
                     directory_path: directory_path.to_path_buf(),
                 });
             }
@@ -236,13 +236,13 @@ impl BreadthFirstDirectoryIter {
     /// `Ok(None)` is returned.
     fn open_next_directory_handle(
         &mut self,
-    ) -> Result<Option<&mut OpenDirectory>, DirectoryScanErrorV2> {
+    ) -> Result<Option<&mut OpenDirectory>, DirectoryScanError> {
         if !self.has_scanned_base_directory {
             // We've just started, perhaps having just yielded the base directory.
             // As such, we should open the base directory.
 
             let base_dir_iterator = fs::read_dir(&self.base_directory).map_err(|io_error| {
-                DirectoryScanErrorV2::UnableToReadDirectory {
+                DirectoryScanError::UnableToReadDirectory {
                     directory_path: self.base_directory.clone(),
                     error: io_error,
                 }
@@ -299,7 +299,7 @@ impl BreadthFirstDirectoryIter {
 
         let directory_iterator =
             fs::read_dir(&next_pending_directory.directory_path).map_err(|io_error| {
-                DirectoryScanErrorV2::UnableToReadDirectory {
+                DirectoryScanError::UnableToReadDirectory {
                     directory_path: next_pending_directory.directory_path.clone(),
                     error: io_error,
                 }
@@ -398,7 +398,7 @@ impl BreadthFirstDirectoryIter {
     /// If the scan has been exhausted, `Ok(None)` is returned, signalling the end of the iterator.
     ///
     /// If following symlinks is enabled, the returned entries will have their symlink paths followed.
-    fn next_entry(&mut self) -> Result<Option<NextEntryInfo>, DirectoryScanErrorV2> {
+    fn next_entry(&mut self) -> Result<Option<NextEntryInfo>, DirectoryScanError> {
         loop {
             let follow_symbolic_links = self.options.follow_symbolic_links;
 
@@ -424,7 +424,7 @@ impl BreadthFirstDirectoryIter {
 
 
             let raw_entry = raw_entry_result.map_err(|io_error| {
-                DirectoryScanErrorV2::UnableToReadDirectoryEntry {
+                DirectoryScanError::UnableToReadDirectoryEntry {
                     directory_path: self
                                 .current_directory_handle()
                                 // PANIC SAFETY: between the call to `current_or_next_directory_handle_mut` and this point,
@@ -437,7 +437,7 @@ impl BreadthFirstDirectoryIter {
             })?;
 
             let raw_entry_metadata = raw_entry.metadata().map_err(|io_error| {
-                DirectoryScanErrorV2::UnableToReadDirectoryEntry {
+                DirectoryScanError::UnableToReadDirectoryEntry {
                     // PANIC SAFETY: between the call to `current_or_next_directory_handle_mut` and this point,
                     // we never call `close_current_directory_handle`.
                     directory_path: self.current_directory_handle_path_unchecked().to_path_buf(),
@@ -450,7 +450,7 @@ impl BreadthFirstDirectoryIter {
                 if follow_symbolic_links && raw_entry_metadata.is_symlink() {
                     let resolved_raw_entry_path =
                         fs::read_link(raw_entry.path()).map_err(|io_error| {
-                            DirectoryScanErrorV2::UnableToReadDirectoryEntry {
+                            DirectoryScanError::UnableToReadDirectoryEntry {
                                 // PANIC SAFETY: between the call to `current_or_next_directory_handle_mut` and this point,
                                 // we never call `close_current_directory_handle`.
                                 directory_path: self
@@ -462,7 +462,7 @@ impl BreadthFirstDirectoryIter {
 
                     let raw_entry_metadata_followed =
                         fs::symlink_metadata(&resolved_raw_entry_path).map_err(|io_error| {
-                            DirectoryScanErrorV2::UnableToReadDirectoryEntry {
+                            DirectoryScanError::UnableToReadDirectoryEntry {
                                 // PANIC SAFETY: between the call to `current_or_next_directory_handle_mut` and this point,
                                 // we never call `close_current_directory_handle`.
                                 directory_path: self
@@ -502,7 +502,7 @@ impl BreadthFirstDirectoryIter {
 
 
 impl Iterator for BreadthFirstDirectoryIter {
-    type Item = Result<ScanEntry, DirectoryScanErrorV2>;
+    type Item = Result<ScanEntry, DirectoryScanError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if !self.has_processed_base_directory {
@@ -511,7 +511,7 @@ impl Iterator for BreadthFirstDirectoryIter {
             // Follow symlink if configured to do so.
             let base_directory_metadata =
                 try_some!(fs::symlink_metadata(&self.base_directory), |io_error| {
-                    DirectoryScanErrorV2::UnableToReadDirectory {
+                    DirectoryScanError::UnableToReadDirectory {
                         directory_path: self.base_directory.clone(),
                         error: io_error,
                     }
@@ -519,7 +519,7 @@ impl Iterator for BreadthFirstDirectoryIter {
 
 
             if !base_directory_metadata.is_symlink() && !base_directory_metadata.is_dir() {
-                return Some(Err(DirectoryScanErrorV2::NotADirectory {
+                return Some(Err(DirectoryScanError::NotADirectory {
                     path: self.base_directory.clone(),
                 }));
             }
@@ -534,7 +534,7 @@ impl Iterator for BreadthFirstDirectoryIter {
                 if self.options.follow_base_directory_symbolic_link {
                     let symlink_destination =
                         try_some!(fs::read_link(&self.base_directory), |io_error| {
-                            DirectoryScanErrorV2::UnableToReadDirectory {
+                            DirectoryScanError::UnableToReadDirectory {
                                 directory_path: self.base_directory.clone(),
                                 error: io_error,
                             }
@@ -542,14 +542,14 @@ impl Iterator for BreadthFirstDirectoryIter {
 
                     let symlink_destination_metadata =
                         try_some!(fs::symlink_metadata(&symlink_destination), |io_error| {
-                            DirectoryScanErrorV2::UnableToReadDirectory {
+                            DirectoryScanError::UnableToReadDirectory {
                                 directory_path: self.base_directory.clone(),
                                 error: io_error,
                             }
                         });
 
                     if !symlink_destination_metadata.is_dir() {
-                        return Some(Err(DirectoryScanErrorV2::NotADirectory {
+                        return Some(Err(DirectoryScanError::NotADirectory {
                             path: self.base_directory.clone(),
                         }));
                     }

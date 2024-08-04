@@ -316,7 +316,7 @@ pub enum MoveDirectoryPreparationError {
 
     /// Source directory entry scanning error.
     #[error(transparent)]
-    DirectoryScanError(#[from] DirectoryScanErrorV2),
+    DirectoryScanError(#[from] DirectoryScanError),
 
     // TODO remove
     /// Source directory size scanning error.
@@ -549,136 +549,15 @@ pub enum DirectoryError {
 
 
 
-/// An error that can occur when scanning a directory.
-#[derive(Error, Debug)]
-pub enum DirectoryScanError {
-    /// The provided directory path to scan doesn't exist.
-    #[error("path doesn't exist: {}", .path.display())]
-    NotFound {
-        /// The directory path that couldn't be scanned.
-        path: PathBuf,
-    },
-
-    /// The provided directory path exists, but is not a directory.
-    #[error(
-        "path exists, but is not a directory nor a symlink to one: {}",
-        .path.display()
-    )]
-    NotADirectory {
-        /// The directory path that couldn't be scanned.
-        path: PathBuf,
-    },
-
-    /// The provided directory path is a directory,
-    /// but could not be read due to an IO error.
-    ///
-    /// The inner [`std::io::Error`] will likely describe a more precise cause of this error.
-    #[error("unable to read directory: {}", .directory_path.display())]
-    UnableToReadDirectory {
-        /// Directory path that could not be read.
-        directory_path: PathBuf,
-
-        /// IO error describing why the given root directory could not be read.
-        #[source]
-        error: std::io::Error,
-    },
-
-    /// A directory contains an entry (i.e. directory or file)
-    /// that could not be read due to an IO error.
-    ///
-    /// The inner [`std::io::Error`] will likely describe a more precise cause of this error.
-    #[error("unable to read directory entry for {}", .directory_path.display())]
-    UnableToReadDirectoryItem {
-        /// Directory path whose entries could not be read.
-        directory_path: PathBuf,
-
-        /// IO error describing why the given file or directory could not be read.
-        #[source]
-        error: std::io::Error,
-    },
-}
-
-
-
-/*
 /// An error that can occur when querying size of a scanned directory.
 #[derive(Error, Debug)]
-#[deprecated]
 pub enum DirectorySizeScanError {
-    /// The provided directory path does not exist.
-    #[error("the provided scan directory path doesn't exist: {}", .path.display())]
-    ScanDirectoryNotFound {
-        /// The directory whose scan was requested.
-        path: PathBuf,
-    },
-
-    /// The root directory path exists, but is not a directory nor a symbolic link to one.
-    #[error(
-        "the provided scan path exists, bus is not a directory \
-        nor a symbolic link to one: {}", .path.display()
-    )]
-    ScanDirectoryNotADirectory {
-        /// The path that was requested to be scanned.
-        path: PathBuf,
-    },
-
-    /// A file or directory that was scanned on initialization
-    /// of [`DirectoryScan`][crate::directory::DirectoryScan] is no longer there or no longer a file.
-    ///
-    /// This is basically a [TOCTOU](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use)
-    ///
-    #[error("a scanned file or directory no longer exists or isn't a file anymore: {path}")]
-    ScanEntryNoLongerExists {
-        /// Path of the file or directory that no longer exists.
-        path: PathBuf,
-    },
-
-    /// A file cannot be accessed (e.g. due to missing permissions).
-    ///
-    /// The inner [`std::io::Error`] will likely describe a more precise cause of this error.
-    #[error("unable to access file: {}", .file_path.display())]
-    UnableToAccessFile {
-        /// File path that could not be accessed.
-        file_path: PathBuf,
-
-        /// Underlying IO error describing why the file could not be accessed.
-        #[source]
-        error: std::io::Error,
-    },
-
-    /// The directory cannot be accessed (e.g. due to missing permissions).
-    ///
-    /// The inner [`std::io::Error`] will likely describe a more precise cause of this error.
-    #[error("unable to access directory: {}", .directory_path.display())]
-    UnableToAccessDirectory {
-        /// Directory path that could not be accessed.
-        directory_path: PathBuf,
-
-        /// Underlying IO error describing why the directory could not be accessed.
-        #[source]
-        error: std::io::Error,
-    },
-
-    /// Some other [`std::io::Error`] was encountered.
-    #[error("other std::io::Error")]
-    OtherIoError {
-        /// IO error describing the cause of the outer error.
-        #[source]
-        error: std::io::Error,
-    },
-}
- */
-
-
-/// An error that can occur when querying size of a scanned directory.
-#[derive(Error, Debug)]
-pub enum DirectorySizeScanErrorV2 {
     /// An error occurred while scanning the directory.
     #[error("failed while scanning directory: {}", .directory_path.display())]
     ScanError {
         /// The scanning error.
         #[source]
-        error: DirectoryScanErrorV2,
+        error: DirectoryScanError,
 
         /// Base directory path for the scan.
         directory_path: PathBuf,
@@ -689,7 +568,7 @@ pub enum DirectorySizeScanErrorV2 {
 
 /// An error that can occur when checking whether a directory is empty.
 #[derive(Error, Debug)]
-pub enum DirectoryEmptinessScanErrorV2 {
+pub enum DirectoryEmptinessScanError {
     /// The provided directory path to scan doesn't exist.
     #[error("path doesn't exist: {}", .path.display())]
     NotFound {
@@ -773,7 +652,7 @@ pub enum IsDirectoryEmptyError {
 
 /// An error that can occur when scanning a directory.
 #[derive(Error, Debug)]
-pub enum DirectoryScanErrorV2 {
+pub enum DirectoryScanError {
     /// The provided directory path to scan doesn't exist.
     #[error("path doesn't exist: {}", .path.display())]
     NotFound {
