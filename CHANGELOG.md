@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.6.1] - 2024-07-10
+
+### Added
+- Added tests for `is_directory_empty` to avoid such large errors.
+
+### Changed
+- Updated directory module documentation to include `DirectoryScan`.
+
+### Fixed
+- Fixed `is_directory_empty` returning incorrect results.
+- Fixed invalid link to `DirectoryScan` in `README.md`.
+
+
+
 ## [0.6.0] - 2024-06-16
 
 ### Changed
@@ -146,6 +160,7 @@ Initial development release with the API mostly stable.
 
 
 [Unreleased]: https://github.com/simongoricar/fs-more/compare/v0.6.0...HEAD
+[0.6.1]: https://github.com/simongoricar/fs-more/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/simongoricar/fs-more/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/simongoricar/fs-more/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/simongoricar/fs-more/compare/v0.4.0...v0.5.0

@@ -695,7 +695,7 @@ where
         }
     })?;
 
-    Ok(directory_read.next().is_some())
+    Ok(directory_read.next().is_none())
 }
  */
 
