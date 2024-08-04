@@ -150,16 +150,21 @@ fn attempt_directory_move_by_rename(
     // but will fail if the source and target paths aren't on the same mount point or filesystem
     // or, if on Windows, the target directory already exists.
 
-    // If the destination directory exists and is not empty, a move by rename is not possible.
-    if validated_destination_directory.state != DestinationDirectoryState::IsEmpty {
-        return Ok(DirectoryMoveByRenameAction::Impossible);
-    }
-
 
     #[cfg(unix)]
     {
-        // If the target directory exists, but is empty, we can (on Unix only)
-        // directly rename the source directory to the target (this might still fail due to different mount points).
+        // If the destination directory either does not exist or is empty,
+        // a move by rename might be possible, but not otherwise.
+        if !matches!(
+            validated_destination_directory.state,
+            DestinationDirectoryState::DoesNotExist | DestinationDirectoryState::IsEmpty
+        ) {
+            return Ok(DirectoryMoveByRenameAction::Impossible);
+        }
+
+
+        // Let's try to rename the source directory to the target.
+        // This might still fail due to different mount points.
         if fs::rename(
             &validated_source_directory.directory_path,
             &validated_destination_directory.directory_path,
@@ -181,6 +186,17 @@ fn attempt_directory_move_by_rename(
 
     #[cfg(windows)]
     {
+        // If the destination directory does not exist,
+        // a move by rename might be possible, but not otherwise.
+        // This is because we're on Windows, where renames are only possible with non-existing destinations.
+        if !matches!(
+            validated_destination_directory.state,
+            DestinationDirectoryState::DoesNotExist
+        ) {
+            return Ok(DirectoryMoveByRenameAction::Impossible);
+        }
+
+
         // On Windows, the destination directory in call to `rename` must not exist for it to work.
         if !validated_destination_directory.state.exists()
             && fs::rename(
