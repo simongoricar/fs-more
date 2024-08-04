@@ -318,3 +318,77 @@ pub fn move_directory_performs_merge_without_overwrite_when_copying_to_non_empty
     destination_harness_untouched.destroy();
     Ok(())
 }
+
+
+
+#[test]
+fn move_directory_renames_source_to_destination_when_destination_does_not_exist() {
+    let source_harness = SimpleTree::initialize();
+    let destination_harness = EmptyTree::initialize();
+
+    let destination_directory_path = destination_harness.child_path("inner-destination");
+    destination_directory_path.assert_not_exists();
+
+
+    let finished_move = fs_more::directory::move_directory(
+        source_harness.as_path(),
+        &destination_directory_path,
+        DirectoryMoveOptions::default(),
+    )
+    .unwrap();
+
+
+    assert_eq!(finished_move.strategy_used, DirectoryMoveStrategy::Rename);
+
+
+    destination_harness.destroy();
+    source_harness.destroy();
+}
+
+
+
+#[test]
+#[cfg(unix)]
+fn move_directory_renames_source_to_destination_when_destination_is_empty_on_unix() {
+    let source_harness = SimpleTree::initialize();
+    let destination_harness = EmptyTree::initialize();
+
+
+    let finished_move = fs_more::directory::move_directory(
+        source_harness.as_path(),
+        destination_harness.as_path(),
+        DirectoryMoveOptions::default(),
+    )
+    .unwrap();
+
+
+    assert_eq!(finished_move.strategy_used, DirectoryMoveStrategy::Rename);
+
+
+    destination_harness.destroy();
+    source_harness.destroy();
+}
+
+
+
+#[test]
+#[cfg(windows)]
+fn move_directory_does_not_rename_source_to_destination_when_destination_is_empty_on_windows() {
+    let source_harness = SimpleTree::initialize();
+    let destination_harness = EmptyTree::initialize();
+
+
+    let finished_move = fs_more::directory::move_directory(
+        source_harness.as_path(),
+        destination_harness.as_path(),
+        DirectoryMoveOptions::default(),
+    )
+    .unwrap();
+
+
+    assert_eq!(finished_move.strategy_used, DirectoryMoveStrategy::CopyAndDelete);
+
+
+    destination_harness.destroy();
+    source_harness.destroy();
+}
