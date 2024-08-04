@@ -5,6 +5,7 @@ use syn::Ident;
 
 use super::{DirectoryEntryError, PreparedDirectoryEntry};
 use crate::codegen::{
+    broken_symlink_entry::generate_code_for_broken_symlink_entry_in_tree,
     file_entry::generate_code_for_file_entry_in_tree,
     symlink_entry::generate_code_for_symlink_entry_in_tree,
     AnyGeneratedEntry,
@@ -168,6 +169,7 @@ fn construct_documentation_for_directory_entry(
         File,
         Directory,
         Symlink,
+        BrokenSymlink,
     }
 
     struct StructFieldAnnotation {
@@ -212,6 +214,17 @@ fn construct_documentation_for_directory_entry(
                 );
 
                 (StructFieldType::Symlink, formatted_field)
+            }
+            AnyGeneratedEntry::BrokenSymlink {
+                entry,
+                actual_field_name_ident_on_parent,
+            } => {
+                let formatted_field = format!(
+                    "- `{}` (field `{}`; see [`{}`])",
+                    entry.symlink_name, actual_field_name_ident_on_parent, entry.struct_type_ident
+                );
+
+                (StructFieldType::BrokenSymlink, formatted_field)
             }
         };
 
@@ -375,6 +388,26 @@ pub(crate) fn generate_code_for_directory_entry_in_tree(
 
                 generated_entries.push(AnyGeneratedEntry::Symlink {
                     entry: generated_symlink_entry,
+                    actual_field_name_ident_on_parent,
+                });
+            }
+            AnyPreparedEntry::BrokenSymlink {
+                entry,
+                actual_field_name_on_parent_ident: actual_field_name_ident_on_parent,
+            } => {
+                let generated_broken_symlink_entry =
+                    generate_code_for_broken_symlink_entry_in_tree(tree_root_struct_ident, entry)?;
+
+                let generated_code = &generated_broken_symlink_entry.generated_code;
+
+
+                token_stream_to_prepend = quote! {
+                    #token_stream_to_prepend
+                    #generated_code
+                };
+
+                generated_entries.push(AnyGeneratedEntry::BrokenSymlink {
+                    entry: generated_broken_symlink_entry,
                     actual_field_name_ident_on_parent,
                 });
             }

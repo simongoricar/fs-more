@@ -8,4 +8,8 @@ pub mod symlinked;
 pub mod empty;
 
 #[rustfmt::skip]
+pub mod broken_symlinks;
+
+
+#[rustfmt::skip]
 pub mod simple;

@@ -1,6 +1,6 @@
 //! @generated
 //!
-//! This code was automatically generated from "simple.json",
+//! This code was automatically generated from "broken_symlinks.json",
 //! a file that describes this filesystem tree harness for testing.
 //!
 //!
@@ -8,7 +8,8 @@
 //! ```md
 //! .
 //! |-- empty.txt (empty)
-//! |-- yes
+//! |-- foo
+//! |   |-- broken-symlink.txt
 //! |   |-- no.bin (random data, 16 KiB)
 //! |   |-- hello-world.txt (text data, 12 B)
 //! ```
@@ -36,7 +37,7 @@ use fs_more_test_harness_tree_schema::schema::FileDataConfiguration;
 
 <br>
 
-<sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`BrokenSymlinksTree`] test harness tree.</sup>*/
 pub struct EmptyTxt {
     file_path: PathBuf,
     state_at_initialization: FileState,
@@ -72,11 +73,11 @@ impl AsInitialFileStateRef for EmptyTxt {
 }
 impl AssertableInitialFileCapture for EmptyTxt {}
 impl CaptureableFilePath for EmptyTxt {}
-/**This is a file residing at `./yes/hello-world.txt` (relative to the root of the tree).
+/**This is a file residing at `./foo/hello-world.txt` (relative to the root of the tree).
 
 <br>
 
-<sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`BrokenSymlinksTree`] test harness tree.</sup>*/
 pub struct HelloWorldTxt {
     file_path: PathBuf,
     state_at_initialization: FileState,
@@ -104,7 +105,7 @@ impl AsPath for HelloWorldTxt {
 }
 impl AsRelativePath for HelloWorldTxt {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new("./yes/hello-world.txt")
+        Path::new("./foo/hello-world.txt")
     }
 }
 impl AsInitialFileStateRef for HelloWorldTxt {
@@ -114,11 +115,11 @@ impl AsInitialFileStateRef for HelloWorldTxt {
 }
 impl AssertableInitialFileCapture for HelloWorldTxt {}
 impl CaptureableFilePath for HelloWorldTxt {}
-/**This is a file residing at `./yes/no.bin` (relative to the root of the tree).
+/**This is a file residing at `./foo/no.bin` (relative to the root of the tree).
 
 <br>
 
-<sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`BrokenSymlinksTree`] test harness tree.</sup>*/
 pub struct NoBin {
     file_path: PathBuf,
     state_at_initialization: FileState,
@@ -150,7 +151,7 @@ impl AsPath for NoBin {
 }
 impl AsRelativePath for NoBin {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new("./yes/no.bin")
+        Path::new("./foo/no.bin")
     }
 }
 impl AsInitialFileStateRef for NoBin {
@@ -160,7 +161,55 @@ impl AsInitialFileStateRef for NoBin {
 }
 impl AssertableInitialFileCapture for NoBin {}
 impl CaptureableFilePath for NoBin {}
-/**This is a sub-directory residing at `./yes` (relative to the root of the test harness).
+/**This is a broken symbolic link entry. It resides at `./foo/broken-symlink.txt`
+and points to the non-existent location `../nonexistent-destination-file.txt`
+(both paths are relative to the root of the test harness).
+
+<br>
+
+<sup>This entry is part of the [`BrokenSymlinksTree`] test harness tree.</sup>*/
+pub struct BrokenSymlinkTxt {
+    broken_symlink_path: PathBuf,
+    /// Symlink destination path, relative to the tree harness root.
+    broken_symlink_destination_path: PathBuf,
+}
+impl BrokenSymlinkTxt {
+    #[track_caller]
+    fn initialize(parent_directory_path: &Path) -> Self {
+        let broken_symlink_path = parent_directory_path.join("broken-symlink.txt");
+        let broken_symlink_destination_path = "../nonexistent-destination-file.txt"
+            .into();
+        broken_symlink_path.assert_not_exists();
+        Self {
+            broken_symlink_path,
+            broken_symlink_destination_path,
+        }
+    }
+    #[track_caller]
+    fn post_initialize(&mut self, tree_root_absolute_path: &Path) {
+        self.broken_symlink_path.assert_not_exists();
+        self.broken_symlink_destination_path.assert_not_exists();
+        let absolute_destination_path = tree_root_absolute_path
+            .join(&self.broken_symlink_destination_path);
+        initialize_symbolic_link(
+            &self.broken_symlink_path,
+            &self.broken_symlink_destination_path,
+            SymlinkDestinationType::Directory,
+        );
+        self.broken_symlink_path.assert_is_any_broken_symlink();
+    }
+}
+impl AsPath for BrokenSymlinkTxt {
+    fn as_path(&self) -> &Path {
+        &self.broken_symlink_path
+    }
+}
+impl AsRelativePath for BrokenSymlinkTxt {
+    fn as_path_relative_to_harness_root(&self) -> &Path {
+        Path::new("./foo/broken-symlink.txt")
+    }
+}
+/**This is a sub-directory residing at `./foo` (relative to the root of the test harness).
 
 
 It contains the following files:
@@ -170,52 +219,64 @@ It contains the following files:
 
 <br>
 
-<sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
-pub struct Yes {
+<sup>This entry is part of the [`BrokenSymlinksTree`] test harness tree.</sup>*/
+pub struct Foo {
     directory_path: PathBuf,
-    /**This is a file residing at `./yes/hello-world.txt` (relative to the root of the tree).
+    /**This is a file residing at `./foo/hello-world.txt` (relative to the root of the tree).
 
 <br>
 
-<sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`BrokenSymlinksTree`] test harness tree.</sup>*/
     pub hello_world_txt: HelloWorldTxt,
-    /**This is a file residing at `./yes/no.bin` (relative to the root of the tree).
+    /**This is a file residing at `./foo/no.bin` (relative to the root of the tree).
 
 <br>
 
-<sup>This entry is part of the [`SimpleTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`BrokenSymlinksTree`] test harness tree.</sup>*/
     pub no_bin: NoBin,
+    /**This is a broken symbolic link entry. It resides at `./foo/broken-symlink.txt`
+and points to the non-existent location `../nonexistent-destination-file.txt`
+(both paths are relative to the root of the test harness).
+
+<br>
+
+<sup>This entry is part of the [`BrokenSymlinksTree`] test harness tree.</sup>*/
+    pub broken_symlink_txt: BrokenSymlinkTxt,
 }
-impl Yes {
+impl Foo {
     #[track_caller]
     fn initialize(parent_directory_path: &Path) -> Self {
-        let directory_path = parent_directory_path.join("yes");
+        let directory_path = parent_directory_path.join("foo");
         directory_path.assert_not_exists();
         fs::create_dir(&directory_path).expect("failed to create directory");
         directory_path.assert_is_directory_and_empty();
         let hello_world_txt = <HelloWorldTxt>::initialize(&directory_path);
         let no_bin = <NoBin>::initialize(&directory_path);
+        let broken_symlink_txt = <BrokenSymlinkTxt>::initialize(&directory_path);
         Self {
             directory_path,
             hello_world_txt,
             no_bin,
+            broken_symlink_txt,
         }
     }
+    #[track_caller]
+    fn post_initialize(&mut self, tree_root_absolute_path: &Path) {}
 }
-impl AsPath for Yes {
+impl AsPath for Foo {
     fn as_path(&self) -> &Path {
         &self.directory_path
     }
 }
-impl AsRelativePath for Yes {
+impl AsRelativePath for Foo {
     fn as_path_relative_to_harness_root(&self) -> &Path {
-        Path::new("./yes")
+        Path::new("./foo")
     }
 }
-impl FileSystemHarnessDirectory for Yes {}
-/**`fs-more` filesystem tree for testing. Upon calling [`SimpleTree::initialize`],
+impl FileSystemHarnessDirectory for Foo {}
+/**`fs-more` filesystem tree for testing. Upon calling [`BrokenSymlinksTree::initialize`],
 a temporary directory is set up, and the entire pre-defined filesystem tree is initialized.
-When [`SimpleTree::destroy`] is called (or when the struct is dropped), the temporary directory is removed,
+When [`BrokenSymlinksTree::destroy`] is called (or when the struct is dropped), the temporary directory is removed,
 along with all of its contents.
 
 In addition to initializing the configured files and directories, a snapshot is created
@@ -223,14 +284,15 @@ for each file (also called a "capture"). This is the same as [`CaptureableFilePa
 
 This harness has the following sub-entries at the top level (files, sub-directories, ...):
 - `empty_txt` (see [`EmptyTxt`])
-- `yes` (see [`Yes`])
+- `foo` (see [`Foo`])
 
 
 The full file tree is as follows:
 ```md
 .
 |-- empty.txt (empty)
-|-- yes
+|-- foo
+|   |-- broken-symlink.txt
 |   |-- no.bin (random data, 16 KiB)
 |   |-- hello-world.txt (text data, 12 B)
 ```
@@ -238,13 +300,13 @@ The full file tree is as follows:
 
 <br>
 
-<sup>This tree and related code was automatically generated from the structure described in `simple.json`.</sup>*/
-pub struct SimpleTree {
+<sup>This tree and related code was automatically generated from the structure described in `broken_symlinks.json`.</sup>*/
+pub struct BrokenSymlinksTree {
     temporary_directory: TempDir,
     pub empty_txt: EmptyTxt,
-    pub yes: Yes,
+    pub foo: Foo,
 }
-impl FileSystemHarness for SimpleTree {
+impl FileSystemHarness for BrokenSymlinksTree {
     #[track_caller]
     fn initialize() -> Self {
         let temporary_directory = tempfile::tempdir()
@@ -252,12 +314,14 @@ impl FileSystemHarness for SimpleTree {
         let temporary_directory_path = temporary_directory.path();
         temporary_directory_path.assert_is_directory_and_empty();
         let empty_txt = <EmptyTxt>::initialize(temporary_directory_path);
-        let yes = <Yes>::initialize(temporary_directory_path);
-        Self {
+        let foo = <Foo>::initialize(temporary_directory_path);
+        let mut new_self = Self {
             temporary_directory,
             empty_txt,
-            yes,
-        }
+            foo,
+        };
+        new_self.post_initialize();
+        new_self
     }
     #[track_caller]
     fn destroy(self) {
@@ -273,14 +337,19 @@ impl FileSystemHarness for SimpleTree {
         }
     }
 }
-impl AsPath for SimpleTree {
+impl BrokenSymlinksTree {
+    fn post_initialize(&mut self) {
+        self.foo.post_initialize(self.temporary_directory.path());
+    }
+}
+impl AsPath for BrokenSymlinksTree {
     fn as_path(&self) -> &Path {
         self.temporary_directory.path()
     }
 }
-impl AsRelativePath for SimpleTree {
+impl AsRelativePath for BrokenSymlinksTree {
     fn as_path_relative_to_harness_root(&self) -> &Path {
         Path::new(".")
     }
 }
-impl FileSystemHarnessDirectory for SimpleTree {}
+impl FileSystemHarnessDirectory for BrokenSymlinksTree {}

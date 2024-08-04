@@ -4,6 +4,7 @@ use syn::Ident;
 
 use super::SchemaCodeGenerationError;
 use crate::codegen::{
+    broken_symlink_entry::generate_code_for_broken_symlink_entry_in_tree,
     directory_entry::generate_code_for_directory_entry_in_tree,
     file_entry::generate_code_for_file_entry_in_tree,
     symlink_entry::generate_code_for_symlink_entry_in_tree,
@@ -140,6 +141,47 @@ pub(super) fn generate_code_for_all_tree_sub_entries(
                 (
                     AnyGeneratedEntry::Symlink {
                         entry: generated_symlink_entry,
+                        actual_field_name_ident_on_parent,
+                    },
+                    struct_field_specifier,
+                    struct_field_name,
+                )
+            }
+            AnyPreparedEntry::BrokenSymlink {
+                entry,
+                actual_field_name_on_parent_ident: actual_field_name_ident_on_parent,
+            } => {
+                let field_type_ident = entry.struct_type_ident.clone();
+                let broken_symlink_path_relative_to_tree_root =
+                    entry.symlink_path_relative_to_tree_root.clone();
+
+
+                let generated_broken_symlink_entry =
+                    generate_code_for_broken_symlink_entry_in_tree(
+                        tree_root_struct_name_ident,
+                        entry,
+                    )
+                    .map_err(|error| {
+                        SchemaCodeGenerationError::BrokenSymlinkEntryError {
+                            error,
+                            broken_symlink_relative_path: broken_symlink_path_relative_to_tree_root
+                                .into(),
+                        }
+                    })?;
+
+
+                let struct_field_specifier = quote! {
+                    pub #actual_field_name_ident_on_parent: #field_type_ident
+                };
+
+                let struct_field_name = quote! {
+                    #actual_field_name_ident_on_parent
+                };
+
+
+                (
+                    AnyGeneratedEntry::BrokenSymlink {
+                        entry: generated_broken_symlink_entry,
                         actual_field_name_ident_on_parent,
                     },
                     struct_field_specifier,

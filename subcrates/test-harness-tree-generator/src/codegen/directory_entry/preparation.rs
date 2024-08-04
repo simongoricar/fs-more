@@ -10,6 +10,7 @@ use syn::Ident;
 use super::DirectoryEntryError;
 use crate::{
     codegen::{
+        broken_symlink_entry::prepare_broken_symlink_entry,
         file_entry::prepare_file_entry,
         symlink_entry::prepare_symlink_entry,
         AnyPreparedEntry,
@@ -40,6 +41,7 @@ impl PreparedDirectoryEntry {
         self.entries.iter().any(|entry| match entry {
             AnyPreparedEntry::Directory { entry, .. } => entry.requires_post_initialization_call(),
             AnyPreparedEntry::Symlink { .. } => true,
+            AnyPreparedEntry::BrokenSymlink { .. } => true,
             AnyPreparedEntry::File { .. } => false,
         })
     }
@@ -145,6 +147,32 @@ pub(crate) fn prepare_directory_entry(
                 context
                     .prepared_entry_registry
                     .add_prepared_entry(prepared_entry_any.clone())?;
+
+                prepared_entries.push(prepared_entry_any);
+            }
+            FileSystemHarnessEntry::BrokenSymlink(broken_symlink_entry) => {
+                let prepared_broken_symlink_entry = prepare_broken_symlink_entry(
+                    context,
+                    &directory_relative_path,
+                    broken_symlink_entry,
+                )?;
+
+                let actual_field_name_ident_on_parent = struct_field_name_collision_avoider
+                    .collision_free_ident(
+                        &prepared_broken_symlink_entry.preferred_parent_field_ident,
+                    );
+
+
+                let prepared_entry_any = AnyPreparedEntry::BrokenSymlink {
+                    entry: prepared_broken_symlink_entry,
+                    actual_field_name_on_parent_ident: actual_field_name_ident_on_parent,
+                };
+
+
+                context
+                    .prepared_entry_registry
+                    .add_prepared_entry(prepared_entry_any.clone())?;
+
 
                 prepared_entries.push(prepared_entry_any);
             }

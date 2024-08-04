@@ -53,15 +53,17 @@ fn construct_post_initializer_code_for_symlink_entry(
                 );
             }
         }),
-        AnyPreparedEntry::Symlink { .. } => Err(SymlinkEntryError::ChainingSymlinksNotSupported {
-            from: PathBuf::from(&prepared_entry.symlink_path_relative_to_tree_root),
-            to: match symlink_destination_entry {
-                AnyPreparedEntry::Symlink { entry, .. } => {
-                    PathBuf::from(&entry.symlink_path_relative_to_tree_root)
-                }
-                _ => unreachable!(),
-            },
-        }),
+        AnyPreparedEntry::Symlink { .. } | AnyPreparedEntry::BrokenSymlink { .. } => {
+            Err(SymlinkEntryError::ChainingSymlinksNotSupported {
+                from: PathBuf::from(&prepared_entry.symlink_path_relative_to_tree_root),
+                to: match symlink_destination_entry {
+                    AnyPreparedEntry::Symlink { entry, .. } => {
+                        PathBuf::from(&entry.symlink_path_relative_to_tree_root)
+                    }
+                    _ => unreachable!(),
+                },
+            })
+        }
     }
 }
 
@@ -141,8 +143,7 @@ pub(crate) fn generate_code_for_symlink_entry_in_tree(
 
         impl #symlink_entry_struct_name_ident {
             #[track_caller]
-            fn initialize(parent_directory_path: &Path) -> Self
-            {
+            fn initialize(parent_directory_path: &Path) -> Self {
                 let #symlink_path_variable_ident = parent_directory_path.join(#symlink_name);
                 let #symlink_destination_path_variable_ident = #symlink_destination_path_relative_to_tree_root.into();
 
@@ -163,7 +164,7 @@ pub(crate) fn generate_code_for_symlink_entry_in_tree(
 
         impl AsPath for #symlink_entry_struct_name_ident {
             fn as_path(&self) -> &Path {
-                &self.symlink_path
+                &self.#symlink_path_variable_ident
             }
         }
 

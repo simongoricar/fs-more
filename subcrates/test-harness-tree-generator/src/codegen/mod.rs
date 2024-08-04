@@ -1,5 +1,6 @@
 use std::collections::{hash_map::Entry, HashMap};
 
+use broken_symlink_entry::{GeneratedBrokenSymlinkEntry, PreparedBrokenSymlinkEntry};
 use directory_entry::{GeneratedDirectoryEntry, PreparedDirectoryEntry};
 use file_entry::{GeneratedFileEntry, PreparedFileEntry};
 use proc_macro2::TokenStream;
@@ -9,6 +10,7 @@ use thiserror::Error;
 
 use crate::name_collision::NameCollisionAvoider;
 
+pub mod broken_symlink_entry;
 pub mod directory_entry;
 pub mod file_entry;
 pub mod final_source_file;
@@ -29,6 +31,10 @@ pub enum AnyPreparedEntry {
         entry: PreparedSymlinkEntry,
         actual_field_name_on_parent_ident: Ident,
     },
+    BrokenSymlink {
+        entry: PreparedBrokenSymlinkEntry,
+        actual_field_name_on_parent_ident: Ident,
+    },
 }
 
 impl AnyPreparedEntry {
@@ -46,6 +52,10 @@ impl AnyPreparedEntry {
                 actual_field_name_on_parent_ident,
                 ..
             } => actual_field_name_on_parent_ident,
+            AnyPreparedEntry::BrokenSymlink {
+                actual_field_name_on_parent_ident,
+                ..
+            } => actual_field_name_on_parent_ident,
         }
     }
 
@@ -54,6 +64,7 @@ impl AnyPreparedEntry {
             AnyPreparedEntry::Directory { entry, .. } => entry.entry_id.as_ref(),
             AnyPreparedEntry::File { entry, .. } => entry.entry_id.as_ref(),
             AnyPreparedEntry::Symlink { entry, .. } => entry.entry_id.as_ref(),
+            AnyPreparedEntry::BrokenSymlink { entry, .. } => entry.entry_id.as_ref(),
         }
     }
 
@@ -66,6 +77,9 @@ impl AnyPreparedEntry {
             AnyPreparedEntry::Symlink { entry, .. } => {
                 entry.symlink_path_relative_to_tree_root.as_str()
             }
+            AnyPreparedEntry::BrokenSymlink { entry, .. } => {
+                entry.symlink_path_relative_to_tree_root.as_str()
+            }
         }
     }
 
@@ -74,6 +88,7 @@ impl AnyPreparedEntry {
             AnyPreparedEntry::Directory { entry, .. } => &entry.struct_type_ident,
             AnyPreparedEntry::File { entry, .. } => &entry.struct_type_ident,
             AnyPreparedEntry::Symlink { entry, .. } => &entry.struct_type_ident,
+            AnyPreparedEntry::BrokenSymlink { entry, .. } => &entry.struct_type_ident,
         }
     }
 }
@@ -93,6 +108,10 @@ pub(crate) enum AnyGeneratedEntry {
         entry: GeneratedSymlinkEntry,
         actual_field_name_ident_on_parent: Ident,
     },
+    BrokenSymlink {
+        entry: GeneratedBrokenSymlinkEntry,
+        actual_field_name_ident_on_parent: Ident,
+    },
 }
 
 impl AnyGeneratedEntry {
@@ -101,6 +120,7 @@ impl AnyGeneratedEntry {
             AnyGeneratedEntry::Directory { entry, .. } => &entry.generated_code,
             AnyGeneratedEntry::File { entry, .. } => &entry.generated_code,
             AnyGeneratedEntry::Symlink { entry, .. } => &entry.generated_code,
+            AnyGeneratedEntry::BrokenSymlink { entry, .. } => &entry.generated_code,
         }
     }
 
@@ -118,6 +138,10 @@ impl AnyGeneratedEntry {
                 actual_field_name_ident_on_parent,
                 ..
             } => actual_field_name_ident_on_parent,
+            AnyGeneratedEntry::BrokenSymlink {
+                actual_field_name_ident_on_parent,
+                ..
+            } => actual_field_name_ident_on_parent,
         }
     }
 
@@ -126,6 +150,7 @@ impl AnyGeneratedEntry {
             AnyGeneratedEntry::Directory { entry, .. } => &entry.struct_type_ident,
             AnyGeneratedEntry::File { entry, .. } => &entry.struct_type_ident,
             AnyGeneratedEntry::Symlink { entry, .. } => &entry.struct_type_ident,
+            AnyGeneratedEntry::BrokenSymlink { entry, .. } => &entry.struct_type_ident,
         }
     }
 
@@ -134,6 +159,7 @@ impl AnyGeneratedEntry {
             AnyGeneratedEntry::Directory { entry, .. } => &entry.documentation_for_parent_field,
             AnyGeneratedEntry::File { entry, .. } => &entry.documentation_for_parent_field,
             AnyGeneratedEntry::Symlink { entry, .. } => &entry.documentation_for_parent_field,
+            AnyGeneratedEntry::BrokenSymlink { entry, .. } => &entry.documentation_for_parent_field,
         }
     }
 }

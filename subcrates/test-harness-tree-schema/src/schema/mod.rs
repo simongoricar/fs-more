@@ -4,9 +4,9 @@ mod directory;
 pub use directory::*;
 mod symlink;
 pub use symlink::*;
+mod broken_symlink;
+pub use broken_symlink::*;
 
-
-// TODO refactor this out into either the main test harness or a separate crate (to avoid compiling the entire generator crate for testing)
 
 
 /// Describes an entry in a tree - a file or a directory.
@@ -28,6 +28,9 @@ pub enum FileSystemHarnessEntry {
 
     #[cfg_attr(feature = "serializable_tree_schema", serde(rename = "symlink"))]
     Symlink(SymlinkEntry),
+
+    #[cfg_attr(feature = "serializable_tree_schema", serde(rename = "broken-symlink"))]
+    BrokenSymlink(BrokenSymlinkEntry),
 }
 
 

@@ -204,6 +204,37 @@
               ]
             }
           }
+        },
+        {
+          "type": "object",
+          "required": [
+            "destination_relative_path",
+            "name",
+            "type"
+          ],
+          "properties": {
+            "destination_relative_path": {
+              "description": "Non-existent destination path, relative to this symlink.\n\nDestination must not exist.",
+              "type": "string"
+            },
+            "id": {
+              "description": "Optional tree-unique entry ID. User to refer to entries in the symlink file type, for example.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "name": {
+              "description": "Symlink name (including extension).",
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "broken-symlink"
+              ]
+            }
+          }
         }
       ]
     },

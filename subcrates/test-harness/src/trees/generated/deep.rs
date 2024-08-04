@@ -24,6 +24,7 @@
 #![allow(unused_imports)]
 #![allow(clippy::disallowed_names)]
 #![allow(dead_code)]
+#![allow(unused)]
 
 
 use std::fs;

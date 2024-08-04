@@ -8,6 +8,7 @@ use syn::Ident;
 use super::SchemaCodeGenerationError;
 use crate::{
     codegen::{
+        broken_symlink_entry::prepare_broken_symlink_entry,
         directory_entry::prepare_directory_entry,
         file_entry::prepare_file_entry,
         symlink_entry::prepare_symlink_entry,
@@ -37,10 +38,20 @@ pub(super) fn prepare_tree_entries(
                     .collision_free_ident(&prepared_file_entry.preferred_parent_field_ident);
 
 
-                prepared_entries.push(AnyPreparedEntry::File {
+                let prepared_entry_any = AnyPreparedEntry::File {
                     entry: prepared_file_entry,
                     actual_field_name_on_parent_ident: actual_field_name_ident_on_parent,
-                })
+                };
+
+                global_context
+                    .prepared_entry_registry
+                    .add_prepared_entry(prepared_entry_any.clone())
+                    .map_err(|error| SchemaCodeGenerationError::TreeRegistryError {
+                        error,
+                        entry_relative_path: tree_root_relative_path.join(&file_entry.name),
+                    })?;
+
+                prepared_entries.push(prepared_entry_any);
             }
             FileSystemHarnessEntry::Directory(directory_entry) => {
                 let prepared_directory_entry = prepare_directory_entry(
@@ -60,10 +71,20 @@ pub(super) fn prepare_tree_entries(
                     .collision_free_ident(&prepared_directory_entry.preferred_parent_field_ident);
 
 
-                prepared_entries.push(AnyPreparedEntry::Directory {
+                let prepared_entry_any = AnyPreparedEntry::Directory {
                     entry: prepared_directory_entry,
                     actual_field_name_on_parent_ident: actual_field_name_ident_on_parent,
-                })
+                };
+
+                global_context
+                    .prepared_entry_registry
+                    .add_prepared_entry(prepared_entry_any.clone())
+                    .map_err(|error| SchemaCodeGenerationError::TreeRegistryError {
+                        error,
+                        entry_relative_path: tree_root_relative_path.join(&directory_entry.name),
+                    })?;
+
+                prepared_entries.push(prepared_entry_any);
             }
             FileSystemHarnessEntry::Symlink(symlink_entry) => {
                 let prepared_symlink_entry =
@@ -77,10 +98,56 @@ pub(super) fn prepare_tree_entries(
                     .collision_free_ident(&prepared_symlink_entry.preferred_parent_field_ident);
 
 
-                prepared_entries.push(AnyPreparedEntry::Symlink {
+                let prepared_entry_any = AnyPreparedEntry::Symlink {
                     entry: prepared_symlink_entry,
                     actual_field_name_on_parent_ident: actual_field_name_ident_on_parent,
-                })
+                };
+
+                global_context
+                    .prepared_entry_registry
+                    .add_prepared_entry(prepared_entry_any.clone())
+                    .map_err(|error| SchemaCodeGenerationError::TreeRegistryError {
+                        error,
+                        entry_relative_path: tree_root_relative_path.join(&symlink_entry.name),
+                    })?;
+
+                prepared_entries.push(prepared_entry_any);
+            }
+            FileSystemHarnessEntry::BrokenSymlink(broken_symlink_entry) => {
+                let prepared_broken_symlink_entry = prepare_broken_symlink_entry(
+                    global_context,
+                    tree_root_relative_path,
+                    broken_symlink_entry,
+                )
+                .map_err(|error| {
+                    SchemaCodeGenerationError::BrokenSymlinkEntryError {
+                        error,
+                        broken_symlink_relative_path: tree_root_relative_path
+                            .join(&broken_symlink_entry.name),
+                    }
+                })?;
+
+                let actual_field_name_ident_on_parent = local_struct_field_name_collision_avoider
+                    .collision_free_ident(
+                        &prepared_broken_symlink_entry.preferred_parent_field_ident,
+                    );
+
+
+                let prepared_entry_any = AnyPreparedEntry::BrokenSymlink {
+                    entry: prepared_broken_symlink_entry,
+                    actual_field_name_on_parent_ident: actual_field_name_ident_on_parent,
+                };
+
+                global_context
+                    .prepared_entry_registry
+                    .add_prepared_entry(prepared_entry_any.clone())
+                    .map_err(|error| SchemaCodeGenerationError::TreeRegistryError {
+                        error,
+                        entry_relative_path: tree_root_relative_path
+                            .join(&broken_symlink_entry.name),
+                    })?;
+
+                prepared_entries.push(prepared_entry_any);
             }
         }
     }
@@ -142,6 +209,16 @@ pub(super) fn construct_field_post_initializer_code(
             } => {
                 quote! {
                     self.#actual_field_name_ident_on_parent.post_initialize(
+                        self.#temporary_directory_struct_field_ident.path()
+                    );
+                }
+            }
+            AnyPreparedEntry::BrokenSymlink {
+                actual_field_name_on_parent_ident,
+                ..
+            } => {
+                quote! {
+                    self.#actual_field_name_on_parent_ident.post_initialize(
                         self.#temporary_directory_struct_field_ident.path()
                     );
                 }

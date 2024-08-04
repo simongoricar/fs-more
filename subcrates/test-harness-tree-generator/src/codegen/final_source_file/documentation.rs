@@ -74,6 +74,9 @@ fn format_tree_structure_as_string(schema: &FileSystemHarnessSchema) -> String {
                 }
                 FileSystemHarnessEntry::Directory(directory) => directory.name.to_string(),
                 FileSystemHarnessEntry::Symlink(symlink) => symlink.name.to_string(),
+                FileSystemHarnessEntry::BrokenSymlink(broken_symlink) => {
+                    broken_symlink.name.to_string()
+                }
             }
             .as_str(),
         );
@@ -148,7 +151,8 @@ pub(super) fn construct_documentation(
 
 #![allow(unused_imports)]
 #![allow(clippy::disallowed_names)]
-#![allow(dead_code)]\
+#![allow(dead_code)]
+#![allow(unused)]\
         ",
         schema_file_name,
         custom_schema_description,

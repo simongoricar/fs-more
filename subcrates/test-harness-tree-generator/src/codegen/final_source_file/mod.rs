@@ -16,7 +16,12 @@ use heck::ToUpperCamelCase;
 use quote::{format_ident, quote};
 use thiserror::Error;
 
-use super::{directory_entry::DirectoryEntryError, symlink_entry::SymlinkEntryError};
+use super::{
+    broken_symlink_entry::BrokenSymlinkEntryError,
+    directory_entry::DirectoryEntryError,
+    symlink_entry::SymlinkEntryError,
+    TreeRegistryError,
+};
 use crate::{
     codegen::{CodeGenerationContext, PreparedEntryRegistry},
     name_collision::NameCollisionAvoider,
@@ -53,12 +58,38 @@ pub enum SchemaCodeGenerationError {
         symlink_relative_path: PathBuf,
     },
 
-    #[error("failed to parse generated source file")]
-    SynParsingError(
-        #[from]
+    #[error(
+        "failed to generate code for broken symlink entry {}",
+        .broken_symlink_relative_path.display()
+    )]
+    BrokenSymlinkEntryError {
         #[source]
-        syn::Error,
-    ),
+        error: BrokenSymlinkEntryError,
+
+        broken_symlink_relative_path: PathBuf,
+    },
+
+    #[error(
+        "failed to register entry {} in tree",
+        .entry_relative_path.display()
+    )]
+    TreeRegistryError {
+        #[source]
+        error: TreeRegistryError,
+
+        entry_relative_path: PathBuf,
+    },
+
+    #[error(
+        "failed to parse generated source file\nfull source:\n{}",
+        .full_source_file
+    )]
+    FileParsingError {
+        #[source]
+        error: syn::Error,
+
+        full_source_file: String,
+    },
 
     #[error(
         "failed to open or write to output file: {}",
@@ -261,7 +292,14 @@ pub fn generate_rust_source_file_for_schema(
 
 
 
-    let file_without_top_comment = syn::parse_file(&generated_module_code.to_string())?;
+    let file_without_top_comment =
+        syn::parse_file(&generated_module_code.to_string()).map_err(|error| {
+            SchemaCodeGenerationError::FileParsingError {
+                error,
+                full_source_file: generated_module_code.to_string(),
+            }
+        })?;
+
     let formatted_file_without_top_comment = prettyplease::unparse(&file_without_top_comment);
 
 

@@ -50,6 +50,7 @@ pub(crate) fn prepare_symlink_entry(
         .join(" ")
         .to_upper_camel_case();
 
+
     let symlink_struct_name = context
         .struct_name_collision_avoider
         .collision_free_name(&friendly_upper_camel_case_file_name);

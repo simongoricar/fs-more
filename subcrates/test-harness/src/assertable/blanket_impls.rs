@@ -253,6 +253,58 @@ where
     }
 
     #[track_caller]
+    fn assert_is_any_valid_symlink(&self) {
+        self.assert_exists();
+
+        let metadata_no_follow = self
+            .as_path()
+            .symlink_metadata()
+            .expect("unable to read file metadata without following");
+
+        if !metadata_no_follow.is_symlink() {
+            panic!(
+                "path is not a symlink, but {:?}: {}",
+                metadata_no_follow.file_type(),
+                self.as_path().display()
+            );
+        }
+
+
+        let symlink_destination = self
+            .as_path()
+            .read_link()
+            .expect("unable to read file symlink destination");
+
+        symlink_destination.assert_exists();
+    }
+
+    #[track_caller]
+    fn assert_is_any_broken_symlink(&self) {
+        self.assert_exists();
+
+        let metadata_no_follow = self
+            .as_path()
+            .symlink_metadata()
+            .expect("unable to read file metadata without following");
+
+        if !metadata_no_follow.is_symlink() {
+            panic!(
+                "path is not a symlink, but {:?}: {}",
+                metadata_no_follow.file_type(),
+                self.as_path().display()
+            );
+        }
+
+
+        let symlink_destination = self
+            .as_path()
+            .read_link()
+            .expect("unable to read file symlink destination");
+
+        symlink_destination.assert_not_exists();
+    }
+
+    #[track_caller]
     fn assert_is_symlink_to_directory(&self) {
         self.assert_exists();
 
