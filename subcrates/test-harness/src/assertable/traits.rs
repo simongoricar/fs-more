@@ -275,10 +275,10 @@ pub trait CaptureableFilePath: AsPath {
     /// since this is part of `fs-more`'s testing harness.
     ///
     ///
-    /// [`AssertableInitialFileCapture`]: crate::tree_framework::AssertableInitialFileCapture
-    /// [`assert_unchanged_from_initial_state`]: crate::tree_framework::AssertableInitialFileCapture::assert_unchanged_from_initial_state
-    /// [`initialize`]: crate::tree_framework::FileSystemHarness::initialize
-    /// [`FileState::capture_from_file_path`]: crate::assertable::file_capture::FileState::capture_from_file_path
+    /// [`AssertableInitialFileCapture`]: crate::trees::AssertableInitialFileCapture
+    /// [`assert_unchanged_from_initial_state`]: crate::trees::AssertableInitialFileCapture::assert_unchanged_from_initial_state
+    /// [`initialize`]: crate::trees::FileSystemHarness::initialize
+    /// [`FileState::capture_from_file_path`]: crate::assertable::file::FileState::capture_from_file_path
     fn capture_with_content(&self) -> CapturedFileState {
         CapturedFileState::new_with_content_capture(self.as_path())
     }

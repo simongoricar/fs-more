@@ -818,4 +818,11 @@ pub enum DirectoryScanErrorV2 {
         #[source]
         error: std::io::Error,
     },
+
+    /// A symlink inside the scan tree is cyclical.
+    #[error("encountered a directory symlink cycle at {}", .directory_path.display())]
+    SymlinkCycleEncountered {
+        /// The directory path at which the cycle loops around (i.e. where the cycle was detected).
+        directory_path: PathBuf,
+    },
 }

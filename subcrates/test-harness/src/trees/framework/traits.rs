@@ -15,10 +15,8 @@ pub trait FileSystemHarness: AsPath {
     /// initializing any directories and files inside it.
     ///
     /// The details generally depend on the given tree definition,
-    /// see the [harness generator] for more info.
-    ///
-    ///
-    /// [harness generator]: fs_more_test_harness_tree_generator
+    /// see the harness generator (`fs_more_test_harness_tree_generator` crate)
+    /// for more info.
     fn initialize() -> Self;
 
     /// Consumes `self` and cleans up the entire temporary directory

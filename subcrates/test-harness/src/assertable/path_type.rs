@@ -73,6 +73,9 @@ impl PathType {
     ///
     /// This method exists as a convenience for cases where the metadata has already been obtained,
     /// and needs to be simply turned into [`PathType`].
+    ///
+    ///
+    /// [`Metadata::file_type`]: std::fs::Metadata::file_type
     pub fn from_path_types(file_type_no_follow: FileType, file_type_with_follow: FileType) -> Self {
         if file_type_no_follow.is_file() {
             Self::BareFile

@@ -10,9 +10,7 @@ use crate::error::DirectorySizeScanErrorV2;
 ///
 ///
 /// This function is essentially a shortcut for initializing
-/// a [`DirectoryScan`] with unlimited scan depth and calling its
-/// [`total_size_in_bytes`][DirectoryScan::total_size_in_bytes] method
-/// immediately after.
+/// a [`DirectoryScanner`] with unlimited scan depth and summing entries' sizes.
 pub fn directory_size_in_bytes<P>(directory_path: P) -> Result<u64, DirectorySizeScanErrorV2>
 where
     P: Into<PathBuf>,

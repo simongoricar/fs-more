@@ -36,7 +36,7 @@
 //!
 //! Enables the optional support for [`dunce`](https://docs.rs/dunce) which automatically strips Windows' UNC paths
 //! if they can be represented as non-UNC paths (e.g., `\\?\C:\foo` as `C:\foo`). This is done both
-//! internally and in external results from e.g., [`DirectoryScan`].
+//! internally and in external results from e.g., [`DirectoryScanner`].
 //!
 //! This feature is enabled by default and recommended because path canonicalization on Windows very commonly returns UNC paths.
 //! `dunce` only has an effect when compiling for Windows targets.
@@ -157,7 +157,7 @@
 //! # }
 //! ```
 //!
-//! [`DirectoryScan`]: crate::directory::DirectoryScan
+//! [`DirectoryScanner`]: crate::directory::DirectoryScanner
 
 #![warn(missing_docs)]
 
