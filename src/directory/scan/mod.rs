@@ -70,7 +70,7 @@ pub enum DirectoryScanDepthLimit {
 
 /// Options that influence [`DirectoryScanner`].
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct DirectoryScanOptionsV2 {
+pub struct DirectoryScanOptions {
     /// Whether to have the iterator yield the base directory
     /// as its first item or not.
     pub yield_base_directory: bool,
@@ -103,14 +103,14 @@ pub struct DirectoryScanOptionsV2 {
     pub follow_base_directory_symbolic_link: bool,
 }
 
-impl DirectoryScanOptionsV2 {
+impl DirectoryScanOptions {
     #[inline]
     pub(crate) const fn should_track_ancestors(&self) -> bool {
         self.follow_symbolic_links
     }
 }
 
-impl Default for DirectoryScanOptionsV2 {
+impl Default for DirectoryScanOptions {
     fn default() -> Self {
         Self {
             yield_base_directory: true,
@@ -236,7 +236,7 @@ impl ScanEntry {
 pub struct DirectoryScanner {
     base_path: PathBuf,
 
-    options: DirectoryScanOptionsV2,
+    options: DirectoryScanOptions,
 }
 
 impl DirectoryScanner {
@@ -244,7 +244,7 @@ impl DirectoryScanner {
     ///
     /// This call will not interact with the filesystem yet. To turn this scanner struct into
     /// a breadth-first recursive iterator, call its [`into_iter`][`Self::into_iter`] method.
-    pub fn new<P>(base_directory_path: P, options: DirectoryScanOptionsV2) -> Self
+    pub fn new<P>(base_directory_path: P, options: DirectoryScanOptions) -> Self
     where
         P: Into<PathBuf>,
     {
@@ -289,7 +289,7 @@ pub(crate) fn is_directory_empty_unchecked(directory_path: &Path) -> std::io::Re
 /// Returns a `bool` indicating whether the given directory is completely empty.
 ///
 /// Permission and other errors will *not* be coerced into `false`,
-/// but will instead raise a distinct error (see [`DirectoryEmptinessScanErrorV2`]).
+/// but will instead raise a distinct error (see [`DirectoryEmptinessScanError`]).
 pub fn is_directory_empty<P>(directory_path: P) -> Result<bool, DirectoryEmptinessScanError>
 where
     P: AsRef<Path>,

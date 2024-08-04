@@ -4,7 +4,7 @@ use fs_more::{
         DestinationDirectoryRule,
         DirectoryCopyOptions,
         DirectoryScanDepthLimit,
-        DirectoryScanOptionsV2,
+        DirectoryScanOptions,
         ExistingSubDirectoryBehaviour,
     },
     error::{
@@ -79,7 +79,7 @@ pub fn copy_directory_respects_copy_depth_limit() -> TestResult {
 
     let deep_harness_stats = collect_directory_statistics_via_scan_with_options(
         deep_harness.as_path(),
-        DirectoryScanOptionsV2 {
+        DirectoryScanOptions {
             yield_base_directory: false,
             maximum_scan_depth: MAXIMUM_SCAN_DEPTH,
             ..Default::default()

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use super::{DirectoryScanDepthLimit, DirectoryScanOptionsV2, DirectoryScanner};
+use super::{DirectoryScanDepthLimit, DirectoryScanOptions, DirectoryScanner};
 use crate::error::DirectorySizeScanError;
 
 
@@ -20,7 +20,7 @@ where
 
     let unlimited_depth_scan = DirectoryScanner::new(
         &directory_path,
-        DirectoryScanOptionsV2 {
+        DirectoryScanOptions {
             yield_base_directory: true,
             maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
             follow_symbolic_links: false,

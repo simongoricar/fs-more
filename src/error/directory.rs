@@ -318,11 +318,6 @@ pub enum MoveDirectoryPreparationError {
     #[error(transparent)]
     DirectoryScanError(#[from] DirectoryScanError),
 
-    // TODO remove
-    /// Source directory size scanning error.
-    // #[error(transparent)]
-    // DirectorySizeScanError(#[from] DirectorySizeScanErrorV2),
-
     /// Directory copy planning error. These errors can happen
     /// when a move-by-rename fails and a copy-and-delete is attempted instead.
     #[error(transparent)]

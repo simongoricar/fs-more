@@ -6,7 +6,7 @@ use std::{
 
 use_enabled_fs_module!();
 
-use super::{DirectoryScanDepthLimit, DirectoryScanOptionsV2, ScanEntry};
+use super::{DirectoryScanDepthLimit, DirectoryScanOptions, ScanEntry};
 use crate::{directory::ScanEntryDepth, error::DirectoryScanError};
 
 
@@ -36,7 +36,7 @@ struct PendingDirectory {
 /// Represents a file tree ancestor.
 ///
 /// Used for symlink cycle detection when
-/// [`DirectoryScanOptionsV2::should_track_ancestors`] returns `true`.
+/// [`DirectoryScanOptions::should_track_ancestors`] returns `true`.
 struct Ancestor {
     /// Path of the ancestor directory.
     path: PathBuf,
@@ -50,7 +50,7 @@ struct Ancestor {
 struct NextEntryInfo {
     /// Path of the next entry.
     ///
-    /// If [`DirectoryScanOptionsV2::follow_symbolic_links`] is `true`,
+    /// If [`DirectoryScanOptions::follow_symbolic_links`] is `true`,
     /// this path will never lead to a symlink.
     path: PathBuf,
 
@@ -75,7 +75,7 @@ pub struct BreadthFirstDirectoryIter {
     base_directory: PathBuf,
 
     /// Directory scanning options.
-    options: DirectoryScanOptionsV2,
+    options: DirectoryScanOptions,
 
     /// Whether the `base_directory` has been added to the pending scan queue yet.
     /// If the base directory is a symbolic link to a directory and
@@ -85,7 +85,7 @@ pub struct BreadthFirstDirectoryIter {
     ///
     /// This is generally done on the first call to [`Self::next`].
     ///
-    /// [`follow_base_directory_symbolic_link`]: DirectoryScanOptionsV2::follow_base_directory_symbolic_link
+    /// [`follow_base_directory_symbolic_link`]: DirectoryScanOptions::follow_base_directory_symbolic_link
     has_processed_base_directory: bool,
 
     /// Whether the `base_directory` has been taken from the pending scan queue and opened for reading yet.
@@ -108,16 +108,16 @@ pub struct BreadthFirstDirectoryIter {
     /// (i.e. first element is a handle to the base directory).
     ///
     /// This will always be empty if [`follow_symbolic_links`] is `false`
-    /// (i.e. when [`DirectoryScanOptionsV2::should_track_ancestors`] returns `false`).
+    /// (i.e. when [`DirectoryScanOptions::should_track_ancestors`] returns `false`).
     ///
     ///
-    /// [`follow_symbolic_links`]: DirectoryScanOptionsV2::follow_symbolic_links
+    /// [`follow_symbolic_links`]: DirectoryScanOptions::follow_symbolic_links
     current_directory_ancestors: Vec<Ancestor>,
 }
 
 
 impl BreadthFirstDirectoryIter {
-    pub(super) fn new<P>(base_directory: P, options: DirectoryScanOptionsV2) -> Self
+    pub(super) fn new<P>(base_directory: P, options: DirectoryScanOptions) -> Self
     where
         P: Into<PathBuf>,
     {
@@ -206,7 +206,7 @@ impl BreadthFirstDirectoryIter {
     ///   before calling the function).
     ///
     ///
-    /// [`SymlinkCycleEncountered`]: DirectoryScanErrorV2::SymlinkCycleEncountered
+    /// [`SymlinkCycleEncountered`]: DirectoryScanError::SymlinkCycleEncountered
     fn ensure_directory_path_does_not_lead_to_a_tree_cycle(
         &self,
         directory_path: &Path,

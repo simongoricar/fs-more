@@ -1,4 +1,4 @@
-use fs_more::directory::{DirectoryScanDepthLimit, DirectoryScanOptionsV2, DirectoryScanner};
+use fs_more::directory::{DirectoryScanDepthLimit, DirectoryScanOptions, DirectoryScanner};
 use fs_more_test_harness::{
     assert_path_list_fully_matches_set,
     assert_path_list_fully_matches_with_counted_ocucrrences,
@@ -19,7 +19,7 @@ fn scanner_iter_produces_all_expected_paths() {
 
     let scanner = DirectoryScanner::new(
         simple_tree.as_path(),
-        DirectoryScanOptionsV2 {
+        DirectoryScanOptions {
             maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
             ..Default::default()
         },
@@ -52,7 +52,7 @@ fn scanner_iter_produces_all_expected_paths() {
 
     let scanner = DirectoryScanner::new(
         deep_tree.as_path(),
-        DirectoryScanOptionsV2 {
+        DirectoryScanOptions {
             maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
             ..Default::default()
         },
@@ -92,7 +92,7 @@ fn scanner_iter_skips_base_directory_if_configured() {
 
     let scanner = DirectoryScanner::new(
         simple_tree.as_path(),
-        DirectoryScanOptionsV2 {
+        DirectoryScanOptions {
             maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
             yield_base_directory: false,
             ..Default::default()
@@ -129,7 +129,7 @@ fn scanner_iter_respects_depth_limit() {
     {
         let scanner = DirectoryScanner::new(
             deep_harness.as_path(),
-            DirectoryScanOptionsV2 {
+            DirectoryScanOptions {
                 maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
                 ..Default::default()
             },
@@ -162,7 +162,7 @@ fn scanner_iter_respects_depth_limit() {
     {
         let scanner = DirectoryScanner::new(
             deep_harness.as_path(),
-            DirectoryScanOptionsV2 {
+            DirectoryScanOptions {
                 maximum_scan_depth: DirectoryScanDepthLimit::Limited { maximum_depth: 0 },
                 ..Default::default()
             },
@@ -188,7 +188,7 @@ fn scanner_iter_respects_depth_limit() {
     {
         let scanner = DirectoryScanner::new(
             deep_harness.as_path(),
-            DirectoryScanOptionsV2 {
+            DirectoryScanOptions {
                 maximum_scan_depth: DirectoryScanDepthLimit::Limited { maximum_depth: 2 },
                 ..Default::default()
             },
@@ -250,7 +250,7 @@ fn scanner_iter_sums_into_correct_size() {
 
     let scanner = DirectoryScanner::new(
         deep_harness.as_path(),
-        DirectoryScanOptionsV2 {
+        DirectoryScanOptions {
             maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
             ..Default::default()
         },
@@ -281,7 +281,7 @@ fn scanner_iter_follows_symlinks_if_enabled() {
 
     let scanner = DirectoryScanner::new(
         tree_harness.as_path(),
-        DirectoryScanOptionsV2 {
+        DirectoryScanOptions {
             maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
             follow_symbolic_links: true,
             ..Default::default()
@@ -320,7 +320,7 @@ fn scanner_iter_does_not_follow_symlinks_if_not_enabled() {
 
     let scanner = DirectoryScanner::new(
         tree_harness.as_path(),
-        DirectoryScanOptionsV2 {
+        DirectoryScanOptions {
             maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
             follow_symbolic_links: false,
             ..Default::default()
@@ -368,7 +368,7 @@ fn scanner_iter_follows_base_scan_directory_symlink_if_enabled() {
 
     let scanner = DirectoryScanner::new(
         &symlink_to_tree,
-        DirectoryScanOptionsV2 {
+        DirectoryScanOptions {
             maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
             follow_base_directory_symbolic_link: true,
             ..Default::default()
@@ -418,7 +418,7 @@ fn scanner_iter_does_not_follow_base_scan_directory_symlink_if_not_enabled() {
 
     let scanner = DirectoryScanner::new(
         &symlink_to_tree,
-        DirectoryScanOptionsV2 {
+        DirectoryScanOptions {
             maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
             follow_base_directory_symbolic_link: false,
             ..Default::default()
