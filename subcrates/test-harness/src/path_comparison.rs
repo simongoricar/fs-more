@@ -1,5 +1,5 @@
 use std::{
-    collections::HashSet,
+    collections::{hash_map::Entry, HashMap, HashSet},
     path::{Path, PathBuf},
 };
 
@@ -76,6 +76,100 @@ where
                 expected_path.display(),
                 scanned_path_set,
                 expected_path_set
+            );
+        }
+    }
+}
+
+
+#[track_caller]
+pub fn assert_path_list_fully_matches_with_counted_ocucrrences<S, SP, D, DP>(
+    scanned_paths: S,
+    expected_set_of_paths: D,
+) where
+    S: IntoIterator<Item = SP>,
+    SP: AsRef<Path>,
+    D: IntoIterator<Item = (DP, usize)>,
+    DP: AsRef<Path>,
+{
+    let mut scanned_paths_with_occurrences: HashMap<PathBuf, usize> = HashMap::new();
+
+    for scanned_path in scanned_paths {
+        match scanned_paths_with_occurrences.entry(scanned_path.as_ref().to_path_buf()) {
+            Entry::Occupied(mut existing_path_counter) => *existing_path_counter.get_mut() += 1,
+            Entry::Vacant(missing_path_counter) => {
+                missing_path_counter.insert(1);
+            }
+        }
+    }
+
+    let expected_paths_with_occurrences: HashMap<PathBuf, usize> = HashMap::from_iter(
+        expected_set_of_paths
+            .into_iter()
+            .map(|(path, occurrences)| (path.as_ref().to_path_buf(), occurrences)),
+    );
+
+
+
+    for (scanned_path, scanned_occurrences) in scanned_paths_with_occurrences.iter() {
+        let Some(expected_occurrences) =
+            expected_paths_with_occurrences.get(scanned_path.as_path())
+        else {
+            panic!(
+                "path \"{}\" was scanned, but not present in expected paths:\n\n\
+                {:?}\n  \
+                  (scanned) versus (expected)\n\
+                {:?}\n",
+                scanned_path.display(),
+                scanned_paths_with_occurrences,
+                expected_paths_with_occurrences
+            );
+        };
+
+
+        if scanned_occurrences != expected_occurrences {
+            panic!(
+                "path \"{}\" was present on both sides, \
+                but not the same number of times ({} scanned, {} expected):\n\n\
+                {:?}\n  \
+                  (scanned) versus (expected)\n\
+                {:?}\n",
+                scanned_path.display(),
+                scanned_occurrences,
+                expected_occurrences,
+                scanned_paths_with_occurrences,
+                expected_paths_with_occurrences
+            );
+        }
+    }
+
+    for (expected_path, expected_occurrences) in expected_paths_with_occurrences.iter() {
+        let Some(scanned_occurrences) = scanned_paths_with_occurrences.get(expected_path.as_path())
+        else {
+            panic!(
+                "path \"{}\" was expected, but not present in scanned paths:\n\n\
+                {:?}\n  \
+                  (scanned) versus (expected)\n\
+                {:?}\n",
+                expected_path.display(),
+                scanned_paths_with_occurrences,
+                expected_paths_with_occurrences
+            );
+        };
+
+
+        if scanned_occurrences != expected_occurrences {
+            panic!(
+                "path \"{}\" was present on both sides, \
+                but not the same number of times ({} scanned, {} expected):\n\n\
+                {:?}\n  \
+                  (scanned) versus (expected)\n\
+                {:?}\n",
+                expected_path.display(),
+                scanned_occurrences,
+                expected_occurrences,
+                scanned_paths_with_occurrences,
+                expected_paths_with_occurrences
             );
         }
     }

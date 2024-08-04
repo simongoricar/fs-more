@@ -116,6 +116,7 @@ pub(super) fn construct_field_initializer_code(
 
 pub(super) fn construct_field_post_initializer_code(
     prepared_entries: &[AnyPreparedEntry],
+    temporary_directory_struct_field_ident: &Ident,
 ) -> Option<TokenStream> {
     let mut individual_initializers = Vec::with_capacity(prepared_entries.len());
 
@@ -130,7 +131,9 @@ pub(super) fn construct_field_post_initializer_code(
                 }
 
                 quote! {
-                    self.#actual_field_name_ident_on_parent.post_initialize();
+                    self.#actual_field_name_ident_on_parent.post_initialize(
+                        self.#temporary_directory_struct_field_ident.path()
+                    );
                 }
             }
             AnyPreparedEntry::Symlink {
@@ -138,7 +141,9 @@ pub(super) fn construct_field_post_initializer_code(
                 ..
             } => {
                 quote! {
-                    self.#actual_field_name_ident_on_parent.post_initialize();
+                    self.#actual_field_name_ident_on_parent.post_initialize(
+                        self.#temporary_directory_struct_field_ident.path()
+                    );
                 }
             }
             AnyPreparedEntry::File { .. } => continue,

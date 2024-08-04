@@ -14,32 +14,43 @@ fn construct_post_initializer_code_for_symlink_entry(
     symlink_destination_entry: &AnyPreparedEntry,
     symlink_path_variable_ident: &Ident,
     symlink_destination_path_variable_ident: &Ident,
+    tree_root_absolute_path_parameter_ident: &Ident,
 ) -> Result<TokenStream, SymlinkEntryError> {
     match symlink_destination_entry {
         AnyPreparedEntry::Directory { .. } => Ok({
             quote! {
                 self.#symlink_path_variable_ident.assert_not_exists();
 
+                let absolute_destination_path =
+                    #tree_root_absolute_path_parameter_ident.join(&self.#symlink_destination_path_variable_ident);
+
                 initialize_symbolic_link(
                     &self.#symlink_path_variable_ident,
-                    &self.#symlink_destination_path_variable_ident,
+                    &absolute_destination_path,
                     SymlinkDestinationType::Directory,
                 );
 
-                self.#symlink_path_variable_ident.assert_is_symlink_to_directory();
+                self.#symlink_path_variable_ident.assert_is_symlink_to_directory_and_destination_matches(
+                    &absolute_destination_path
+                );
             }
         }),
         AnyPreparedEntry::File { .. } => Ok({
             quote! {
                 self.#symlink_path_variable_ident.assert_not_exists();
 
+                let absolute_destination_path =
+                    #tree_root_absolute_path_parameter_ident.join(&self.#symlink_destination_path_variable_ident);
+
                 initialize_symbolic_link(
                     &self.#symlink_path_variable_ident,
-                    &self.#symlink_destination_path_variable_ident,
+                    &absolute_destination_path,
                     SymlinkDestinationType::File,
                 );
 
-                self.#symlink_path_variable_ident.assert_is_symlink_to_directory();
+                self.#symlink_path_variable_ident.assert_is_symlink_to_file_and_destination_matches(
+                    &absolute_destination_path
+                );
             }
         }),
         AnyPreparedEntry::Symlink { .. } => Err(SymlinkEntryError::ChainingSymlinksNotSupported {
@@ -76,6 +87,8 @@ pub(crate) fn generate_code_for_symlink_entry_in_tree(
     let symlink_path_variable_ident = format_ident!("symlink_path");
     let symlink_destination_path_variable_ident = format_ident!("symlink_destination_path");
 
+    let tree_root_absolute_path_parameter_ident = format_ident!("tree_root_absolute_path");
+
 
     let Some(destination_entry) = context
         .prepared_entry_registry
@@ -107,6 +120,7 @@ pub(crate) fn generate_code_for_symlink_entry_in_tree(
             destination_entry,
             &symlink_path_variable_ident,
             &symlink_destination_path_variable_ident,
+            &tree_root_absolute_path_parameter_ident,
         )?;
 
 
@@ -120,6 +134,8 @@ pub(crate) fn generate_code_for_symlink_entry_in_tree(
         #[doc = #documentation_for_symlink_entry]
         pub struct #symlink_entry_struct_name_ident {
             #symlink_path_variable_ident: PathBuf,
+
+            /// Symlink destination path, relative to the tree harness root.
             #symlink_destination_path_variable_ident: PathBuf,
         }
 
@@ -128,7 +144,7 @@ pub(crate) fn generate_code_for_symlink_entry_in_tree(
             fn initialize(parent_directory_path: &Path) -> Self
             {
                 let #symlink_path_variable_ident = parent_directory_path.join(#symlink_name);
-                let #symlink_destination_path_variable_ident = parent_directory_path.join(#symlink_destination_path_relative_to_tree_root);
+                let #symlink_destination_path_variable_ident = #symlink_destination_path_relative_to_tree_root.into();
 
                 #symlink_path_variable_ident.assert_not_exists();
 
@@ -139,7 +155,7 @@ pub(crate) fn generate_code_for_symlink_entry_in_tree(
             }
 
             #[track_caller]
-            fn post_initialize(&mut self) {
+            fn post_initialize(&mut self, #tree_root_absolute_path_parameter_ident: &Path) {
                 #generated_symlink_post_initialization_code
             }
         }

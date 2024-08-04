@@ -1,8 +1,14 @@
 use fs_more::directory::{DirectoryScanDepthLimit, DirectoryScanOptionsV2, DirectoryScanner};
 use fs_more_test_harness::{
     assert_path_list_fully_matches_set,
+    assert_path_list_fully_matches_with_counted_ocucrrences,
     prelude::*,
-    trees::structures::{deep::DeepTree, simple::SimpleTree},
+    trees::structures::{
+        deep::DeepTree,
+        empty::EmptyTree,
+        simple::SimpleTree,
+        symlinked::SymlinkedTree,
+    },
 };
 
 
@@ -266,4 +272,172 @@ fn scanner_iter_sums_into_correct_size() {
     deep_harness.destroy();
 }
 
-// TODO tests for symlink and base directory symlink behaviour
+
+
+#[test]
+fn scanner_iter_follows_symlinks_if_enabled() {
+    let tree_harness = SymlinkedTree::initialize();
+
+
+    let scanner = DirectoryScanner::new(
+        tree_harness.as_path(),
+        DirectoryScanOptionsV2 {
+            maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
+            follow_symbolic_links: true,
+            ..Default::default()
+        },
+    )
+    .into_iter();
+
+
+    let scanned_paths = scanner
+        .map(|entry_result| entry_result.map(|entry| entry.into_path()))
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+
+    assert_path_list_fully_matches_with_counted_ocucrrences(
+        scanned_paths,
+        [
+            (tree_harness.as_path(), 1),
+            (tree_harness.a_bin.as_path(), 1),
+            (tree_harness.foo.as_path(), 1),
+            (tree_harness.foo.bar.as_path(), 1),
+            (tree_harness.foo.bar.hello.as_path(), 2),
+            (tree_harness.foo.bar.c_bin.as_path(), 1),
+            (tree_harness.foo.bar.hello.world.as_path(), 2),
+            (tree_harness.foo.bar.hello.world.d_bin.as_path(), 3),
+            (tree_harness.foo.b_bin.as_path(), 1),
+        ],
+    );
+
+    tree_harness.destroy();
+}
+
+#[test]
+fn scanner_iter_does_not_follow_symlinks_if_not_enabled() {
+    let tree_harness = SymlinkedTree::initialize();
+
+
+    let scanner = DirectoryScanner::new(
+        tree_harness.as_path(),
+        DirectoryScanOptionsV2 {
+            maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
+            follow_symbolic_links: false,
+            ..Default::default()
+        },
+    )
+    .into_iter();
+
+
+    let scanned_paths = scanner
+        .map(|entry_result| entry_result.map(|entry| entry.into_path()))
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+
+    assert_path_list_fully_matches_with_counted_ocucrrences(
+        scanned_paths,
+        [
+            (tree_harness.as_path(), 1),
+            (tree_harness.a_bin.as_path(), 1),
+            (tree_harness.foo.as_path(), 1),
+            (tree_harness.foo.b_bin.as_path(), 1),
+            (tree_harness.foo.symlink_to_hello.as_path(), 1),
+            (tree_harness.foo.symlink_to_d_bin.as_path(), 1),
+            (tree_harness.foo.bar.as_path(), 1),
+            (tree_harness.foo.bar.c_bin.as_path(), 1),
+            (tree_harness.foo.bar.hello.as_path(), 1),
+            (tree_harness.foo.bar.hello.world.as_path(), 1),
+            (tree_harness.foo.bar.hello.world.d_bin.as_path(), 1),
+        ],
+    );
+
+    tree_harness.destroy();
+}
+
+
+#[test]
+fn scanner_iter_follows_base_scan_directory_symlink_if_enabled() {
+    let scan_source_harness = EmptyTree::initialize();
+    let tree_harness = SymlinkedTree::initialize();
+
+
+    let symlink_to_tree = scan_source_harness.child_path("symlink-to-tree");
+    symlink_to_tree.assert_not_exists();
+    symlink_to_tree.symlink_to_directory(tree_harness.as_path());
+
+
+    let scanner = DirectoryScanner::new(
+        &symlink_to_tree,
+        DirectoryScanOptionsV2 {
+            maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
+            follow_base_directory_symbolic_link: true,
+            ..Default::default()
+        },
+    )
+    .into_iter();
+
+
+    let scanned_paths = scanner
+        .map(|entry_result| entry_result.map(|entry| entry.into_path()))
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+
+    assert_path_list_fully_matches_with_counted_ocucrrences(
+        scanned_paths,
+        [
+            (tree_harness.as_path(), 1),
+            (tree_harness.a_bin.as_path(), 1),
+            (tree_harness.foo.as_path(), 1),
+            (tree_harness.foo.b_bin.as_path(), 1),
+            (tree_harness.foo.symlink_to_hello.as_path(), 1),
+            (tree_harness.foo.symlink_to_d_bin.as_path(), 1),
+            (tree_harness.foo.bar.as_path(), 1),
+            (tree_harness.foo.bar.c_bin.as_path(), 1),
+            (tree_harness.foo.bar.hello.as_path(), 1),
+            (tree_harness.foo.bar.hello.world.as_path(), 1),
+            (tree_harness.foo.bar.hello.world.d_bin.as_path(), 1),
+        ],
+    );
+
+
+    tree_harness.destroy();
+    scan_source_harness.destroy();
+}
+
+
+#[test]
+fn scanner_iter_does_not_follow_base_scan_directory_symlink_if_not_enabled() {
+    let scan_source_harness = EmptyTree::initialize();
+    let tree_harness = SymlinkedTree::initialize();
+
+
+    let symlink_to_tree = scan_source_harness.child_path("symlink-to-tree");
+    symlink_to_tree.assert_not_exists();
+    symlink_to_tree.symlink_to_directory(tree_harness.as_path());
+
+
+    let scanner = DirectoryScanner::new(
+        &symlink_to_tree,
+        DirectoryScanOptionsV2 {
+            maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
+            follow_base_directory_symbolic_link: false,
+            ..Default::default()
+        },
+    )
+    .into_iter();
+
+
+    let scanned_paths = scanner
+        .map(|entry_result| entry_result.map(|entry| entry.into_path()))
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+
+    assert_path_list_fully_matches_with_counted_ocucrrences(
+        scanned_paths,
+        [(symlink_to_tree.as_path(), 1)],
+    );
+
+
+    tree_harness.destroy();
+    scan_source_harness.destroy();
+}

@@ -90,7 +90,10 @@ fn construct_final_struct_initializer(
 }
 
 
-fn construct_post_initializers_for_entries(entries: &[AnyPreparedEntry]) -> Vec<TokenStream> {
+fn construct_post_initializers_for_entries(
+    entries: &[AnyPreparedEntry],
+    tree_root_absolute_path_parameter_ident: &Ident,
+) -> Vec<TokenStream> {
     let num_symlink_entries = entries
         .iter()
         .filter(|entry| matches!(entry, AnyPreparedEntry::Symlink { .. }))
@@ -99,17 +102,33 @@ fn construct_post_initializers_for_entries(entries: &[AnyPreparedEntry]) -> Vec<
     let mut field_post_initializers = Vec::with_capacity(num_symlink_entries);
 
     for entry in entries {
-        let AnyPreparedEntry::Symlink {
-            actual_field_name_on_parent_ident: actual_field_name_ident_on_parent,
-            ..
-        } = entry
-        else {
-            continue;
-        };
+        match entry {
+            AnyPreparedEntry::Directory {
+                actual_field_name_on_parent_ident: actual_field_name_ident_on_parent,
+                entry,
+            } => {
+                if !entry.requires_post_initialization_call() {
+                    continue;
+                }
 
-        field_post_initializers.push(quote! {
-            self.#actual_field_name_ident_on_parent.post_initialize();
-        });
+                field_post_initializers.push(quote! {
+                    self.#actual_field_name_ident_on_parent.post_initialize(
+                        #tree_root_absolute_path_parameter_ident
+                    );
+                });
+            }
+            AnyPreparedEntry::Symlink {
+                actual_field_name_on_parent_ident: actual_field_name_ident_on_parent,
+                ..
+            } => {
+                field_post_initializers.push(quote! {
+                    self.#actual_field_name_ident_on_parent.post_initialize(
+                        #tree_root_absolute_path_parameter_ident
+                    );
+                });
+            }
+            _ => {}
+        }
     }
 
     field_post_initializers
@@ -118,18 +137,21 @@ fn construct_post_initializers_for_entries(entries: &[AnyPreparedEntry]) -> Vec<
 
 fn construct_post_initialize_function_if_needed(
     prepared_directory: &PreparedDirectoryEntry,
+    tree_root_absolute_path_parameter_ident: &Ident,
 ) -> Option<TokenStream> {
     if !prepared_directory.requires_post_initialization_call() {
         return None;
     }
 
 
-    let post_initializer_calls =
-        construct_post_initializers_for_entries(&prepared_directory.entries);
+    let post_initializer_calls = construct_post_initializers_for_entries(
+        &prepared_directory.entries,
+        tree_root_absolute_path_parameter_ident,
+    );
 
     Some(quote! {
         #[track_caller]
-        fn post_initialize(&mut self) {
+        fn post_initialize(&mut self, #tree_root_absolute_path_parameter_ident: &Path) {
             #(#post_initializer_calls)*
         }
     })
@@ -279,9 +301,13 @@ pub(crate) fn generate_code_for_directory_entry_in_tree(
         &prepared_directory.directory_path_relative_to_tree_root;
 
 
+    let tree_root_absolute_path_parameter_ident = format_ident!("tree_root_absolute_path");
 
-    let potential_post_initialize_function =
-        construct_post_initialize_function_if_needed(&prepared_directory);
+
+    let potential_post_initialize_function = construct_post_initialize_function_if_needed(
+        &prepared_directory,
+        &tree_root_absolute_path_parameter_ident,
+    );
 
 
     let mut token_stream_to_prepend = TokenStream::new();

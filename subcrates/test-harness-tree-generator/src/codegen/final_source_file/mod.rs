@@ -94,6 +94,8 @@ pub fn generate_rust_source_file_for_schema(
     let temporary_directory_path_ident = format_ident!("temporary_directory_path");
     let new_self_variable_ident = format_ident!("new_self");
 
+    let temporary_directory_field_ident = format_ident!("temporary_directory");
+
     let tree_root_relative_path = Path::new(".");
 
 
@@ -117,7 +119,7 @@ pub fn generate_rust_source_file_for_schema(
 
 
     let potential_post_initialization_code =
-        construct_field_post_initializer_code(&prepared_entries);
+        construct_field_post_initializer_code(&prepared_entries, &temporary_directory_field_ident);
 
 
 
@@ -149,20 +151,20 @@ pub fn generate_rust_source_file_for_schema(
         if potential_post_initialization_code.is_some() {
             quote! {
                 let mut #new_self_variable_ident = Self {
-                    temporary_directory,
+                    #temporary_directory_field_ident,
                     #(#tree_struct_field_names),*
                 };
 
                 #new_self_variable_ident.post_initialize();
 
-                // Returns self, optionally post-initialized if required
-                // (indicated by a post_initialize call between declaration and return).
+                // Returns self (optionally post-initialized if required,
+                // as indicated by a post_initialize call between declaration and return).
                 #new_self_variable_ident
             }
         } else {
             quote! {
                 Self {
-                    temporary_directory,
+                    #temporary_directory_field_ident,
                     #(#tree_struct_field_names),*
                 }
             }
@@ -204,7 +206,7 @@ pub fn generate_rust_source_file_for_schema(
 
         #[doc = #tree_root_struct_documentation]
         pub struct #tree_root_struct_name_ident {
-            temporary_directory: TempDir,
+            #temporary_directory_field_ident: TempDir,
 
             #(#tree_struct_fields),*
         }
@@ -213,10 +215,10 @@ pub fn generate_rust_source_file_for_schema(
         impl FileSystemHarness for #tree_root_struct_name_ident {
             #[track_caller]
             fn initialize() -> Self {
-                let temporary_directory = tempfile::tempdir()
+                let #temporary_directory_field_ident = tempfile::tempdir()
                     .expect("failed to initialize temporary directory");
 
-                let #temporary_directory_path_ident = temporary_directory.path();
+                let #temporary_directory_path_ident = #temporary_directory_field_ident.path();
                 #temporary_directory_path_ident.assert_is_directory_and_empty();
 
                 #tree_struct_field_initializer_code
@@ -226,14 +228,14 @@ pub fn generate_rust_source_file_for_schema(
 
             #[track_caller]
             fn destroy(self) {
-                if self.temporary_directory.path().exists() {
-                    self.temporary_directory
+                if self.#temporary_directory_field_ident.path().exists() {
+                    self.#temporary_directory_field_ident
                         .close()
                         .expect("failed to destroy filesystem harness directory");
                 } else {
                     println!(
                         "Temporary directory \"{}\" doesn't exist, no need to clean up.",
-                        self.temporary_directory.path().display()
+                        self.#temporary_directory_field_ident.path().display()
                     );
                 }
             }
@@ -244,7 +246,7 @@ pub fn generate_rust_source_file_for_schema(
 
         impl AsPath for #tree_root_struct_name_ident {
             fn as_path(&self) -> &Path {
-                self.temporary_directory.path()
+                self.#temporary_directory_field_ident.path()
             }
         }
 
@@ -256,7 +258,6 @@ pub fn generate_rust_source_file_for_schema(
 
         impl FileSystemHarnessDirectory for #tree_root_struct_name_ident {}
     };
-
 
 
 

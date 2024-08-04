@@ -1,6 +1,6 @@
 {
-  "name": "DeepSymlinkedTree",
-  "file_name": "deep_symlinked",
+  "name": "SymlinkedTree",
+  "file_name": "symlinked",
   "structure": {
     "entries": [
       {
@@ -46,6 +46,7 @@
               {
                 "type": "directory",
                 "name": "hello",
+                "id": "hello",
                 "entries": [
                   {
                     "type": "directory",
@@ -66,6 +67,11 @@
                 ]
               }
             ]
+          },
+          {
+            "type": "symlink",
+            "name": "symlink-to-hello",
+            "destination_entry_id": "hello"
           }
         ]
       }

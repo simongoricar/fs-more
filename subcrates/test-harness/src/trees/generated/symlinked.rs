@@ -1,6 +1,6 @@
 //! @generated
 //!
-//! This code was automatically generated from "deep_symlinked.json",
+//! This code was automatically generated from "symlinked.json",
 //! a file that describes this filesystem tree harness for testing.
 //!
 //!
@@ -9,6 +9,7 @@
 //! .
 //! |-- a.bin (random data, 32 KiB)
 //! |-- foo
+//! |   |-- symlink-to-hello
 //! |   |-- bar
 //! |   |   |-- hello
 //! |   |   |   |-- world
@@ -40,7 +41,7 @@ use fs_more_test_harness_tree_schema::schema::FileDataConfiguration;
 
 <br>
 
-<sup>This entry is part of the [`DeepSymlinkedTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
 pub struct ABin {
     file_path: PathBuf,
     state_at_initialization: FileState,
@@ -86,7 +87,7 @@ impl CaptureableFilePath for ABin {}
 
 <br>
 
-<sup>This entry is part of the [`DeepSymlinkedTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
 pub struct BBin {
     file_path: PathBuf,
     state_at_initialization: FileState,
@@ -133,17 +134,17 @@ impl CaptureableFilePath for BBin {}
 
 <br>
 
-<sup>This entry is part of the [`DeepSymlinkedTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
 pub struct SymlinkToDBin {
     symlink_path: PathBuf,
+    /// Symlink destination path, relative to the tree harness root.
     symlink_destination_path: PathBuf,
 }
 impl SymlinkToDBin {
     #[track_caller]
     fn initialize(parent_directory_path: &Path) -> Self {
         let symlink_path = parent_directory_path.join("symlink-to-d.bin");
-        let symlink_destination_path = parent_directory_path
-            .join("./foo/bar/hello/world/d.bin");
+        let symlink_destination_path = "./foo/bar/hello/world/d.bin".into();
         symlink_path.assert_not_exists();
         Self {
             symlink_path,
@@ -151,14 +152,19 @@ impl SymlinkToDBin {
         }
     }
     #[track_caller]
-    fn post_initialize(&mut self) {
+    fn post_initialize(&mut self, tree_root_absolute_path: &Path) {
         self.symlink_path.assert_not_exists();
+        let absolute_destination_path = tree_root_absolute_path
+            .join(&self.symlink_destination_path);
         initialize_symbolic_link(
             &self.symlink_path,
-            &self.symlink_destination_path,
+            &absolute_destination_path,
             SymlinkDestinationType::File,
         );
-        self.symlink_path.assert_is_symlink_to_directory();
+        self.symlink_path
+            .assert_is_symlink_to_file_and_destination_matches(
+                &absolute_destination_path,
+            );
     }
 }
 impl AsPath for SymlinkToDBin {
@@ -175,7 +181,7 @@ impl AsRelativePath for SymlinkToDBin {
 
 <br>
 
-<sup>This entry is part of the [`DeepSymlinkedTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
 pub struct CBin {
     file_path: PathBuf,
     state_at_initialization: FileState,
@@ -221,7 +227,7 @@ impl CaptureableFilePath for CBin {}
 
 <br>
 
-<sup>This entry is part of the [`DeepSymlinkedTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
 pub struct DBin {
     file_path: PathBuf,
     state_at_initialization: FileState,
@@ -272,14 +278,14 @@ It contains the following files:
 
 <br>
 
-<sup>This entry is part of the [`DeepSymlinkedTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
 pub struct World {
     directory_path: PathBuf,
     /**This is a file residing at `./foo/bar/hello/world/d.bin` (relative to the root of the tree).
 
 <br>
 
-<sup>This entry is part of the [`DeepSymlinkedTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
     pub d_bin: DBin,
 }
 impl World {
@@ -313,7 +319,7 @@ It contains the following sub-directories:
 
 <br>
 
-<sup>This entry is part of the [`DeepSymlinkedTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
 pub struct Hello {
     directory_path: PathBuf,
     /**This is a sub-directory residing at `./foo/bar/hello/world` (relative to the root of the test harness).
@@ -325,7 +331,7 @@ It contains the following files:
 
 <br>
 
-<sup>This entry is part of the [`DeepSymlinkedTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
     pub world: World,
 }
 impl Hello {
@@ -361,14 +367,14 @@ It contains the following files:
 
 <br>
 
-<sup>This entry is part of the [`DeepSymlinkedTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
 pub struct Bar {
     directory_path: PathBuf,
     /**This is a file residing at `./foo/bar/c.bin` (relative to the root of the tree).
 
 <br>
 
-<sup>This entry is part of the [`DeepSymlinkedTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
     pub c_bin: CBin,
     /**This is a sub-directory residing at `./foo/bar/hello` (relative to the root of the test harness).
 
@@ -379,7 +385,7 @@ It contains the following sub-directories:
 
 <br>
 
-<sup>This entry is part of the [`DeepSymlinkedTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
     pub hello: Hello,
 }
 impl Bar {
@@ -409,6 +415,54 @@ impl AsRelativePath for Bar {
     }
 }
 impl FileSystemHarnessDirectory for Bar {}
+/**This is a symbolic link residing at `./foo/symlink-to-hello` and pointing to `./foo/bar/hello`
+(both paths are relative to the root of the test harness).
+
+<br>
+
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
+pub struct SymlinkToHello {
+    symlink_path: PathBuf,
+    /// Symlink destination path, relative to the tree harness root.
+    symlink_destination_path: PathBuf,
+}
+impl SymlinkToHello {
+    #[track_caller]
+    fn initialize(parent_directory_path: &Path) -> Self {
+        let symlink_path = parent_directory_path.join("symlink-to-hello");
+        let symlink_destination_path = "./foo/bar/hello".into();
+        symlink_path.assert_not_exists();
+        Self {
+            symlink_path,
+            symlink_destination_path,
+        }
+    }
+    #[track_caller]
+    fn post_initialize(&mut self, tree_root_absolute_path: &Path) {
+        self.symlink_path.assert_not_exists();
+        let absolute_destination_path = tree_root_absolute_path
+            .join(&self.symlink_destination_path);
+        initialize_symbolic_link(
+            &self.symlink_path,
+            &absolute_destination_path,
+            SymlinkDestinationType::Directory,
+        );
+        self.symlink_path
+            .assert_is_symlink_to_directory_and_destination_matches(
+                &absolute_destination_path,
+            );
+    }
+}
+impl AsPath for SymlinkToHello {
+    fn as_path(&self) -> &Path {
+        &self.symlink_path
+    }
+}
+impl AsRelativePath for SymlinkToHello {
+    fn as_path_relative_to_harness_root(&self) -> &Path {
+        Path::new("./foo/symlink-to-hello")
+    }
+}
 /**This is a sub-directory residing at `./foo` (relative to the root of the test harness).
 
 
@@ -418,25 +472,26 @@ It contains the following files:
 - `b.bin` (field `b_bin`; see [`BBin`])
 It contains the following symlinks:
 - `symlink-to-d.bin` (field `symlink_to_d_bin`; see [`SymlinkToDBin`])
+- `symlink-to-hello` (field `symlink_to_hello`; see [`SymlinkToHello`])
 
 
 <br>
 
-<sup>This entry is part of the [`DeepSymlinkedTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
 pub struct Foo {
     directory_path: PathBuf,
     /**This is a file residing at `./foo/b.bin` (relative to the root of the tree).
 
 <br>
 
-<sup>This entry is part of the [`DeepSymlinkedTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
     pub b_bin: BBin,
     /**This is a symbolic link residing at `./foo/symlink-to-d.bin` and pointing to `./foo/bar/hello/world/d.bin`
 (both paths are relative to the root of the test harness).
 
 <br>
 
-<sup>This entry is part of the [`DeepSymlinkedTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
     pub symlink_to_d_bin: SymlinkToDBin,
     /**This is a sub-directory residing at `./foo/bar` (relative to the root of the test harness).
 
@@ -449,8 +504,15 @@ It contains the following files:
 
 <br>
 
-<sup>This entry is part of the [`DeepSymlinkedTree`] test harness tree.</sup>*/
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
     pub bar: Bar,
+    /**This is a symbolic link residing at `./foo/symlink-to-hello` and pointing to `./foo/bar/hello`
+(both paths are relative to the root of the test harness).
+
+<br>
+
+<sup>This entry is part of the [`SymlinkedTree`] test harness tree.</sup>*/
+    pub symlink_to_hello: SymlinkToHello,
 }
 impl Foo {
     #[track_caller]
@@ -462,16 +524,19 @@ impl Foo {
         let b_bin = <BBin>::initialize(&directory_path);
         let symlink_to_d_bin = <SymlinkToDBin>::initialize(&directory_path);
         let bar = <Bar>::initialize(&directory_path);
+        let symlink_to_hello = <SymlinkToHello>::initialize(&directory_path);
         Self {
             directory_path,
             b_bin,
             symlink_to_d_bin,
             bar,
+            symlink_to_hello,
         }
     }
     #[track_caller]
-    fn post_initialize(&mut self) {
-        self.symlink_to_d_bin.post_initialize();
+    fn post_initialize(&mut self, tree_root_absolute_path: &Path) {
+        self.symlink_to_d_bin.post_initialize(tree_root_absolute_path);
+        self.symlink_to_hello.post_initialize(tree_root_absolute_path);
     }
 }
 impl AsPath for Foo {
@@ -485,9 +550,9 @@ impl AsRelativePath for Foo {
     }
 }
 impl FileSystemHarnessDirectory for Foo {}
-/**`fs-more` filesystem tree for testing. Upon calling [`DeepSymlinkedTree::initialize`],
+/**`fs-more` filesystem tree for testing. Upon calling [`SymlinkedTree::initialize`],
 a temporary directory is set up, and the entire pre-defined filesystem tree is initialized.
-When [`DeepSymlinkedTree::destroy`] is called (or when the struct is dropped), the temporary directory is removed,
+When [`SymlinkedTree::destroy`] is called (or when the struct is dropped), the temporary directory is removed,
 along with all of its contents.
 
 In addition to initializing the configured files and directories, a snapshot is created
@@ -503,6 +568,7 @@ The full file tree is as follows:
 .
 |-- a.bin (random data, 32 KiB)
 |-- foo
+|   |-- symlink-to-hello
 |   |-- bar
 |   |   |-- hello
 |   |   |   |-- world
@@ -515,13 +581,13 @@ The full file tree is as follows:
 
 <br>
 
-<sup>This tree and related code was automatically generated from the structure described in `deep_symlinked.json`.</sup>*/
-pub struct DeepSymlinkedTree {
+<sup>This tree and related code was automatically generated from the structure described in `symlinked.json`.</sup>*/
+pub struct SymlinkedTree {
     temporary_directory: TempDir,
     pub a_bin: ABin,
     pub foo: Foo,
 }
-impl FileSystemHarness for DeepSymlinkedTree {
+impl FileSystemHarness for SymlinkedTree {
     #[track_caller]
     fn initialize() -> Self {
         let temporary_directory = tempfile::tempdir()
@@ -552,19 +618,19 @@ impl FileSystemHarness for DeepSymlinkedTree {
         }
     }
 }
-impl DeepSymlinkedTree {
+impl SymlinkedTree {
     fn post_initialize(&mut self) {
-        self.foo.post_initialize();
+        self.foo.post_initialize(self.temporary_directory.path());
     }
 }
-impl AsPath for DeepSymlinkedTree {
+impl AsPath for SymlinkedTree {
     fn as_path(&self) -> &Path {
         self.temporary_directory.path()
     }
 }
-impl AsRelativePath for DeepSymlinkedTree {
+impl AsRelativePath for SymlinkedTree {
     fn as_path_relative_to_harness_root(&self) -> &Path {
         Path::new(".")
     }
 }
-impl FileSystemHarnessDirectory for DeepSymlinkedTree {}
+impl FileSystemHarnessDirectory for SymlinkedTree {}

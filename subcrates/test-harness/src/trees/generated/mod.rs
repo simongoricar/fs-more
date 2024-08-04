@@ -2,7 +2,7 @@
 pub mod deep;
 
 #[rustfmt::skip]
-pub mod deep_symlinked;
+pub mod symlinked;
 
 #[rustfmt::skip]
 pub mod empty;

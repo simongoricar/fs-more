@@ -524,37 +524,45 @@ impl Iterator for BreadthFirstDirectoryIter {
                 }));
             }
 
+
             if base_directory_metadata.is_symlink() {
                 if !self.options.yield_base_directory {
                     // Nothing no follow, nothing to yield - the iterator will have no elements.
                     return None;
                 }
 
-                let symlink_destination =
-                    try_some!(fs::read_link(&self.base_directory), |io_error| {
-                        DirectoryScanErrorV2::UnableToReadDirectory {
-                            directory_path: self.base_directory.clone(),
-                            error: io_error,
-                        }
-                    });
+                if self.options.follow_base_directory_symbolic_link {
+                    let symlink_destination =
+                        try_some!(fs::read_link(&self.base_directory), |io_error| {
+                            DirectoryScanErrorV2::UnableToReadDirectory {
+                                directory_path: self.base_directory.clone(),
+                                error: io_error,
+                            }
+                        });
 
-                let symlink_destination_metadata =
-                    try_some!(fs::symlink_metadata(&symlink_destination), |io_error| {
-                        DirectoryScanErrorV2::UnableToReadDirectory {
-                            directory_path: self.base_directory.clone(),
-                            error: io_error,
-                        }
-                    });
+                    let symlink_destination_metadata =
+                        try_some!(fs::symlink_metadata(&symlink_destination), |io_error| {
+                            DirectoryScanErrorV2::UnableToReadDirectory {
+                                directory_path: self.base_directory.clone(),
+                                error: io_error,
+                            }
+                        });
 
-                if !symlink_destination_metadata.is_dir() {
-                    return Some(Err(DirectoryScanErrorV2::NotADirectory {
-                        path: self.base_directory.clone(),
-                    }));
+                    if !symlink_destination_metadata.is_dir() {
+                        return Some(Err(DirectoryScanErrorV2::NotADirectory {
+                            path: self.base_directory.clone(),
+                        }));
+                    }
+
+
+                    // We followed the symlink, and we should now update our iterator's base directory path.
+                    self.base_directory = symlink_destination;
+                } else {
+                    // This flag will prevent the iterator from going further;
+                    // the base directory (which is a symlink) will be yielded,
+                    // but no further elements will be returned.
+                    self.has_scanned_base_directory = true;
                 }
-
-
-                // We followed the symlink, and we should now update our iterator's base directory path.
-                self.base_directory = symlink_destination;
             }
 
 
