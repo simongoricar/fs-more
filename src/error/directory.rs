@@ -181,6 +181,19 @@ pub enum DirectoryExecutionPlanError {
         /// Path of the target directory or file that already exists.
         path: PathBuf,
     },
+
+    /// A broken symbolic link has been encountered inside the source directory.
+    ///
+    /// This error can occur only when `broken_symlink_behaviour` is set to
+    /// [`BrokenSymlinkBehaviour::Abort`].
+    #[error(
+        "symbolic link inside source directory is broken, \
+        and the behaviour is set to abort"
+    )]
+    SymbolicLinkIsBroken {
+        /// Path of the broken symbolic link.
+        path: PathBuf,
+    },
 }
 
 
@@ -265,6 +278,18 @@ pub enum CopyDirectoryExecutionError {
         /// The underlying file copying error.
         #[source]
         error: FileError,
+    },
+
+    /// An error occurred while trying to create a symlink at the destination.
+    #[error(
+        "failed while creating a symlink at {}",
+        .symlink_path.display()
+    )]
+    SymlinkCreationError {
+        symlink_path: PathBuf,
+
+        #[source]
+        error: std::io::Error,
     },
 
     /// A destination directory, a file or a sub-directory inside it

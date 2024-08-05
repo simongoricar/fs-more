@@ -113,6 +113,7 @@ pub fn move_directory_with_progress_moves_all_files_and_subdirectories() -> Test
 
                             assert_eq!(target_path, previous_target_path);
                         }
+
                         DirectoryMoveOperation::CopyingFile { target_path, .. } => {
                             let DirectoryMoveOperation::CopyingFile {
                                 target_path: previous_target_path,
@@ -127,6 +128,18 @@ pub fn move_directory_with_progress_moves_all_files_and_subdirectories() -> Test
 
                             assert_eq!(target_path, previous_target_path);
                         }
+
+                        DirectoryMoveOperation::CreatingSymbolicLink { destination_symbolic_link_file_path } => {
+                            let DirectoryMoveOperation::CreatingSymbolicLink { destination_symbolic_link_file_path: previous_destination_symbolic_link_file_path } = &previous_report.current_operation else {
+                                panic!(
+                                    "invalid progress reported: current_operation changed variant \
+                                    without incrementing current_operation_index"
+                                );
+                            };
+
+                            assert_eq!(destination_symbolic_link_file_path, previous_destination_symbolic_link_file_path);
+                        }
+
                         DirectoryMoveOperation::RemovingSourceDirectory => {
                             if previous_report.current_operation
                                 != DirectoryMoveOperation::RemovingSourceDirectory
@@ -264,6 +277,7 @@ pub fn move_directory_with_progress_does_not_preserve_symlinks_when_destination_
             DirectoryCopyOptions {
                 destination_directory_rule: DestinationDirectoryRule::DisallowExisting,
                 copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
+                ..Default::default()
             },
         )
         .unwrap();
@@ -342,6 +356,7 @@ pub fn move_directory_with_progress_may_preserve_symlinks_when_destination_direc
             DirectoryCopyOptions {
                 destination_directory_rule: DestinationDirectoryRule::DisallowExisting,
                 copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
+                ..Default::default()
             },
         )
         .unwrap();
@@ -525,3 +540,6 @@ fn move_directory_with_progress_does_not_rename_source_to_destination_when_desti
     destination_harness.destroy();
     source_harness.destroy();
 }
+
+
+// TODO Revisit tests that handle symlinks: remove obsolete tests and add new ones that test the symlink options.

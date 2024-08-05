@@ -9,7 +9,9 @@ use_enabled_fs_module!();
 use super::{
     common::DestinationDirectoryRule,
     is_directory_empty_unchecked,
+    BrokenSymlinkBehaviour,
     CopyDirectoryDepthLimit,
+    SymlinkBehaviour,
 };
 use crate::{
     directory::common::join_relative_source_path_onto_destination,
@@ -21,6 +23,15 @@ use crate::{
     },
 };
 
+
+#[cfg(windows)]
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum SymlinkType {
+    File,
+    Directory,
+}
+
+
 /// Represents a file copy or directory creation operation.
 ///
 /// For more details, see the [`build_directory_copy_queue`] function.
@@ -28,12 +39,25 @@ use crate::{
 pub(crate) enum QueuedOperation {
     CopyFile {
         source_file_path: PathBuf,
+
         source_size_bytes: u64,
+
         destination_file_path: PathBuf,
     },
     CreateDirectory {
         source_size_bytes: u64,
+
         destination_directory_path: PathBuf,
+    },
+    CreateSymlink {
+        symlink_path: PathBuf,
+
+        #[cfg(windows)]
+        symlink_type: SymlinkType,
+
+        source_symlink_size_bytes: u64,
+
+        symlink_destination_path: PathBuf,
     },
 }
 
@@ -319,6 +343,8 @@ fn scan_and_plan_directory_copy(
     source_directory_path: PathBuf,
     destination_directory_path: PathBuf,
     copy_depth_limit: CopyDirectoryDepthLimit,
+    symlink_behaviour: SymlinkBehaviour,
+    broken_symlink_behaviour: BrokenSymlinkBehaviour,
 ) -> Result<Vec<QueuedOperation>, DirectoryExecutionPlanError> {
     let mut operation_queue: Vec<QueuedOperation> = Vec::new();
 
@@ -338,6 +364,8 @@ fn scan_and_plan_directory_copy(
         depth: 0,
     });
 
+
+    // TODO Refactor this giant loop into smaller functions.
 
     while let Some(next_directory) = directory_scan_queue.pop() {
         // Scan the directory for its files and directories.
@@ -362,7 +390,7 @@ fn scan_and_plan_directory_copy(
                     path: directory_item_source_path.clone(),
                     error: io::Error::new(
                         ErrorKind::Other,
-                        "ReadDir's iterator generated a path that terminates in ..",
+                        "ReadDir's iterator generated a path that terminates in \"..\"",
                     ),
                 }
             })?;
@@ -389,6 +417,7 @@ fn scan_and_plan_directory_copy(
             })?;
 
 
+            // For clarity: this call will not traverse symlinks.
             let item_type = directory_item.file_type().map_err(|error| {
                 DirectoryExecutionPlanError::UnableToAccess {
                     path: directory_item_source_path.clone(),
@@ -457,62 +486,211 @@ fn scan_and_plan_directory_copy(
                 // If the path is a symbolic link, we need to follow it and queue a copy
                 // from the underlying file or directory.
 
-                // Now we should retrieve the metadata of the target of the symbolic link
-                // (unlike [`DirEntry::metadata`], this metadata call *does* follow symolic links).
-                let underlying_path =
-                    fs::canonicalize(&directory_item_source_path).map_err(|error| {
+                let resolved_symlink_path =
+                    fs::read_link(&directory_item_source_path).map_err(|error| {
                         DirectoryExecutionPlanError::UnableToAccess {
                             path: directory_item_source_path.clone(),
                             error,
                         }
                     })?;
 
-                let underlying_item_metadata = fs::metadata(&underlying_path).map_err(|error| {
-                    DirectoryExecutionPlanError::UnableToAccess {
-                        path: underlying_path.clone(),
-                        error,
-                    }
-                })?;
+
+                let resolved_symlink_path_exists =
+                    resolved_symlink_path.try_exists().map_err(|error| {
+                        DirectoryExecutionPlanError::UnableToAccess {
+                            path: resolved_symlink_path.clone(),
+                            error,
+                        }
+                    })?;
 
 
-                if underlying_item_metadata.is_file() {
-                    let underlying_file_size_in_bytes = underlying_item_metadata.len();
+                if !resolved_symlink_path_exists {
+                    // This symbolic link is broken, we should look at the
+                    // corresponding `broken_symlink_behaviour` option and act accordingly.
 
-                    operation_queue.push(QueuedOperation::CopyFile {
-                        source_file_path: underlying_path,
-                        source_size_bytes: underlying_file_size_in_bytes,
-                        destination_file_path: directory_item_destination_path,
-                    });
-                } else if underlying_item_metadata.is_dir() {
-                    // Note that this is the size of the directory itself, not of its contents.
-                    let underlying_directory_size_in_bytes = underlying_item_metadata.len();
+                    let unresolved_symlink_metadata =
+                        fs::symlink_metadata(&directory_item_source_path).map_err(|error| {
+                            DirectoryExecutionPlanError::UnableToAccess {
+                                path: directory_item_source_path.clone(),
+                                error,
+                            }
+                        })?;
 
-                    operation_queue.push(QueuedOperation::CreateDirectory {
-                        source_size_bytes: underlying_directory_size_in_bytes,
-                        destination_directory_path: directory_item_destination_path,
-                    });
+                    let unresolved_symlink_file_size = unresolved_symlink_metadata.len();
 
-                    // If we haven't reached the maximum depth yet, we queue the directory for scanning.
-                    match copy_depth_limit {
-                        CopyDirectoryDepthLimit::Limited { maximum_depth } => {
-                            if next_directory.depth < maximum_depth {
-                                directory_scan_queue.push(PendingDirectoryScan {
-                                    directory_path: directory_item_source_path.clone(),
-                                    directory_path_without_symlink_follows:
-                                        new_directory_path_without_symlink_follows,
-                                    depth: next_directory.depth + 1,
+
+                    #[cfg(windows)]
+                    {
+                        use std::os::windows::fs::FileTypeExt;
+
+                        match broken_symlink_behaviour {
+                            BrokenSymlinkBehaviour::Preserve => {
+                                let unresolved_symlink_file_type =
+                                    unresolved_symlink_metadata.file_type();
+
+                                let symbolic_link_type = if unresolved_symlink_file_type
+                                    .is_symlink_file()
+                                {
+                                    SymlinkType::File
+                                } else if unresolved_symlink_file_type.is_symlink_dir() {
+                                    SymlinkType::Directory
+                                } else {
+                                    panic!("Unexpected symbolic link type: neither file nor directory.");
+                                };
+
+
+                                operation_queue.push(QueuedOperation::CreateSymlink {
+                                    symlink_path: directory_item_destination_path,
+                                    symlink_type: symbolic_link_type,
+                                    source_symlink_size_bytes: unresolved_symlink_file_size,
+                                    symlink_destination_path: resolved_symlink_path,
+                                });
+                            }
+                            BrokenSymlinkBehaviour::Abort => {
+                                return Err(DirectoryExecutionPlanError::SymbolicLinkIsBroken {
+                                    path: directory_item_source_path.clone(),
                                 });
                             }
                         }
-                        CopyDirectoryDepthLimit::Unlimited => {
-                            directory_scan_queue.push(PendingDirectoryScan {
-                                directory_path: directory_item_source_path,
-                                directory_path_without_symlink_follows:
-                                    new_directory_path_without_symlink_follows,
-                                depth: next_directory.depth + 1,
+                    }
+
+                    #[cfg(unix)]
+                    {
+                        match broken_symlink_behaviour {
+                            BrokenSymlinkBehaviour::Preserve => {
+                                operation_queue.push(QueuedOperation::CreateSymlink {
+                                    symlink_path: directory_item_destination_path,
+                                    source_symlink_size_bytes: unresolved_symlink_file_size,
+                                    symlink_destination_path: resolved_symlink_path,
+                                });
+                            }
+                            BrokenSymlinkBehaviour::Abort => {
+                                return Err(DirectoryExecutionPlanError::SymbolicLinkIsBroken {
+                                    path: directory_item_source_path.clone(),
+                                });
+                            }
+                        }
+                    }
+
+                    #[cfg(not(any(windows, unix)))]
+                    {
+                        compile_error!(
+                            "fs-more supports only the following values of target_family: \
+                            unix and windows (notably, wasm is unsupported)."
+                        );
+                    }
+
+                    continue;
+                }
+
+
+                // Symbolic link is valid, we should look at the corresponding
+                // `symlink_behaviour` option.
+
+                let resolved_symlink_metadata =
+                    fs::metadata(&resolved_symlink_path).map_err(|error| {
+                        DirectoryExecutionPlanError::UnableToAccess {
+                            path: resolved_symlink_path.clone(),
+                            error,
+                        }
+                    })?;
+
+                let resolved_symlink_file_type = resolved_symlink_metadata.file_type();
+                let resolved_symlink_file_size = resolved_symlink_metadata.len();
+
+
+                match symlink_behaviour {
+                    SymlinkBehaviour::Keep => {
+                        // Symbolic link should be preserved.
+                        // Note that success is not guaranteed, e.g. in cases of
+                        // trying to create symbolic links across mount points.
+
+                        #[cfg(windows)]
+                        {
+                            let symlink_type = if resolved_symlink_file_type.is_file() {
+                                SymlinkType::File
+                            } else if resolved_symlink_file_type.is_dir() {
+                                SymlinkType::Directory
+                            } else {
+                                // FIXME Can this branch ever be reached? Is panicking okay?
+                                panic!(
+                                    "unexpected filesystem state: followed symbolic link(s), \
+                                    but arrived at another symbolic link"
+                                )
+                            };
+
+
+                            operation_queue.push(QueuedOperation::CreateSymlink {
+                                symlink_path: directory_item_destination_path,
+                                symlink_type,
+                                source_symlink_size_bytes: resolved_symlink_file_size,
+                                symlink_destination_path: resolved_symlink_path,
                             });
                         }
-                    };
+
+                        #[cfg(unix)]
+                        {
+                            operation_queue.push(QueuedOperation::CreateSymlink {
+                                symlink_path: directory_item_destination_path,
+                                source_symlink_size_bytes: resolved_symlink_file_size,
+                                symlink_destination_path: resolved_symlink_path,
+                            });
+                        }
+
+                        #[cfg(not(any(windows, unix)))]
+                        {
+                            compile_error!(
+                                "fs-more supports only the following values of target_family: \
+                                unix and windows (notably, wasm is unsupported)."
+                            );
+                        }
+                    }
+                    SymlinkBehaviour::Follow => {
+                        // Symbolic link should be resolved, and a copy of the
+                        // symlink's destination to the copy destination should be queued.
+                        if resolved_symlink_file_type.is_file() {
+                            operation_queue.push(QueuedOperation::CopyFile {
+                                source_file_path: resolved_symlink_path,
+                                source_size_bytes: resolved_symlink_file_size,
+                                destination_file_path: directory_item_destination_path,
+                            });
+                        } else if resolved_symlink_file_type.is_dir() {
+                            operation_queue.push(QueuedOperation::CreateDirectory {
+                                source_size_bytes: resolved_symlink_file_size,
+                                destination_directory_path: directory_item_destination_path,
+                            });
+
+
+                            // If we haven't reached the maximum depth yet,
+                            // we queue the symlink-followed directory for scanning.
+                            match copy_depth_limit {
+                                CopyDirectoryDepthLimit::Limited { maximum_depth } => {
+                                    if next_directory.depth < maximum_depth {
+                                        directory_scan_queue.push(PendingDirectoryScan {
+                                            directory_path: directory_item_source_path.clone(),
+                                            directory_path_without_symlink_follows:
+                                                new_directory_path_without_symlink_follows,
+                                            depth: next_directory.depth + 1,
+                                        });
+                                    }
+                                }
+                                CopyDirectoryDepthLimit::Unlimited => {
+                                    directory_scan_queue.push(PendingDirectoryScan {
+                                        directory_path: directory_item_source_path,
+                                        directory_path_without_symlink_follows:
+                                            new_directory_path_without_symlink_follows,
+                                        depth: next_directory.depth + 1,
+                                    });
+                                }
+                            };
+                        } else if resolved_symlink_file_type.is_symlink() {
+                            // FIXME Can this branch ever be reached? Is panicking okay?
+                            panic!(
+                                "unexpected filesystem state: followed symbolic link(s), \
+                                but arrived at another symbolic link"
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -520,6 +698,7 @@ fn scan_and_plan_directory_copy(
 
     Ok(operation_queue)
 }
+
 
 /// Given a list of references to [`QueuedOperation`]s, this function validates that
 /// the files and directories this queue would process match the provided [`DestinationDirectoryRule`].
@@ -564,6 +743,7 @@ fn check_operation_queue_for_collisions(
                     }
                 }
             }
+
             QueuedOperation::CreateDirectory {
                 destination_directory_path,
                 ..
@@ -583,6 +763,26 @@ fn check_operation_queue_for_collisions(
                     }
                 }
             }
+
+            QueuedOperation::CreateSymlink {
+                symlink_destination_path,
+                ..
+            } => {
+                if !overwriting_existing_destination_files_allowed {
+                    let symlink_destination_exists = symlink_destination_path
+                        .try_exists()
+                        .map_err(|error| DirectoryExecutionPlanError::UnableToAccess {
+                            path: symlink_destination_path.to_path_buf(),
+                            error,
+                        })?;
+
+                    if symlink_destination_exists {
+                        return Err(DirectoryExecutionPlanError::DestinationItemAlreadyExists {
+                            path: symlink_destination_path.to_path_buf(),
+                        });
+                    }
+                }
+            }
         }
     }
 
@@ -591,7 +791,7 @@ fn check_operation_queue_for_collisions(
 
 
 
-/// An auxiliary struct that contains a set of operation required for a directory copy.
+/// An auxiliary struct that contains a set of operations required for a directory copy.
 ///
 /// It can be initialized by calling [`Self::prepare`] or [`Self::prepare_with_validated`].
 pub(crate) struct DirectoryCopyPrepared {
@@ -621,6 +821,8 @@ impl DirectoryCopyPrepared {
         destination_directory_path: &Path,
         destination_directory_rule: DestinationDirectoryRule,
         copy_depth_limit: CopyDirectoryDepthLimit,
+        symlink_behaviour: SymlinkBehaviour,
+        broken_symlink_behaviour: BrokenSymlinkBehaviour,
     ) -> Result<Self, CopyDirectoryPreparationError> {
         let (canonical_source_directory_path, validated_destination) =
             Self::validate_source_and_destination(
@@ -634,6 +836,8 @@ impl DirectoryCopyPrepared {
             validated_destination,
             destination_directory_rule,
             copy_depth_limit,
+            symlink_behaviour,
+            broken_symlink_behaviour,
         )
         .map_err(CopyDirectoryPreparationError::CopyPlanningError)
     }
@@ -646,12 +850,16 @@ impl DirectoryCopyPrepared {
         validated_destination_directory: ValidatedDestinationDirectory,
         destination_directory_rule: DestinationDirectoryRule,
         copy_depth_limit: CopyDirectoryDepthLimit,
+        symlink_behaviour: SymlinkBehaviour,
+        broken_symlink_behaviour: BrokenSymlinkBehaviour,
     ) -> Result<Self, DirectoryExecutionPlanError> {
         let operations = Self::prepare_directory_operations(
             validated_source_directory.directory_path,
             validated_destination_directory.directory_path.clone(),
             destination_directory_rule,
             copy_depth_limit,
+            symlink_behaviour,
+            broken_symlink_behaviour,
         )?;
 
         let bytes_total = Self::calculate_total_bytes_to_be_copied(&operations);
@@ -673,6 +881,10 @@ impl DirectoryCopyPrepared {
                 } => *source_size_bytes,
                 QueuedOperation::CreateDirectory {
                     source_size_bytes, ..
+                } => *source_size_bytes,
+                QueuedOperation::CreateSymlink {
+                    source_symlink_size_bytes: source_size_bytes,
+                    ..
                 } => *source_size_bytes,
             })
             .sum::<u64>()
@@ -723,12 +935,16 @@ impl DirectoryCopyPrepared {
         destination_directory_path: PathBuf,
         destination_directory_rule: DestinationDirectoryRule,
         copy_depth_limit: CopyDirectoryDepthLimit,
+        symlink_behaviour: SymlinkBehaviour,
+        broken_symlink_behaviour: BrokenSymlinkBehaviour,
     ) -> Result<Vec<QueuedOperation>, DirectoryExecutionPlanError> {
         // Initialize a queue of file copy or directory create operations.
         let copy_queue = scan_and_plan_directory_copy(
             source_directory_path,
             destination_directory_path,
             copy_depth_limit,
+            symlink_behaviour,
+            broken_symlink_behaviour,
         )?;
 
         check_operation_queue_for_collisions(&copy_queue, destination_directory_rule)?;

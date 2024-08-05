@@ -94,6 +94,7 @@ pub fn copy_directory_respects_copy_depth_limit() -> TestResult {
         DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
             copy_depth_limit: MAXIMUM_COPY_DEPTH,
+            ..Default::default()
         },
     )
     .unwrap();
@@ -509,6 +510,7 @@ pub fn copy_directory_respects_copy_depth_limit_even_if_source_contains_symlink(
         DirectoryCopyOptions {
             copy_depth_limit: CopyDirectoryDepthLimit::Limited { maximum_depth: 1 },
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
+            ..Default::default()
         },
     )
     .unwrap();
@@ -719,3 +721,6 @@ pub fn copy_directory_errors_when_source_is_symlink_to_destination() -> TestResu
     empty_harness.destroy();
     Ok(())
 }
+
+
+// TODO Revisit tests that handle symlinks: remove obsolete tests and add new ones that test the symlink options.

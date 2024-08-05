@@ -21,8 +21,9 @@ use crate::{
     DEFAULT_WRITE_BUFFER_SIZE,
 };
 
+
 /// The maximum depth of a directory copy operation.
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum CopyDirectoryDepthLimit {
     /// No depth limit - the entire directory tree will be copied.
     Unlimited,
@@ -71,6 +72,19 @@ pub enum CopyDirectoryDepthLimit {
 }
 
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum SymlinkBehaviour {
+    Keep,
+    Follow,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BrokenSymlinkBehaviour {
+    Preserve,
+    Abort,
+}
+
+
 
 /// Options that influence the [`copy_directory`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -86,16 +100,26 @@ pub struct DirectoryCopyOptions {
 
     /// Maximum depth of the source directory to copy over to the destination.
     pub copy_depth_limit: CopyDirectoryDepthLimit,
+
+    // TODO implement, document and test
+    pub symlink_behaviour: SymlinkBehaviour,
+
+    // TODO implement, document and test
+    pub broken_symlink_behaviour: BrokenSymlinkBehaviour,
 }
 
 impl Default for DirectoryCopyOptions {
     /// Constructs defaults for copying a directory:
     /// - if the destination directory already exists, it must be empty ([`DestinationDirectoryRule::AllowEmpty`]), and
     /// - there is no copy depth limit ([`CopyDirectoryDepthLimit::Unlimited`]).
+    ///
+    /// TODO update with new symlink behaviours
     fn default() -> Self {
         Self {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
             copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
+            symlink_behaviour: SymlinkBehaviour::Keep,
+            broken_symlink_behaviour: BrokenSymlinkBehaviour::Abort,
         }
     }
 }
@@ -109,6 +133,12 @@ pub struct DirectoryCopyFinished {
 
     /// Total number of files copied.
     pub files_copied: usize,
+
+    /// Total number of symlinks (re)created.
+    ///
+    /// If the [`DirectoryCopyOptions::symlink_behaviour`] option is set to
+    /// [`SymlinkBehaviour::Follow`], this will always be `0`.
+    pub symlinks_created: usize,
 
     /// Total number of directories created.
     pub directories_created: usize,
@@ -141,6 +171,7 @@ pub(crate) fn copy_directory_unchecked(
 
     let mut total_bytes_copied = 0;
     let mut num_files_copied = 0;
+    let mut num_symlinks_recreated = 0;
     let mut num_directories_created = 0;
 
 
@@ -224,14 +255,24 @@ pub(crate) fn copy_directory_unchecked(
                     }
                 })?;
 
+
                 num_files_copied += 1;
                 total_bytes_copied += source_size_bytes;
             }
+
             QueuedOperation::CreateDirectory {
                 source_size_bytes,
                 destination_directory_path,
             } => {
-                if destination_directory_path.exists() {
+                let destination_directory_exists = destination_directory_path
+                    .try_exists()
+                    .map_err(|error| CopyDirectoryExecutionError::UnableToAccessDestination {
+                        path: destination_directory_path.clone(),
+                        error,
+                    })?;
+
+
+                if destination_directory_exists {
                     if !destination_directory_path.is_dir() {
                         return Err(CopyDirectoryExecutionError::DestinationEntryUnexpected {
                             path: destination_directory_path.clone(),
@@ -254,15 +295,72 @@ pub(crate) fn copy_directory_unchecked(
                     }
                 })?;
 
+
                 num_directories_created += 1;
                 total_bytes_copied += source_size_bytes;
+            }
+
+            #[cfg(windows)]
+            QueuedOperation::CreateSymlink {
+                symlink_path,
+                symlink_type,
+                source_symlink_size_bytes,
+                symlink_destination_path,
+            } => {
+                use crate::directory::prepared::SymlinkType;
+
+                match symlink_type {
+                    SymlinkType::File => {
+                        std::os::windows::fs::symlink_file(
+                            &symlink_destination_path,
+                            &symlink_path,
+                        )
+                        .map_err(|error| {
+                            CopyDirectoryExecutionError::SymlinkCreationError {
+                                symlink_path: symlink_path.clone(),
+                                error,
+                            }
+                        })?;
+                    }
+                    SymlinkType::Directory => {
+                        std::os::windows::fs::symlink_dir(&symlink_destination_path, &symlink_path)
+                            .map_err(|error| CopyDirectoryExecutionError::SymlinkCreationError {
+                                symlink_path: symlink_path.clone(),
+                                error,
+                            })?;
+                    }
+                }
+
+
+                num_symlinks_recreated += 1;
+                total_bytes_copied += source_symlink_size_bytes;
+            }
+
+            #[cfg(not(windows))]
+            QueuedOperation::CreateSymlink {
+                symlink_path,
+                source_symlink_size_bytes,
+                symlink_destination_path,
+            } => {
+                std::os::unix::fs::symlink(&symlink_destination_path, &symlink_path).map_err(
+                    |error| CopyDirectoryExecutionError::SymlinkCreationError {
+                        symlink_path: symlink_path.clone(),
+                        error,
+                    },
+                )?;
+
+
+                num_symlinks_recreated += 1;
+                total_bytes_copied += source_symlink_size_bytes;
             }
         };
     }
 
+
     Ok(DirectoryCopyFinished {
         total_bytes_copied,
         files_copied: num_files_copied,
+        symlinks_created: num_symlinks_recreated,
         directories_created: num_directories_created,
     })
 }
@@ -333,11 +431,15 @@ where
     S: AsRef<Path>,
     T: AsRef<Path>,
 {
+    // TODO update function documentation (regarding symlink options)
+
     let prepared_copy = DirectoryCopyPrepared::prepare(
         source_directory_path.as_ref(),
         destination_directory_path.as_ref(),
         options.destination_directory_rule,
         options.copy_depth_limit,
+        options.symlink_behaviour,
+        options.broken_symlink_behaviour,
     )?;
 
     let finished_copy = copy_directory_unchecked(prepared_copy, options)?;
@@ -367,6 +469,11 @@ pub enum DirectoryCopyOperation {
         /// Progress of the file copy operation.
         progress: FileProgress,
     },
+
+    CreatingSymbolicLink {
+        /// Path to the symlink being created.
+        destination_symbolic_link_file_path: PathBuf,
+    },
 }
 
 
@@ -390,6 +497,12 @@ pub struct DirectoryCopyProgressRef<'o> {
 
     /// Number of files that have been copied so far.
     pub files_copied: usize,
+
+    /// Number of symlinks that have been (re)created so far.
+    ///
+    /// If the [`DirectoryCopyOptions::symlink_behaviour`] option is set to
+    /// [`SymlinkBehaviour::Follow`], this will always be `0`.
+    pub symlinks_created: usize,
 
     /// Number of directories that have been created so far.
     pub directories_created: usize,
@@ -419,6 +532,7 @@ impl<'o> DirectoryCopyProgressRef<'o> {
             bytes_total: self.bytes_total,
             bytes_finished: self.bytes_finished,
             files_copied: self.files_copied,
+            symlinks_created: self.symlinks_created,
             directories_created: self.directories_created,
             current_operation: self.current_operation.to_owned(),
             current_operation_index: self.current_operation_index,
@@ -446,6 +560,12 @@ pub struct DirectoryCopyProgress {
 
     /// Number of files that have been copied so far.
     pub files_copied: usize,
+
+    /// Number of symlinks that have been (re)created so far.
+    ///
+    /// If the [`DirectoryCopyOptions::symlink_behaviour`] option is set to
+    /// [`SymlinkBehaviour::Follow`], this will always be `0`.
+    pub symlinks_created: usize,
 
     /// Number of directories that have been created so far.
     pub directories_created: usize,
@@ -479,6 +599,12 @@ struct DirectoryCopyInternalProgress {
 
     /// Number of files that have been copied so far.
     files_copied: usize,
+
+    /// Number of symlinks that have been (re)created so far.
+    ///
+    /// If the [`DirectoryCopyOptions::symlink_behaviour`] option is set to
+    /// [`SymlinkBehaviour::Follow`], this will always be `0`.
+    symlinks_created: usize,
 
     /// Number of directories that have been created so far.
     directories_created: usize,
@@ -560,6 +686,7 @@ impl DirectoryCopyInternalProgress {
             bytes_total: self.bytes_total,
             bytes_finished: self.bytes_finished,
             files_copied: self.files_copied,
+            symlinks_created: self.symlinks_created,
             directories_created: self.directories_created,
             current_operation: current_operation_reference,
             current_operation_index,
@@ -583,6 +710,12 @@ pub struct DirectoryCopyWithProgressOptions {
 
     /// Maximum depth of the source directory to copy.
     pub copy_depth_limit: CopyDirectoryDepthLimit,
+
+    // TODO implement, document and test
+    pub symlink_behaviour: SymlinkBehaviour,
+
+    // TODO implement, document and test
+    pub broken_symlink_behaviour: BrokenSymlinkBehaviour,
 
     /// Internal buffer size used for reading source files.
     ///
@@ -609,10 +742,14 @@ impl Default for DirectoryCopyWithProgressOptions {
     /// - there is no copy depth limit ([`CopyDirectoryDepthLimit::Unlimited`]),
     /// - read and write buffers are 64 KiB large, and
     /// - the progress reporting closure byte interval is set to 512 KiB.
+    ///
+    /// TODO update with new symlink behaviours
     fn default() -> Self {
         Self {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
             copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
+            symlink_behaviour: SymlinkBehaviour::Keep,
+            broken_symlink_behaviour: BrokenSymlinkBehaviour::Abort,
             read_buffer_size: DEFAULT_READ_BUFFER_SIZE,
             write_buffer_size: DEFAULT_WRITE_BUFFER_SIZE,
             progress_update_byte_interval: DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL,
@@ -752,6 +889,7 @@ where
     Ok(())
 }
 
+
 /// Given inner data of [`QueuedOperation::CreateDirectory`], this function
 /// creates the given directory with progress information.
 ///
@@ -826,6 +964,123 @@ where
 
 
 
+struct SymlinkCreationInfo {
+    symlink_path: PathBuf,
+
+    symlink_destination_path: PathBuf,
+
+    #[cfg(windows)]
+    symlink_type: crate::directory::prepared::SymlinkType,
+
+    unfollowed_symlink_file_size_bytes: u64,
+}
+
+fn execute_create_symlink_operation_with_progress<F>(
+    symlink_info: SymlinkCreationInfo,
+    options: &DirectoryCopyWithProgressOptions,
+    progress: &mut DirectoryCopyInternalProgress,
+    progress_handler: &mut F,
+) -> Result<(), CopyDirectoryExecutionError>
+where
+    F: FnMut(&DirectoryCopyProgressRef),
+{
+    let can_overwrite_destination_file = options
+        .destination_directory_rule
+        .allows_overwriting_existing_destination_files();
+
+
+    let symlink_path_exists = symlink_info.symlink_path.try_exists().map_err(|error| {
+        CopyDirectoryExecutionError::UnableToAccessDestination {
+            path: symlink_info.symlink_path.clone(),
+            error,
+        }
+    })?;
+
+    if symlink_path_exists {
+        let symlink_path_metadata =
+            fs::symlink_metadata(&symlink_info.symlink_path).map_err(|error| {
+                CopyDirectoryExecutionError::UnableToAccessDestination {
+                    path: symlink_info.symlink_path.clone(),
+                    error,
+                }
+            })?;
+
+        if !symlink_path_metadata.is_symlink() {
+            return Err(CopyDirectoryExecutionError::DestinationEntryUnexpected {
+                path: symlink_info.symlink_path,
+            });
+        }
+
+        if !can_overwrite_destination_file {
+            return Err(CopyDirectoryExecutionError::DestinationEntryUnexpected {
+                path: symlink_info.symlink_path,
+            });
+        }
+    }
+
+
+    progress.set_next_operation_and_emit_progress(
+        DirectoryCopyOperation::CreatingSymbolicLink {
+            destination_symbolic_link_file_path: symlink_info.symlink_path.clone(),
+        },
+        progress_handler,
+    );
+
+
+    #[cfg(windows)]
+    {
+        use crate::directory::prepared::SymlinkType;
+
+        match symlink_info.symlink_type {
+            SymlinkType::File => {
+                std::os::windows::fs::symlink_file(
+                    &symlink_info.symlink_destination_path,
+                    &symlink_info.symlink_path,
+                )
+                .map_err(|error| {
+                    CopyDirectoryExecutionError::SymlinkCreationError {
+                        symlink_path: symlink_info.symlink_path.clone(),
+                        error,
+                    }
+                })?;
+            }
+            SymlinkType::Directory => {
+                std::os::windows::fs::symlink_dir(
+                    &symlink_info.symlink_destination_path,
+                    &symlink_info.symlink_path,
+                )
+                .map_err(|error| {
+                    CopyDirectoryExecutionError::SymlinkCreationError {
+                        symlink_path: symlink_info.symlink_path.clone(),
+                        error,
+                    }
+                })?;
+            }
+        };
+    }
+
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(
+            &symlink_info.symlink_destination_path,
+            &symlink_info.symlink_path,
+        )
+        .map_err(|error| CopyDirectoryExecutionError::SymlinkCreationError {
+            symlink_path: symlink_info.symlink_path.clone(),
+            error,
+        })?;
+    }
+
+
+    progress.symlinks_created += 1;
+    progress.bytes_finished += symlink_info.unfollowed_symlink_file_size_bytes;
+
+    Ok(())
+}
+
+
+
+
 /// Execute a prepared copy with progress tracking.
 ///
 /// For more details, see [`copy_directory_with_progress`].
@@ -851,6 +1106,7 @@ where
             bytes_total: prepared_copy.total_bytes,
             bytes_finished: 0,
             files_copied: 0,
+            symlinks_created: 0,
             directories_created: 0,
             // This is an invisible operation - we don't emit this progress struct at all,
             // but we do need something here before the next operation starts.
@@ -865,6 +1121,7 @@ where
             bytes_total: prepared_copy.total_bytes,
             bytes_finished: 0,
             files_copied: 0,
+            symlinks_created: 0,
             directories_created: 0,
             current_operation: Some(DirectoryCopyOperation::CreatingDirectory {
                 destination_directory_path: validated_destination.directory_path.clone(),
@@ -903,12 +1160,47 @@ where
                 &mut progress,
                 &mut progress_handler,
             )?,
+
             QueuedOperation::CreateDirectory {
                 source_size_bytes,
                 destination_directory_path,
             } => execute_create_directory_operation_with_progress(
                 destination_directory_path,
                 source_size_bytes,
+                &options,
+                &mut progress,
+                &mut progress_handler,
+            )?,
+
+            #[cfg(windows)]
+            QueuedOperation::CreateSymlink {
+                symlink_path,
+                symlink_type,
+                source_symlink_size_bytes,
+                symlink_destination_path,
+            } => execute_create_symlink_operation_with_progress(
+                SymlinkCreationInfo {
+                    symlink_path,
+                    symlink_destination_path,
+                    symlink_type,
+                    unfollowed_symlink_file_size_bytes: source_symlink_size_bytes,
+                },
+                &options,
+                &mut progress,
+                &mut progress_handler,
+            )?,
+
+            #[cfg(unix)]
+            QueuedOperation::CreateSymlink {
+                symlink_path,
+                source_symlink_size_bytes,
+                symlink_destination_path,
+            } => execute_create_symlink_operation_with_progress(
+                SymlinkCreationInfo {
+                    symlink_path,
+                    symlink_destination_path,
+                    unfollowed_symlink_file_size_bytes: source_symlink_size_bytes,
+                },
                 &options,
                 &mut progress,
                 &mut progress_handler,
@@ -922,6 +1214,7 @@ where
     Ok(DirectoryCopyFinished {
         total_bytes_copied: progress.bytes_finished,
         files_copied: progress.files_copied,
+        symlinks_created: progress.symlinks_created,
         directories_created: progress.directories_created,
     })
 }
@@ -1015,11 +1308,15 @@ where
     T: AsRef<Path>,
     F: FnMut(&DirectoryCopyProgressRef),
 {
+    // TODO update function documentation (regarding symlink options)
+
     let prepared_copy = DirectoryCopyPrepared::prepare(
         source_directory_path.as_ref(),
         destination_directory_path.as_ref(),
         options.destination_directory_rule,
         options.copy_depth_limit,
+        options.symlink_behaviour,
+        options.broken_symlink_behaviour,
     )?;
 
 

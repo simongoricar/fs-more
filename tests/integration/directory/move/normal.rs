@@ -39,6 +39,7 @@ pub fn move_directory_moves_all_files_and_subdirectories() -> TestResult {
         empty_harness.as_path(),
         DirectoryMoveOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
+            ..Default::default()
         },
     )
     .unwrap();
@@ -87,6 +88,7 @@ pub fn move_directory_errors_when_source_is_symlink_to_destination_directory() -
                 existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
                 existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
             },
+            ..Default::default()
         },
     );
 
@@ -141,6 +143,7 @@ pub fn move_directory_does_not_preserve_symlinks_when_destination_directory_alre
             DirectoryCopyOptions {
                 destination_directory_rule: DestinationDirectoryRule::DisallowExisting,
                 copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
+                ..Default::default()
             },
         )
         .unwrap();
@@ -164,6 +167,7 @@ pub fn move_directory_does_not_preserve_symlinks_when_destination_directory_alre
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
                 existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
             },
+            ..Default::default()
         },
     )
     .unwrap();
@@ -216,6 +220,7 @@ pub fn move_directory_may_preserve_symlinks_when_destination_directory_exists_an
             DirectoryCopyOptions {
                 destination_directory_rule: DestinationDirectoryRule::DisallowExisting,
                 copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
+                ..Default::default()
             },
         )
         .unwrap();
@@ -239,6 +244,7 @@ pub fn move_directory_may_preserve_symlinks_when_destination_directory_exists_an
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
                 existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
             },
+            ..Default::default()
         },
     )
     .unwrap();
@@ -295,6 +301,7 @@ pub fn move_directory_performs_merge_without_overwrite_when_copying_to_non_empty
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
                 existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
             },
+            ..Default::default()
         },
     )
     .unwrap();
@@ -392,3 +399,6 @@ fn move_directory_does_not_rename_source_to_destination_when_destination_is_empt
     destination_harness.destroy();
     source_harness.destroy();
 }
+
+
+// TODO Revisit tests that handle symlinks: remove obsolete tests and add new ones that test the symlink options.

@@ -15,11 +15,13 @@ use super::{
         ValidatedDestinationDirectory,
         ValidatedSourceDirectory,
     },
+    BrokenSymlinkBehaviour,
     CopyDirectoryDepthLimit,
     DestinationDirectoryRule,
     DirectoryCopyOperation,
     DirectoryCopyOptions,
     DirectoryCopyWithProgressOptions,
+    SymlinkBehaviour,
 };
 use crate::{
     error::{MoveDirectoryError, MoveDirectoryExecutionError, MoveDirectoryPreparationError},
@@ -42,12 +44,16 @@ pub struct DirectoryMoveOptions {
     ///
     /// See [`DestinationDirectoryRule`] for more details and examples.
     pub destination_directory_rule: DestinationDirectoryRule,
+
+    // TODO implement, document and test
+    pub broken_symlink_behaviour: BrokenSymlinkBehaviour,
 }
 
 impl Default for DirectoryMoveOptions {
     fn default() -> Self {
         Self {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
+            broken_symlink_behaviour: BrokenSymlinkBehaviour::Abort,
         }
     }
 }
@@ -86,10 +92,13 @@ pub struct DirectoryMoveFinished {
     /// Total number of bytes moved.
     pub total_bytes_moved: u64,
 
-    /// Number of files moved (created).
+    /// Number of files moved (details depend on strategy).
     pub files_moved: usize,
 
-    /// Number of directories moved (created).
+    /// Total number of symlinks moved (details depend on strategy).
+    pub symlinks_moved: usize,
+
+    /// Number of directories moved (details depend on strategy).
     pub directories_moved: usize,
 
     /// How the directory was moved: was is simply renamed or was it copied and deleted.
@@ -105,6 +114,9 @@ struct DirectoryContentDetails {
 
     /// Total number of files in the directory (recursive).
     pub(crate) total_files: usize,
+
+    /// Total number of symlinks in the directory (recursive).
+    pub(crate) total_symlinks: usize,
 
     /// Total number of subdirectories in the directory (recursive).
     pub(crate) total_directories: usize,
@@ -122,6 +134,7 @@ fn collect_source_directory_details(
     Ok(DirectoryContentDetails {
         total_bytes: directory_statistics.total_bytes,
         total_files: directory_statistics.total_files,
+        total_symlinks: directory_statistics.total_symlinks,
         total_directories: directory_statistics.total_directories,
     })
 }
@@ -209,6 +222,7 @@ fn attempt_directory_move_by_rename(
                 finished_move: DirectoryMoveFinished {
                     total_bytes_moved: source_directory_details.total_bytes,
                     files_moved: source_directory_details.total_files,
+                    symlinks_moved: source_directory_details.total_symlinks,
                     directories_moved: source_directory_details.total_directories,
                     strategy_used: DirectoryMoveStrategy::Rename,
                 },
@@ -297,6 +311,8 @@ where
     S: AsRef<Path>,
     T: AsRef<Path>,
 {
+    // TODO update function documentation (regarding symlink options)
+
     let validated_source_directory = validate_source_directory_path(source_directory_path.as_ref())
         .map_err(MoveDirectoryPreparationError::SourceDirectoryValidationError)?;
 
@@ -338,6 +354,8 @@ where
         validated_destination_directory,
         options.destination_directory_rule,
         CopyDirectoryDepthLimit::Unlimited,
+        SymlinkBehaviour::Keep,
+        options.broken_symlink_behaviour,
     )
     .map_err(MoveDirectoryPreparationError::CopyPlanningError)?;
 
@@ -346,6 +364,8 @@ where
         DirectoryCopyOptions {
             destination_directory_rule: options.destination_directory_rule,
             copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
+            symlink_behaviour: SymlinkBehaviour::Keep,
+            broken_symlink_behaviour: options.broken_symlink_behaviour,
         },
     )
     .map_err(MoveDirectoryExecutionError::CopyDirectoryError)?;
@@ -369,6 +389,7 @@ where
     Ok(DirectoryMoveFinished {
         total_bytes_moved: source_details.total_bytes,
         files_moved: source_details.total_files,
+        symlinks_moved: source_details.total_symlinks,
         directories_moved: source_details.total_directories,
         strategy_used: DirectoryMoveStrategy::CopyAndDelete,
     })
@@ -385,6 +406,9 @@ pub struct DirectoryMoveWithProgressOptions {
     ///
     /// See [`DestinationDirectoryRule`] for more details and examples.
     pub destination_directory_rule: DestinationDirectoryRule,
+
+    // TODO implement, document and test
+    pub broken_symlink_behaviour: BrokenSymlinkBehaviour,
 
     /// Internal buffer size used for reading source files.
     ///
@@ -408,6 +432,7 @@ impl Default for DirectoryMoveWithProgressOptions {
     fn default() -> Self {
         Self {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
+            broken_symlink_behaviour: BrokenSymlinkBehaviour::Abort,
             read_buffer_size: DEFAULT_READ_BUFFER_SIZE,
             write_buffer_size: DEFAULT_WRITE_BUFFER_SIZE,
             progress_update_byte_interval: DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL,
@@ -435,6 +460,11 @@ pub enum DirectoryMoveOperation {
 
         /// Progress of the file operation.
         progress: FileProgress,
+    },
+
+    CreatingSymbolicLink {
+        /// Path to the symlink being created.
+        destination_symbolic_link_file_path: PathBuf,
     },
 
     /// Describes removal of the source directory
@@ -570,6 +600,8 @@ where
     T: AsRef<Path>,
     F: FnMut(&DirectoryMoveProgress),
 {
+    // TODO update function documentation (regarding symlink options)
+
     let validated_source_directory = validate_source_directory_path(source_directory_path.as_ref())
         .map_err(MoveDirectoryPreparationError::SourceDirectoryValidationError)?;
 
@@ -632,6 +664,8 @@ where
         write_buffer_size: options.write_buffer_size,
         progress_update_byte_interval: options.progress_update_byte_interval,
         copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
+        symlink_behaviour: SymlinkBehaviour::Keep,
+        broken_symlink_behaviour: options.broken_symlink_behaviour,
     };
 
     let prepared_copy = DirectoryCopyPrepared::prepare_with_validated(
@@ -639,6 +673,8 @@ where
         validated_destination_directory,
         copy_options.destination_directory_rule,
         copy_options.copy_depth_limit,
+        SymlinkBehaviour::Keep,
+        options.broken_symlink_behaviour,
     )
     .map_err(MoveDirectoryPreparationError::CopyPlanningError)?;
 
@@ -657,6 +693,11 @@ where
                 } => DirectoryMoveOperation::CopyingFile {
                     target_path,
                     progress,
+                },
+                DirectoryCopyOperation::CreatingSymbolicLink {
+                    destination_symbolic_link_file_path,
+                } => DirectoryMoveOperation::CreatingSymbolicLink {
+                    destination_symbolic_link_file_path,
                 },
             };
 
@@ -698,6 +739,7 @@ where
         directories_moved: directory_copy_result.directories_created,
         total_bytes_moved: directory_copy_result.total_bytes_copied,
         files_moved: directory_copy_result.files_copied,
+        symlinks_moved: directory_copy_result.symlinks_created,
         strategy_used: DirectoryMoveStrategy::CopyAndDelete,
     })
 }

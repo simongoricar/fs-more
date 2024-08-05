@@ -6,6 +6,7 @@ use crate::error::DirectoryScanError;
 pub(crate) struct DirectoryStatistics {
     pub(crate) total_bytes: u64,
     pub(crate) total_files: usize,
+    pub(crate) total_symlinks: usize,
     pub(crate) total_directories: usize,
 }
 
@@ -26,6 +27,7 @@ pub(crate) fn collect_directory_statistics_via_scan(
 
     let mut total_bytes = 0;
     let mut total_files = 0;
+    let mut total_symlinks = 0;
     let mut total_directories = 0;
 
     for scan_entry_result in scanner {
@@ -40,6 +42,8 @@ pub(crate) fn collect_directory_statistics_via_scan(
             total_files += 1;
         } else if scan_entry_file_type.is_dir() {
             total_directories += 1;
+        } else if scan_entry_file_type.is_symlink() {
+            total_symlinks += 1;
         }
     }
 
@@ -47,6 +51,7 @@ pub(crate) fn collect_directory_statistics_via_scan(
     Ok(DirectoryStatistics {
         total_bytes,
         total_files,
+        total_symlinks,
         total_directories,
     })
 }

@@ -104,11 +104,13 @@ pub fn copy_directory_with_progress_creates_an_identical_copy() -> TestResult {
                     let previous_path = match &previous_report.current_operation {
                         DirectoryCopyOperation::CreatingDirectory { destination_directory_path } => destination_directory_path.as_path(),
                         DirectoryCopyOperation::CopyingFile { destination_file_path, .. } => destination_file_path.as_path(),
+                        DirectoryCopyOperation::CreatingSymbolicLink { destination_symbolic_link_file_path } => destination_symbolic_link_file_path.as_path()
                     };
 
                     let current_path = match &progress.current_operation {
                         DirectoryCopyOperation::CreatingDirectory { destination_directory_path } => destination_directory_path.as_path(),
                         DirectoryCopyOperation::CopyingFile { destination_file_path, .. } => destination_file_path.as_path(),
+                        DirectoryCopyOperation::CreatingSymbolicLink { destination_symbolic_link_file_path } => destination_symbolic_link_file_path.as_path()
                     };
 
                     if previous_path != current_path {
@@ -852,3 +854,6 @@ pub fn copy_directory_with_progress_errors_when_source_is_symlink_to_destination
     empty_harness.destroy();
     Ok(())
 }
+
+
+// TODO Revisit tests that handle symlinks: remove obsolete tests and add new ones that test the symlink options.
