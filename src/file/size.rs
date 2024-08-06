@@ -2,19 +2,15 @@ use std::path::Path;
 
 use_enabled_fs_module!();
 
-use crate::error::FileSizeError;
+use crate::{directory::try_exists_without_follow, error::FileSizeError};
 
 /// Retrieve the size of a file in bytes.
 ///
 ///
 /// ## Symbolic link behaviour
-/// Symbolic links are followed.
+/// Symbolic links are not followed.
 ///
-/// This means that, if the provided `file_path` is
-/// a symbolic link leading to a file, the function returns
-/// *the size of the target file, not of the link itself*.
-///
-/// This matches the behaviour of `du` with the `--dereference` flag on Unix[^unix-du].
+/// This matches the behaviour of `du` on Unix[^unix-du].
 ///
 ///
 /// # Errors
@@ -44,12 +40,13 @@ where
 {
     let file_path = file_path.as_ref();
 
+    // TODO Make symbolic link behaviour configurable here (and write tests for that).
 
     // Ensure the file exists. We use `try_exists`
     // instead of `exists` to catch permission and other IO errors
     // as distinct from the `FileMetadataError::NotFound` error.
 
-    match file_path.try_exists() {
+    match try_exists_without_follow(file_path) {
         Ok(exists) => {
             if !exists {
                 return Err(FileSizeError::NotFound {
