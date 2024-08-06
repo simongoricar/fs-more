@@ -209,6 +209,7 @@
           "type": "object",
           "required": [
             "destination_relative_path",
+            "destination_type",
             "name",
             "type"
           ],
@@ -216,6 +217,14 @@
             "destination_relative_path": {
               "description": "Non-existent destination path, relative to this symlink.\n\nDestination must not exist.",
               "type": "string"
+            },
+            "destination_type": {
+              "description": "Type of symlink destination.\n\nThis is required on Windows due to different ways of creating symbolic links depending on the destination type (file or directory).",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/SymlinkDestinationType"
+                }
+              ]
             },
             "id": {
               "description": "Optional tree-unique entry ID. User to refer to entries in the symlink file type, for example.",
@@ -252,6 +261,13 @@
           }
         }
       }
+    },
+    "SymlinkDestinationType": {
+      "type": "string",
+      "enum": [
+        "file",
+        "directory"
+      ]
     }
   }
 }

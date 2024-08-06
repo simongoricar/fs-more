@@ -128,6 +128,16 @@ fn construct_post_initializers_for_entries(
                     );
                 });
             }
+            AnyPreparedEntry::BrokenSymlink {
+                actual_field_name_on_parent_ident: actual_field_name_ident_on_parent,
+                ..
+            } => {
+                field_post_initializers.push(quote! {
+                    self.#actual_field_name_ident_on_parent.post_initialize(
+                        #tree_root_absolute_path_parameter_ident
+                    );
+                });
+            }
             _ => {}
         }
     }

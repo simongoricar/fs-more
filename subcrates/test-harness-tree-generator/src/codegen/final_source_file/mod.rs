@@ -205,6 +205,7 @@ pub fn generate_rust_source_file_for_schema(
         potential_post_initialization_code.map(|post_initialization_code| {
             quote! {
                 impl #tree_root_struct_name_ident {
+                    #[track_caller]
                     fn post_initialize(&mut self) {
                         #post_initialization_code
                     }

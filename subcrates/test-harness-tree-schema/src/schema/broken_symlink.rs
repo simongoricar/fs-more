@@ -1,3 +1,17 @@
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(
+    feature = "serializable_tree_schema",
+    derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema)
+)]
+pub enum SymlinkDestinationType {
+    #[cfg_attr(feature = "serializable_tree_schema", serde(rename = "file"))]
+    File,
+
+    #[cfg_attr(feature = "serializable_tree_schema", serde(rename = "directory"))]
+    Directory,
+}
+
+
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "serializable_tree_schema",
@@ -15,4 +29,10 @@ pub struct BrokenSymlinkEntry {
     ///
     /// Destination must not exist.
     pub destination_relative_path: String,
+
+    /// Type of symlink destination.
+    ///
+    /// This is required on Windows due to different ways of creating
+    /// symbolic links depending on the destination type (file or directory).
+    pub destination_type: SymlinkDestinationType,
 }

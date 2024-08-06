@@ -56,8 +56,8 @@ enum DirectoryComparisonErrorInner {
     #[error(
         "directory contents do not match;\n  \
           {}\n\
-        is a {} inside the secondary (source) directory, \
-        but the corresponding path inside the primary (target) directory\n  \
+        is a {} inside the secondary directory, \
+        but the corresponding path inside the primary directory\n  \
           {}\n\
         is a {}.",
         .original_path.display(),
@@ -91,6 +91,27 @@ enum DirectoryComparisonErrorInner {
 
         #[source]
         error: FileComparisonErrorInner,
+    },
+
+    #[error(
+        "broken symbolic links exist on both sides, \
+        but their destinations do not match;\n  \
+          \"{}\" (in primary) points to \"{}\"\n\
+        and\n  \
+          \"{}\" (in secondary) points to \"{}\".",
+        .symlink_path_in_primary.display(),
+        .resolved_symlink_path_in_primary.display(),
+        .symlink_path_in_secondary.display(),
+        .resolved_symlink_path_in_secondary.display()
+    )]
+    BrokenSymlinkDestinationsNotEqual {
+        symlink_path_in_primary: PathBuf,
+
+        resolved_symlink_path_in_primary: PathBuf,
+
+        symlink_path_in_secondary: PathBuf,
+
+        resolved_symlink_path_in_secondary: PathBuf,
     },
 }
 
@@ -139,6 +160,7 @@ pub struct DirectoryComparisonOptions {
 
 /// For more information, see documentation of
 /// [`assert_primary_directory_precisely_contains_secondary_directory`].
+#[allow(clippy::result_large_err)]
 fn ensure_primary_directory_precisely_contains_secondary_directory_inner(
     primary_directory_path: &Path,
     secondary_directory_path: &Path,
@@ -220,6 +242,7 @@ fn ensure_primary_directory_precisely_contains_secondary_directory_inner(
                         path: entry_path,
                     });
                 }
+
                 PathType::BareFile | PathType::SymlinkToFile => {
                     // Scanned path is file.
                     // We now check if the path remapped into the primary directory exists.
@@ -264,6 +287,7 @@ fn ensure_primary_directory_precisely_contains_secondary_directory_inner(
                         });
                     }
                 }
+
                 PathType::BareDirectory => {
                     // Scanned path is a directory (and *not* a symlink to one).
                     // We now check if the path remapped into the primary directory exists.
@@ -335,6 +359,7 @@ fn ensure_primary_directory_precisely_contains_secondary_directory_inner(
                         }
                     }
                 }
+
                 PathType::SymlinkToDirectory => {
                     // Scanned path is a symlink to a directory.
                     // We now check if the path remapped into the primary directory exists.
@@ -412,6 +437,51 @@ fn ensure_primary_directory_precisely_contains_secondary_directory_inner(
                         }
                     }
                 }
+
+                PathType::BrokenSymlink => {
+                    match remapped_path_type {
+                        PathType::BrokenSymlink => {
+                            // Both locations are broken symbolic links. The way we'll compare them
+                            // is by checking if fs::read_link resolves to the same location.
+                            let resolved_entry_path =
+                                fs::read_link(&entry_path).map_err(|error| {
+                                    DirectoryComparisonErrorInner::UnableToAccessPath {
+                                        path: entry_path.clone(),
+                                        error,
+                                    }
+                                })?;
+
+                            let resolved_remapped_path = fs::read_link(
+                                &remapped_onto_comparison_target,
+                            )
+                            .map_err(|error| DirectoryComparisonErrorInner::UnableToAccessPath {
+                                path: remapped_onto_comparison_target.clone(),
+                                error,
+                            })?;
+
+
+                            if resolved_entry_path != resolved_remapped_path {
+                                return Err(DirectoryComparisonErrorInner::BrokenSymlinkDestinationsNotEqual {
+                                    symlink_path_in_primary: remapped_onto_comparison_target,
+                                    resolved_symlink_path_in_primary: resolved_remapped_path,
+                                    symlink_path_in_secondary: entry_path,
+                                    resolved_symlink_path_in_secondary: resolved_entry_path
+                                });
+                            }
+                        }
+                        unmatched_type => {
+                            return Err(
+                                DirectoryComparisonErrorInner::PrimaryPathIsOfIncorrectType {
+                                    original_path: entry_path.clone(),
+                                    original_path_type: entry_path_type,
+                                    expected_path: remapped_onto_comparison_target.clone(),
+                                    expected_path_type: unmatched_type,
+                                },
+                            );
+                        }
+                    }
+                }
+
                 PathType::Unrecognized => {
                     return Err(DirectoryComparisonErrorInner::InvalidDirectoryEntry {
                         path: entry_path,

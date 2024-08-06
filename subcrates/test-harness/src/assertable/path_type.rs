@@ -19,6 +19,8 @@ pub enum PathType {
     /// The path leads to a symlink to a file.
     SymlinkToFile,
 
+    BrokenSymlink,
+
     /// The path leads to a "bare" directory, i.e. a directory *and not a symlink to one*.
     BareDirectory,
 
@@ -43,6 +45,17 @@ impl PathType {
         }
 
         let metadata_no_follow = fs::symlink_metadata(&path)?;
+
+
+        if metadata_no_follow.is_symlink() {
+            let resolved_symlink_path = fs::read_link(&path)?;
+
+            if !resolved_symlink_path.try_exists()? {
+                return Ok(Self::BrokenSymlink);
+            }
+        }
+
+
         let metadata_with_follow = fs::metadata(path)?;
 
         if metadata_no_follow.is_file() {
@@ -103,6 +116,7 @@ impl PathType {
             PathType::NotFound => "non-existent",
             PathType::BareFile => "a file",
             PathType::SymlinkToFile => "a symlink to a file",
+            PathType::BrokenSymlink => "a broken symlink",
             PathType::BareDirectory => "a directory",
             PathType::SymlinkToDirectory => "a symlink to a directory",
             PathType::Unrecognized => "unrecognized",

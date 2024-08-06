@@ -163,7 +163,7 @@ impl SymlinkToDBin {
             SymlinkDestinationType::File,
         );
         self.symlink_path
-            .assert_is_symlink_to_file_and_destination_matches(
+            .assert_is_valid_symlink_to_file_and_destination_matches(
                 &absolute_destination_path,
             );
     }
@@ -449,7 +449,7 @@ impl SymlinkToHello {
             SymlinkDestinationType::Directory,
         );
         self.symlink_path
-            .assert_is_symlink_to_directory_and_destination_matches(
+            .assert_is_valid_symlink_to_directory_and_destination_matches(
                 &absolute_destination_path,
             );
     }
@@ -620,6 +620,7 @@ impl FileSystemHarness for SymlinkedTree {
     }
 }
 impl SymlinkedTree {
+    #[track_caller]
     fn post_initialize(&mut self) {
         self.foo.post_initialize(self.temporary_directory.path());
     }

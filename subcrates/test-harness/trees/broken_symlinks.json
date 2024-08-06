@@ -34,7 +34,8 @@
           {
             "type": "broken-symlink",
             "name": "broken-symlink.txt",
-            "destination_relative_path": "../nonexistent-destination-file.txt"
+            "destination_relative_path": "../nonexistent-destination-file.txt",
+            "destination_type": "file"
           }
         ]
       }

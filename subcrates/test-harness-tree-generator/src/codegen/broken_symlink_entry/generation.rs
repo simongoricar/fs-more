@@ -1,3 +1,4 @@
+use fs_more_test_harness_tree_schema::schema::SymlinkDestinationType;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::Ident;
@@ -6,10 +7,19 @@ use super::{BrokenSymlinkEntryError, PreparedBrokenSymlinkEntry};
 
 
 fn construct_post_initializer_code_for_broken_symlink_entry(
+    symlink_destination_type: SymlinkDestinationType,
     broken_symlink_path_variable_ident: &Ident,
     broken_symlink_destination_path_variable_ident: &Ident,
     tree_root_absolute_path_parameter_ident: &Ident,
 ) -> Result<TokenStream, BrokenSymlinkEntryError> {
+    // Note: the quoted `SymlinkDestinationType` and the one from the schema crate *are not the same type*.
+    // The quoted one is `fs_more_test_harness::trees::SymlinkDestinationType`,
+    // while the one we use here is `fs_more_test_harness_tree_schema::schema::SymlinkDestinationType`.
+    let entry_symlink_destination_type = match symlink_destination_type {
+        SymlinkDestinationType::File => quote! { SymlinkDestinationType::File },
+        SymlinkDestinationType::Directory => quote! { SymlinkDestinationType::Directory },
+    };
+
     Ok(quote! {
         self.#broken_symlink_path_variable_ident.assert_not_exists();
         self.#broken_symlink_destination_path_variable_ident.assert_not_exists();
@@ -21,7 +31,7 @@ fn construct_post_initializer_code_for_broken_symlink_entry(
         initialize_symbolic_link(
             &self.#broken_symlink_path_variable_ident,
             &self.#broken_symlink_destination_path_variable_ident,
-            SymlinkDestinationType::Directory,
+            #entry_symlink_destination_type,
         );
 
         self.#broken_symlink_path_variable_ident.assert_is_any_broken_symlink();
@@ -77,6 +87,7 @@ pub(crate) fn generate_code_for_broken_symlink_entry_in_tree(
 
     let generated_broken_symlink_post_initialization_code =
         construct_post_initializer_code_for_broken_symlink_entry(
+            prepared_entry.symlink_destination_type,
             &broken_symlink_path_variable_ident,
             &broken_symlink_destination_path_variable_ident,
             &tree_root_absolute_path_parameter_ident,

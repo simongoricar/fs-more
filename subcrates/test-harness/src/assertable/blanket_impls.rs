@@ -1,5 +1,6 @@
 use std::{
     fs,
+    io::ErrorKind,
     path::{Path, PathBuf},
 };
 
@@ -51,21 +52,32 @@ where
 {
     #[track_caller]
     fn assert_exists(&self) {
-        match self.as_path().try_exists() {
-            Ok(exists) => assert!(exists, "path does not exist: {}", self.as_path().display()),
-            Err(error) => panic!(
-                "failed to determine whether the path exists or not (IO error): {}",
-                error
-            ),
-        }
+        match fs::symlink_metadata(self.as_path()) {
+            Ok(_) => {},
+            Err(error) => match error.kind() {
+                ErrorKind::NotFound => panic!("path does not exist: {}", self.as_path().display()),
+                _ => panic!(
+                    "failed to determine whether the path exists or not (IO error): {} (for path {})",
+                    error,
+                    self.as_path().display()
+                ),
+            },
+        };
     }
 
     #[track_caller]
     fn assert_not_exists(&self) {
-        match self.as_path().try_exists() {
-            Ok(exists) => assert!(!exists, "path exists: {}", self.as_path().display()),
-            Err(error) => panic!("failed to determine whether path exists or not: {}", error),
-        }
+        match fs::symlink_metadata(self.as_path()) {
+            Ok(_) => panic!("path exists: {}", self.as_path().display()),
+            Err(error) => match error.kind() {
+                ErrorKind::NotFound => {},
+                _ => panic!(
+                    "failed to determine whether the path exists or not (IO error): {} (for path {})",
+                    error,
+                    self.as_path().display()
+                ),
+            },
+        };
     }
 
     #[track_caller]
@@ -305,7 +317,7 @@ where
     }
 
     #[track_caller]
-    fn assert_is_symlink_to_directory(&self) {
+    fn assert_is_valid_symlink_to_directory(&self) {
         self.assert_exists();
 
         let path_type = PathType::from_path(self.as_path()).unwrap();
@@ -320,7 +332,7 @@ where
     }
 
     #[track_caller]
-    fn assert_is_symlink_to_directory_and_destination_matches<P>(
+    fn assert_is_valid_symlink_to_directory_and_destination_matches<P>(
         &self,
         expected_destination_path: P,
     ) where
@@ -331,7 +343,7 @@ where
             .canonicalize()
             .expect("failed to canonicalize expected destination path");
 
-        let destination = self.assert_is_symlink_to_directory_and_resolve_destination();
+        let destination = self.assert_is_valid_symlink_to_directory_and_resolve_destination();
         let canonical_actual_destination_path = destination
             .canonicalize()
             .expect("failed to canonicalize symlink destination path");
@@ -347,14 +359,14 @@ where
     }
 
     #[track_caller]
-    fn assert_is_symlink_to_directory_and_resolve_destination(&self) -> PathBuf {
-        self.assert_is_symlink_to_directory();
+    fn assert_is_valid_symlink_to_directory_and_resolve_destination(&self) -> PathBuf {
+        self.assert_is_valid_symlink_to_directory();
 
         fs::read_link(self.as_path()).expect("failed to read directory symlink")
     }
 
     #[track_caller]
-    fn assert_is_symlink_to_file(&self) {
+    fn assert_is_valid_symlink_to_file(&self) {
         self.assert_exists();
 
         let path_type = PathType::from_path(self.as_path()).unwrap();
@@ -368,8 +380,10 @@ where
         }
     }
 
-    fn assert_is_symlink_to_file_and_destination_matches<P>(&self, expected_destination_path: P)
-    where
+    fn assert_is_valid_symlink_to_file_and_destination_matches<P>(
+        &self,
+        expected_destination_path: P,
+    ) where
         P: AsRef<Path>,
     {
         let canonical_expected_path = expected_destination_path
@@ -377,7 +391,7 @@ where
             .canonicalize()
             .expect("failed to canonicalize expected destination path");
 
-        let destination = self.assert_is_symlink_to_file_and_resolve_destination();
+        let destination = self.assert_is_valid_symlink_to_file_and_resolve_destination();
         let canonical_actual_destination_path = destination
             .canonicalize()
             .expect("failed to canonicalize symlink destination path");
@@ -393,8 +407,8 @@ where
     }
 
     #[track_caller]
-    fn assert_is_symlink_to_file_and_resolve_destination(&self) -> PathBuf {
-        self.assert_is_symlink_to_file();
+    fn assert_is_valid_symlink_to_file_and_resolve_destination(&self) -> PathBuf {
+        self.assert_is_valid_symlink_to_file();
 
         fs::read_link(self.as_path()).expect("failed to read file symlink")
     }
@@ -482,7 +496,7 @@ where
 
         symlink_to_file(self.as_path(), destination_file_path.as_ref());
 
-        self.assert_is_symlink_to_file_and_destination_matches(destination_file_path);
+        self.assert_is_valid_symlink_to_file_and_destination_matches(destination_file_path);
     }
 
     #[track_caller]
@@ -494,7 +508,9 @@ where
 
         symlink_to_directory(self.as_path(), destination_directory_path.as_ref());
 
-        self.assert_is_symlink_to_directory_and_destination_matches(destination_directory_path);
+        self.assert_is_valid_symlink_to_directory_and_destination_matches(
+            destination_directory_path,
+        );
     }
 
     #[track_caller]

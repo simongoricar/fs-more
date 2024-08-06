@@ -194,7 +194,7 @@ impl BrokenSymlinkTxt {
         initialize_symbolic_link(
             &self.broken_symlink_path,
             &self.broken_symlink_destination_path,
-            SymlinkDestinationType::Directory,
+            SymlinkDestinationType::File,
         );
         self.broken_symlink_path.assert_is_any_broken_symlink();
     }
@@ -261,7 +261,9 @@ impl Foo {
         }
     }
     #[track_caller]
-    fn post_initialize(&mut self, tree_root_absolute_path: &Path) {}
+    fn post_initialize(&mut self, tree_root_absolute_path: &Path) {
+        self.broken_symlink_txt.post_initialize(tree_root_absolute_path);
+    }
 }
 impl AsPath for Foo {
     fn as_path(&self) -> &Path {
@@ -338,6 +340,7 @@ impl FileSystemHarness for BrokenSymlinksTree {
     }
 }
 impl BrokenSymlinksTree {
+    #[track_caller]
     fn post_initialize(&mut self) {
         self.foo.post_initialize(self.temporary_directory.path());
     }

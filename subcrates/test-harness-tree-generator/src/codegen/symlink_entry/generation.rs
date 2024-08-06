@@ -30,7 +30,7 @@ fn construct_post_initializer_code_for_symlink_entry(
                     SymlinkDestinationType::Directory,
                 );
 
-                self.#symlink_path_variable_ident.assert_is_symlink_to_directory_and_destination_matches(
+                self.#symlink_path_variable_ident.assert_is_valid_symlink_to_directory_and_destination_matches(
                     &absolute_destination_path
                 );
             }
@@ -48,7 +48,7 @@ fn construct_post_initializer_code_for_symlink_entry(
                     SymlinkDestinationType::File,
                 );
 
-                self.#symlink_path_variable_ident.assert_is_symlink_to_file_and_destination_matches(
+                self.#symlink_path_variable_ident.assert_is_valid_symlink_to_file_and_destination_matches(
                     &absolute_destination_path
                 );
             }

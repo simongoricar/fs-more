@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use fs_more_test_harness_tree_schema::schema::BrokenSymlinkEntry;
+use fs_more_test_harness_tree_schema::schema::{BrokenSymlinkEntry, SymlinkDestinationType};
 use heck::{ToSnakeCase, ToUpperCamelCase};
 use itertools::Itertools;
 use path_slash::PathBufExt;
@@ -23,6 +23,8 @@ pub struct PreparedBrokenSymlinkEntry {
     ///
     /// Destination must not exist.
     pub(crate) symlink_destination_relative_path: String,
+
+    pub(crate) symlink_destination_type: SymlinkDestinationType,
 
     pub(crate) struct_type_ident: Ident,
 
@@ -74,6 +76,7 @@ pub(crate) fn prepare_broken_symlink_entry(
         symlink_name: broken_symlink.name.clone(),
         symlink_path_relative_to_tree_root: broken_symlink_relative_path_string,
         symlink_destination_relative_path: broken_symlink.destination_relative_path.clone(),
+        symlink_destination_type: broken_symlink.destination_type,
         struct_type_ident: broken_symlink_struct_ident,
         preferred_parent_field_ident,
     })
