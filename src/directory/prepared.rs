@@ -62,6 +62,23 @@ pub(crate) enum QueuedOperation {
 }
 
 
+/// Returns a boolean indicating whether the provided path exists.
+///
+/// Behaves similarly to [`fs::try_exists`],
+/// but *does not follow symbolic links*.
+///
+/// If the `fs-err` feature flag is enabled, this function will automatically use it.
+pub(crate) fn try_exists_without_follow(path: &Path) -> std::io::Result<bool> {
+    match fs::symlink_metadata(path) {
+        Ok(_) => Ok(true),
+        Err(error) => match error.kind() {
+            ErrorKind::NotFound => Ok(false),
+            _ => Err(error),
+        },
+    }
+}
+
+
 
 /// Information about a validated source path (used in copying and moving directories).
 #[derive(Clone, Debug)]
@@ -88,7 +105,7 @@ pub(super) fn validate_source_directory_path(
     // Ensure the source directory path exists. We use `try_exists`
     // instead of `exists` to catch permission and other IO errors
     // as distinct from the `DirectoryError::NotFound` error.
-    match source_directory_path.try_exists() {
+    match try_exists_without_follow(source_directory_path) {
         Ok(exists) => {
             if !exists {
                 return Err(SourceDirectoryPathValidationError::NotFound {
@@ -212,12 +229,10 @@ pub(super) fn validate_destination_directory_path(
     destination_directory_path: &Path,
     destination_directory_rule: DestinationDirectoryRule,
 ) -> Result<ValidatedDestinationDirectory, DestinationDirectoryPathValidationError> {
-    let destination_directory_exists =
-        destination_directory_path.try_exists().map_err(|error| {
-            DestinationDirectoryPathValidationError::UnableToAccess {
-                directory_path: destination_directory_path.to_path_buf(),
-                error,
-            }
+    let destination_directory_exists = try_exists_without_follow(destination_directory_path)
+        .map_err(|error| DestinationDirectoryPathValidationError::UnableToAccess {
+            directory_path: destination_directory_path.to_path_buf(),
+            error,
         })?;
 
     // If `destination_directory_path` exists, but does not point to a directory,
@@ -496,7 +511,7 @@ fn scan_and_plan_directory_copy(
 
 
                 let resolved_symlink_path_exists =
-                    resolved_symlink_path.try_exists().map_err(|error| {
+                    try_exists_without_follow(&resolved_symlink_path).map_err(|error| {
                         DirectoryExecutionPlanError::UnableToAccess {
                             path: resolved_symlink_path.clone(),
                             error,
@@ -728,12 +743,10 @@ fn check_operation_queue_for_collisions(
                 ..
             } => {
                 if !overwriting_existing_destination_files_allowed {
-                    let destination_file_exists =
-                        destination_file_path.try_exists().map_err(|error| {
-                            DirectoryExecutionPlanError::UnableToAccess {
-                                path: destination_file_path.to_path_buf(),
-                                error,
-                            }
+                    let destination_file_exists = try_exists_without_follow(destination_file_path)
+                        .map_err(|error| DirectoryExecutionPlanError::UnableToAccess {
+                            path: destination_file_path.to_path_buf(),
+                            error,
                         })?;
 
                     if destination_file_exists {
@@ -749,11 +762,12 @@ fn check_operation_queue_for_collisions(
                 ..
             } => {
                 if !existing_destination_subdirectories_allowed {
-                    let destination_directory_exists = destination_directory_path
-                        .try_exists()
-                        .map_err(|error| DirectoryExecutionPlanError::UnableToAccess {
-                            path: destination_directory_path.to_path_buf(),
-                            error,
+                    let destination_directory_exists =
+                        try_exists_without_follow(destination_directory_path).map_err(|error| {
+                            DirectoryExecutionPlanError::UnableToAccess {
+                                path: destination_directory_path.to_path_buf(),
+                                error,
+                            }
                         })?;
 
                     if destination_directory_exists {
@@ -766,15 +780,15 @@ fn check_operation_queue_for_collisions(
 
             QueuedOperation::CreateSymlink { symlink_path, .. } => {
                 if !overwriting_existing_destination_files_allowed {
-                    let symlink_destination_exists =
-                        symlink_path.try_exists().map_err(|error| {
+                    let symlink_path_exists =
+                        try_exists_without_follow(symlink_path).map_err(|error| {
                             DirectoryExecutionPlanError::UnableToAccess {
                                 path: symlink_path.to_path_buf(),
                                 error,
                             }
                         })?;
 
-                    if symlink_destination_exists {
+                    if symlink_path_exists {
                         return Err(DirectoryExecutionPlanError::DestinationItemAlreadyExists {
                             path: symlink_path.to_path_buf(),
                         });

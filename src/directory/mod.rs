@@ -33,6 +33,7 @@ mod size;
 
 pub use common::*;
 pub use copy::*;
+pub(crate) use prepared::*;
 pub use r#move::*;
 pub use scan::*;
 pub use size::*;

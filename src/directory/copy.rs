@@ -4,7 +4,7 @@ use_enabled_fs_module!();
 
 use super::{
     common::DestinationDirectoryRule,
-    prepared::{DirectoryCopyPrepared, QueuedOperation},
+    prepared::{try_exists_without_follow, DirectoryCopyPrepared, QueuedOperation},
 };
 use crate::{
     error::{CopyDirectoryError, CopyDirectoryExecutionError},
@@ -206,12 +206,10 @@ pub(crate) fn copy_directory_unchecked(
                 source_size_bytes,
                 destination_file_path,
             } => {
-                let destination_file_exists =
-                    destination_file_path.try_exists().map_err(|error| {
-                        CopyDirectoryExecutionError::UnableToAccessDestination {
-                            path: destination_file_path.clone(),
-                            error,
-                        }
+                let destination_file_exists = try_exists_without_follow(&destination_file_path)
+                    .map_err(|error| CopyDirectoryExecutionError::UnableToAccessDestination {
+                        path: destination_file_path.clone(),
+                        error,
                     })?;
 
                 if destination_file_exists {
@@ -264,11 +262,12 @@ pub(crate) fn copy_directory_unchecked(
                 source_size_bytes,
                 destination_directory_path,
             } => {
-                let destination_directory_exists = destination_directory_path
-                    .try_exists()
-                    .map_err(|error| CopyDirectoryExecutionError::UnableToAccessDestination {
-                        path: destination_directory_path.clone(),
-                        error,
+                let destination_directory_exists =
+                    try_exists_without_follow(&destination_directory_path).map_err(|error| {
+                        CopyDirectoryExecutionError::UnableToAccessDestination {
+                            path: destination_directory_path.clone(),
+                            error,
+                        }
                     })?;
 
 
@@ -780,12 +779,13 @@ where
 
 
 
-    let destination_path_exists = destination_path.try_exists().map_err(|error| {
-        CopyDirectoryExecutionError::UnableToAccessDestination {
-            path: destination_path.clone(),
-            error,
-        }
-    })?;
+    let destination_path_exists =
+        try_exists_without_follow(&destination_path).map_err(|error| {
+            CopyDirectoryExecutionError::UnableToAccessDestination {
+                path: destination_path.clone(),
+                error,
+            }
+        })?;
 
     if destination_path_exists {
         let destination_path_metadata =
@@ -908,12 +908,10 @@ fn execute_create_directory_operation_with_progress<F>(
 where
     F: FnMut(&DirectoryCopyProgressRef),
 {
-    let destination_directory_exists =
-        destination_directory_path.try_exists().map_err(|error| {
-            CopyDirectoryExecutionError::UnableToAccessDestination {
-                path: destination_directory_path.clone(),
-                error,
-            }
+    let destination_directory_exists = try_exists_without_follow(&destination_directory_path)
+        .map_err(|error| CopyDirectoryExecutionError::UnableToAccessDestination {
+            path: destination_directory_path.clone(),
+            error,
         })?;
 
     if destination_directory_exists {
@@ -989,12 +987,13 @@ where
         .allows_overwriting_existing_destination_files();
 
 
-    let symlink_path_exists = symlink_info.symlink_path.try_exists().map_err(|error| {
-        CopyDirectoryExecutionError::UnableToAccessDestination {
-            path: symlink_info.symlink_path.clone(),
-            error,
-        }
-    })?;
+    let symlink_path_exists =
+        try_exists_without_follow(&symlink_info.symlink_path).map_err(|error| {
+            CopyDirectoryExecutionError::UnableToAccessDestination {
+                path: symlink_info.symlink_path.clone(),
+                error,
+            }
+        })?;
 
     if symlink_path_exists {
         let symlink_path_metadata =

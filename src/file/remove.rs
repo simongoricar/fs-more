@@ -2,7 +2,7 @@ use std::path::Path;
 
 use_enabled_fs_module!();
 
-use crate::error::FileRemoveError;
+use crate::{directory::try_exists_without_follow, error::FileRemoveError};
 
 /// Removes a single file.
 ///
@@ -64,7 +64,7 @@ where
     // instead of `exists` to catch permission and other IO errors
     // as distinct from the `FileError::NotFound` error.
 
-    match file_path.try_exists() {
+    match try_exists_without_follow(file_path) {
         Ok(exists) => {
             if !exists {
                 return Err(FileRemoveError::NotFound {

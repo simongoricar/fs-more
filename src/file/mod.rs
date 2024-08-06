@@ -35,7 +35,7 @@ pub use r#move::*;
 pub use remove::*;
 pub use size::*;
 
-use crate::error::FileError;
+use crate::{directory::try_exists_without_follow, error::FileError};
 
 
 /// Controls behaviour for existing destination files when copying or moving.
@@ -94,7 +94,7 @@ fn validate_source_file_path(
     // instead of `exists` to catch permission and other IO errors
     // as distinct from the `FileError::NotFound` error.
 
-    let source_file_exists = match source_file_path.try_exists() {
+    let source_file_exists = match try_exists_without_follow(source_file_path) {
         Ok(exists) => exists,
         Err(error) => {
             return Err(FileError::UnableToAccessSourceFile {
@@ -182,12 +182,13 @@ fn validate_destination_file_path(
     // (unless `options.existing_destination_file_behaviour` allows that),
     // and that it isn't a directory.
 
-    let destination_file_exists = destination_file_path.try_exists().map_err(|error| {
-        FileError::UnableToAccessDestinationFile {
-            path: destination_file_path.to_path_buf(),
-            error,
-        }
-    })?;
+    let destination_file_exists =
+        try_exists_without_follow(destination_file_path).map_err(|error| {
+            FileError::UnableToAccessDestinationFile {
+                path: destination_file_path.to_path_buf(),
+                error,
+            }
+        })?;
 
 
     if destination_file_exists {
