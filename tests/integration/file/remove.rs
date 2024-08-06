@@ -43,7 +43,7 @@ pub fn remove_file_does_not_follow_symlinks() -> TestResult {
         .symlink_to_file(secondary_harness.empty_txt.as_path());
     harness
         .empty_txt
-        .assert_is_symlink_to_file_and_destination_matches(secondary_harness.empty_txt.as_path());
+        .assert_is_valid_symlink_to_file_and_destination_matches(secondary_harness.empty_txt.as_path());
 
     let captured_symlink_destination_file = secondary_harness.empty_txt.capture_with_content();
 

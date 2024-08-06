@@ -237,7 +237,7 @@ pub fn move_file_with_progress_errors_when_source_is_symlink_to_destination() ->
     symlink_path.assert_not_exists();
 
     symlink_path.symlink_to_file(harness.yes.hello_world_txt.as_path());
-    symlink_path.assert_is_symlink_to_file();
+    symlink_path.assert_is_valid_symlink_to_file();
 
 
     let captured_hello_world_txt = harness.yes.hello_world_txt.capture_with_content();
@@ -268,7 +268,7 @@ pub fn move_file_with_progress_errors_when_source_is_symlink_to_destination() ->
     );
 
 
-    symlink_path.assert_is_symlink_to_file();
+    symlink_path.assert_is_valid_symlink_to_file();
     captured_hello_world_txt.assert_unchanged();
 
 
@@ -390,14 +390,14 @@ pub fn move_file_with_progress_may_preserve_symlinks_when_moving_by_rename() -> 
         } => match method {
             FileMoveMethod::Rename => {
                 // The symlink was preserved.
-                symlink_moved_file_path.assert_is_symlink_to_file_and_destination_matches(
+                symlink_moved_file_path.assert_is_valid_symlink_to_file_and_destination_matches(
                     harness.yes.hello_world_txt.as_path(),
                 );
             }
             FileMoveMethod::CopyAndDelete => {
                 // The symlink was not preserved.
                 assert_eq!(bytes_copied, symlink_destination_file_size_bytes);
-                symlink_moved_file_path.assert_is_symlink_to_file_and_destination_matches(
+                symlink_moved_file_path.assert_is_valid_symlink_to_file_and_destination_matches(
                     harness.yes.hello_world_txt.as_path(),
                 );
             }

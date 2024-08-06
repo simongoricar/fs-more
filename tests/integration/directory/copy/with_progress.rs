@@ -1,5 +1,6 @@
 use fs_more::{
     directory::{
+        BrokenSymlinkBehaviour,
         CopyDirectoryDepthLimit,
         DestinationDirectoryRule,
         DirectoryCopyOperation,
@@ -8,6 +9,7 @@ use fs_more::{
         DirectoryScanDepthLimit,
         DirectoryScanOptions,
         ExistingSubDirectoryBehaviour,
+        SymlinkBehaviour,
     },
     error::{
         CopyDirectoryError,
@@ -21,7 +23,12 @@ use fs_more_test_harness::{
     collect_directory_statistics_via_scan,
     collect_directory_statistics_via_scan_with_options,
     prelude::*,
-    trees::structures::{deep::DeepTree, empty::EmptyTree},
+    trees::structures::{
+        broken_symlinks::BrokenSymlinksTree,
+        deep::DeepTree,
+        empty::EmptyTree,
+        symlinked::SymlinkedTree,
+    },
 };
 
 
@@ -486,138 +493,63 @@ pub fn copy_directory_with_progress_errors_when_destination_subdirectory_collide
 
 
 #[test]
-pub fn copy_directory_with_progress_does_not_preserve_file_symlinks() -> TestResult {
+pub fn copy_directory_with_progress_respects_copy_depth_limit_if_source_contains_dir_symlink_and_behaviour_is_set_to_follow(
+) {
     let deep_harness = DeepTree::initialize();
     let empty_harness = EmptyTree::initialize();
 
 
-    let (source_symlink_path, remapped_destination_symlink_path) = {
-        let source_symlink_path = deep_harness.child_path("symlink");
-        source_symlink_path.assert_not_exists();
-        source_symlink_path.symlink_to_file(deep_harness.foo.bar.c_bin.as_path());
-
-
-        let remapped_destination_symlink_path = empty_harness.child_path("symlink");
-        remapped_destination_symlink_path.assert_not_exists();
-
-
-        (source_symlink_path, remapped_destination_symlink_path)
-    };
-
-
-
-    fs_more::directory::copy_directory_with_progress(
-        deep_harness.as_path(),
-        empty_harness.as_path(),
-        DirectoryCopyWithProgressOptions {
-            destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
-            ..Default::default()
-        },
-        |_| {},
-    )
-    .unwrap();
-
-
-    source_symlink_path.assert_is_symlink_to_file();
-
-    remapped_destination_symlink_path.assert_is_file_and_not_symlink();
-    deep_harness
-        .foo
-        .bar
-        .c_bin
-        .assert_initial_state_matches_other_file(&remapped_destination_symlink_path);
-
-
-    deep_harness.destroy();
-    empty_harness.destroy();
-    Ok(())
-}
-
-
-
-#[test]
-pub fn copy_directory_with_progress_does_not_preserve_directory_symlinks() -> TestResult {
-    let deep_harness = DeepTree::initialize();
-    let empty_harness = EmptyTree::initialize();
-
-
-    let (source_symlink_path, remapped_destination_symlink_path) = {
-        let source_symlink_path = deep_harness.child_path("dir-symlink");
-        source_symlink_path.assert_not_exists();
-        source_symlink_path.symlink_to_directory(deep_harness.foo.bar.as_path());
-
-
-        let remapped_destination_symlink_path = empty_harness.child_path("dir-symlink");
-        remapped_destination_symlink_path.assert_not_exists();
-
-
-        (source_symlink_path, remapped_destination_symlink_path)
-    };
-
-    source_symlink_path
-        .assert_is_symlink_to_directory_and_resolve_destination()
-        .assert_is_directory_and_fully_matches_secondary_directory(deep_harness.foo.bar.as_path());
-
-
-    fs_more::directory::copy_directory_with_progress(
-        deep_harness.as_path(),
-        empty_harness.as_path(),
-        DirectoryCopyWithProgressOptions {
-            destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
-            ..Default::default()
-        },
-        |_| {},
-    )
-    .unwrap();
-
-
-
-    remapped_destination_symlink_path.assert_is_directory_and_not_symlink();
-    remapped_destination_symlink_path
-        .assert_is_directory_and_fully_matches_secondary_directory(deep_harness.foo.bar.as_path());
-
-
-
-    deep_harness.destroy();
-    empty_harness.destroy();
-    Ok(())
-}
-
-
-
-#[test]
-pub fn copy_directory_with_progress_respects_copy_depth_limit_even_if_source_contains_symlink(
-) -> TestResult {
-    let deep_harness = DeepTree::initialize();
-    let empty_harness = EmptyTree::initialize();
-
-
+    // This block creates a symbolic link inside the deep tree named
+    // `./symlink-to-bar`, which leads to `./foo/bar`.
+    //
+    // `c_bin_under_symlink_to_bar_in_destination` and `hello_dir_under_symlink_to_bar_in_destination`
+    // lead to `./symlink-to-bar/c.bin` and `./symlink-to-bar/hello`, respectively.
+    // These two paths should exist after the copy as normal files, since the symlink behaviour is set to follow.
+    //
+    // `world_dir_under_symlink_to_bar_in_destination` leads to `./symlink-to-bar/hello/world`,
+    // which, given that the copy depth will be 1, must not exist after the copy.
     let (
-        remapped_destination_symlink_path,
-        remapped_c_bin_path_inside_symlink,
-        remapped_hello_dir_path_inside_symlink,
+        symlink_to_bar_in_destination,
+        c_bin_under_symlink_to_bar_in_destination,
+        hello_dir_under_symlink_to_bar_in_destination,
+        world_dir_under_symlink_to_bar_in_destination,
     ) = {
-        let source_symlink_path = deep_harness.child_path("dir-symlink");
-        source_symlink_path.assert_not_exists();
-        source_symlink_path.symlink_to_directory(deep_harness.foo.bar.as_path());
+        let symlink_to_bar_in_source = deep_harness.child_path("symlink-to-bar");
+        symlink_to_bar_in_source.assert_not_exists();
+        symlink_to_bar_in_source.symlink_to_directory(deep_harness.foo.bar.as_path());
 
 
-        let remapped_destination_symlink_path = empty_harness.child_path("dir-symlink");
+        let symlink_to_bar_in_destination = empty_harness.child_path("symlink-to-bar");
+        symlink_to_bar_in_destination.assert_not_exists();
 
-        let remapped_c_bin_path_inside_symlink = remapped_destination_symlink_path
+
+        let c_bin_under_symlink_to_bar_in_destination = symlink_to_bar_in_destination
             .join(deep_harness.foo.bar.c_bin.as_path().file_name().unwrap());
+        c_bin_under_symlink_to_bar_in_destination.assert_not_exists();
 
-        let remapped_hello_dir_path_inside_symlink = remapped_destination_symlink_path
+        let hello_dir_under_symlink_to_bar_in_destination = symlink_to_bar_in_destination
             .join(deep_harness.foo.bar.hello.as_path().file_name().unwrap());
+        hello_dir_under_symlink_to_bar_in_destination.assert_not_exists();
 
+        let world_dir_under_symlink_to_bar_in_destination =
+            hello_dir_under_symlink_to_bar_in_destination.join(
+                deep_harness
+                    .foo
+                    .bar
+                    .hello
+                    .world
+                    .as_path()
+                    .file_name()
+                    .unwrap(),
+            );
+        world_dir_under_symlink_to_bar_in_destination.assert_not_exists();
 
-        remapped_destination_symlink_path.assert_not_exists();
-        remapped_c_bin_path_inside_symlink.assert_not_exists();
 
         (
-            remapped_destination_symlink_path,
-            remapped_c_bin_path_inside_symlink,
-            remapped_hello_dir_path_inside_symlink,
+            symlink_to_bar_in_destination,
+            c_bin_under_symlink_to_bar_in_destination,
+            hello_dir_under_symlink_to_bar_in_destination,
+            world_dir_under_symlink_to_bar_in_destination,
         )
     };
 
@@ -627,7 +559,7 @@ pub fn copy_directory_with_progress_respects_copy_depth_limit_even_if_source_con
         empty_harness.as_path(),
         DirectoryCopyWithProgressOptions {
             copy_depth_limit: CopyDirectoryDepthLimit::Limited { maximum_depth: 1 },
-            destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
+            symlink_behaviour: SymlinkBehaviour::Follow,
             ..Default::default()
         },
         |_| {},
@@ -635,23 +567,127 @@ pub fn copy_directory_with_progress_respects_copy_depth_limit_even_if_source_con
     .unwrap();
 
 
-    remapped_destination_symlink_path.assert_is_directory_and_not_symlink();
-    remapped_destination_symlink_path.assert_is_directory_and_not_empty();
-    remapped_c_bin_path_inside_symlink.assert_is_file_and_not_symlink();
+    symlink_to_bar_in_destination.assert_is_directory_and_not_empty();
+    c_bin_under_symlink_to_bar_in_destination.assert_is_file_and_not_symlink();
+    hello_dir_under_symlink_to_bar_in_destination.assert_is_directory_and_empty();
+    world_dir_under_symlink_to_bar_in_destination.assert_not_exists();
+
 
     deep_harness
         .foo
         .bar
         .c_bin
-        .assert_initial_state_matches_other_file(&remapped_c_bin_path_inside_symlink);
-
-    remapped_hello_dir_path_inside_symlink.assert_is_directory_and_not_symlink();
-    remapped_hello_dir_path_inside_symlink.assert_is_directory_and_empty();
+        .assert_initial_state_matches_other_file(&c_bin_under_symlink_to_bar_in_destination);
 
 
     deep_harness.destroy();
     empty_harness.destroy();
-    Ok(())
+}
+
+
+#[test]
+pub fn copy_directory_with_progress_respects_copy_depth_limit_if_source_contains_symlinks_and_behaviour_is_set_to_keep(
+) {
+    let deep_harness = DeepTree::initialize();
+    let empty_harness = EmptyTree::initialize();
+
+
+    // This block creates the following symbolic links inside the deep tree:
+    // - `./symlink-to-bar`, which leads to `./foo/bar`, and
+    // - `./foo/symlink-to-d.bin`, which leads to `./foo/bar/hello/world/d.bin`.
+    // - `./foo/bar/symlink-to-b.bin`, which leads to `./foo/b.bin`.
+    //
+    // Given a copy depth of 1 and symlink behaviour set to "keep",
+    // `./symlink-to-bar` and `./foo/symlink-to-d.bin` should exist
+    // on the destination as symlinks, but `./foo/bar/symlink-to-b.bin` should not.
+    // Additionally, `./symlink-to-bar` should resolve to a valid directory with
+    // the same contents as in the source.
+    let (
+        symlink_to_bar_in_destination,
+        symlink_to_d_bin_in_destination,
+        symlink_to_b_bin_in_destination,
+    ) = {
+        let symlink_to_bar_in_source = deep_harness.child_path("symlink-to-bar");
+        symlink_to_bar_in_source.assert_not_exists();
+        symlink_to_bar_in_source.symlink_to_directory(deep_harness.foo.bar.as_path());
+
+        let symlink_to_bar_in_destination = empty_harness.child_path("symlink-to-bar");
+        symlink_to_bar_in_destination.assert_not_exists();
+
+
+        let symlink_to_d_bin_in_source = deep_harness.foo.child_path("symlink-to-d.bin");
+        symlink_to_d_bin_in_source.assert_not_exists();
+        symlink_to_d_bin_in_source
+            .symlink_to_file(deep_harness.foo.bar.hello.world.d_bin.as_path());
+
+        let symlink_to_d_bin_in_destination = empty_harness.child_path(
+            deep_harness
+                .foo
+                .as_path_relative_to_harness_root()
+                .join("symlink-to-d.bin"),
+        );
+        symlink_to_d_bin_in_destination.assert_not_exists();
+
+
+        let symlink_to_b_bin_in_source = deep_harness.foo.bar.child_path("symlink-to-b.bin");
+        symlink_to_b_bin_in_source.assert_not_exists();
+        symlink_to_b_bin_in_source.symlink_to_file(deep_harness.foo.b_bin.as_path());
+
+        let symlink_to_b_bin_in_destination = empty_harness.child_path(
+            deep_harness
+                .foo
+                .bar
+                .as_path_relative_to_harness_root()
+                .join("symlink-to-b.bin"),
+        );
+        symlink_to_b_bin_in_destination.assert_not_exists();
+
+
+        (
+            symlink_to_bar_in_destination,
+            symlink_to_d_bin_in_destination,
+            symlink_to_b_bin_in_destination,
+        )
+    };
+
+
+    fs_more::directory::copy_directory_with_progress(
+        deep_harness.as_path(),
+        empty_harness.as_path(),
+        DirectoryCopyWithProgressOptions {
+            copy_depth_limit: CopyDirectoryDepthLimit::Limited { maximum_depth: 1 },
+            symlink_behaviour: SymlinkBehaviour::Keep,
+            ..Default::default()
+        },
+        |_| {},
+    )
+    .unwrap();
+
+
+    let resolved_symlink_to_bar_in_destination = symlink_to_bar_in_destination
+        .assert_is_valid_symlink_to_directory_and_resolve_destination();
+    resolved_symlink_to_bar_in_destination
+        .assert_is_directory_and_fully_matches_secondary_directory_with_options(
+            deep_harness.foo.bar.as_path(),
+            true,
+        );
+
+
+    let resolved_symlink_to_d_bin_in_destination =
+        symlink_to_d_bin_in_destination.assert_is_valid_symlink_to_file_and_resolve_destination();
+    deep_harness
+        .foo
+        .bar
+        .hello
+        .world
+        .d_bin
+        .assert_initial_state_matches_other_file(resolved_symlink_to_d_bin_in_destination);
+
+    symlink_to_b_bin_in_destination.assert_not_exists();
+
+
+    deep_harness.destroy();
+    empty_harness.destroy();
 }
 
 
@@ -856,4 +892,227 @@ pub fn copy_directory_with_progress_errors_when_source_is_symlink_to_destination
 }
 
 
-// TODO Revisit tests that handle symlinks: remove obsolete tests and add new ones that test the symlink options.
+
+#[test]
+fn copy_directory_with_progress_does_not_preserve_symlinks_when_behaviour_is_set_to_follow() {
+    let symlinked_harness = SymlinkedTree::initialize();
+    let empty_harness = EmptyTree::initialize();
+
+
+    fs_more::directory::copy_directory_with_progress(
+        symlinked_harness.as_path(),
+        empty_harness.as_path(),
+        DirectoryCopyWithProgressOptions {
+            symlink_behaviour: SymlinkBehaviour::Follow,
+            ..Default::default()
+        },
+        |_| {},
+    )
+    .unwrap();
+
+
+    // Ensure ./foo/symlink-to-d.bin on the copy destination is not a symlink,
+    // and that its contents match the symlink destination file on the copy source.
+    {
+        let symlink_to_d_bin_path_on_destination = empty_harness.as_path().join(
+            symlinked_harness
+                .foo
+                .symlink_to_d_bin
+                .as_path_relative_to_harness_root(),
+        );
+
+        symlink_to_d_bin_path_on_destination.assert_is_file_and_not_symlink();
+
+        let symlink_to_d_bin_on_destination_state =
+            CapturedFileState::new_with_content_capture(&symlink_to_d_bin_path_on_destination);
+
+
+        let symlink_to_d_bin_path_on_source = symlinked_harness.foo.symlink_to_d_bin.as_path();
+        let resolved_symlink_to_d_bin_path_on_source = symlink_to_d_bin_path_on_source
+            .assert_is_valid_symlink_to_file_and_resolve_destination();
+
+        let resolved_symlink_to_d_bin_on_source_state =
+            CapturedFileState::new_with_content_capture(resolved_symlink_to_d_bin_path_on_source);
+
+
+        resolved_symlink_to_d_bin_on_source_state
+            .assert_captured_states_equal(&symlink_to_d_bin_on_destination_state);
+    }
+
+
+    // Ensure ./foo/symlink-to-hello on the copy destination is not a symlink,
+    // and that its contents match the symlink destination directory on the copy source.
+    {
+        let symlink_to_hello_path_on_destination = empty_harness.as_path().join(
+            symlinked_harness
+                .foo
+                .symlink_to_hello
+                .as_path_relative_to_harness_root(),
+        );
+
+        symlink_to_hello_path_on_destination.assert_is_directory_and_not_symlink();
+
+
+        let symlink_to_hello_path_on_source = symlinked_harness.foo.symlink_to_hello.as_path();
+        let resolved_symlink_to_hello_path_on_source = symlink_to_hello_path_on_source
+            .assert_is_valid_symlink_to_directory_and_resolve_destination();
+
+
+        resolved_symlink_to_hello_path_on_source
+            .assert_is_directory_and_fully_matches_secondary_directory_with_options(
+                symlink_to_hello_path_on_destination,
+                true,
+            );
+    }
+
+
+    symlinked_harness.destroy();
+    empty_harness.destroy();
+}
+
+
+
+#[test]
+fn copy_directory_with_progress_preserves_symlinks_when_behaviour_is_set_to_keep() {
+    let symlinked_harness = SymlinkedTree::initialize();
+    let empty_harness = EmptyTree::initialize();
+
+
+    fs_more::directory::copy_directory_with_progress(
+        symlinked_harness.as_path(),
+        empty_harness.as_path(),
+        DirectoryCopyWithProgressOptions {
+            symlink_behaviour: SymlinkBehaviour::Keep,
+            ..Default::default()
+        },
+        |_| {},
+    )
+    .unwrap();
+
+
+    // Ensure ./foo/symlink-to-d.bin on the copy destination is still a symlink
+    // and that it points to the correct file.
+    {
+        let destination_d_bin_path = empty_harness.as_path().join(
+            symlinked_harness
+                .foo
+                .symlink_to_d_bin
+                .as_path_relative_to_harness_root(),
+        );
+
+        let resolved_destination_d_bin_path =
+            destination_d_bin_path.assert_is_valid_symlink_to_file_and_resolve_destination();
+
+        let resolved_destination_d_bin_state =
+            CapturedFileState::new_with_content_capture(resolved_destination_d_bin_path);
+
+
+        let resolved_source_d_bin_path = symlinked_harness
+            .foo
+            .symlink_to_d_bin
+            .assert_is_valid_symlink_to_file_and_resolve_destination();
+
+        let resolved_source_d_bin_state =
+            CapturedFileState::new_with_content_capture(resolved_source_d_bin_path);
+
+
+        resolved_destination_d_bin_state.assert_captured_states_equal(&resolved_source_d_bin_state);
+    }
+
+    // Ensure ./foo/symlink-to-hello on the copy destination is still a symlink
+    // and that it points to the correct directory.
+    {
+        let destination_symlink_to_hello_path = empty_harness.as_path().join(
+            symlinked_harness
+                .foo
+                .symlink_to_hello
+                .as_path_relative_to_harness_root(),
+        );
+
+        let resolved_destination_symlink_to_hello_path = destination_symlink_to_hello_path
+            .assert_is_valid_symlink_to_directory_and_resolve_destination();
+
+        let resolved_source_symlink_to_hello_path =
+            symlinked_harness.foo.symlink_to_hello.as_path();
+
+
+
+        resolved_source_symlink_to_hello_path
+            .assert_is_directory_and_fully_matches_secondary_directory_with_options(
+                resolved_destination_symlink_to_hello_path,
+                true,
+            );
+    }
+
+
+    symlinked_harness.destroy();
+    empty_harness.destroy();
+}
+
+
+
+#[test]
+fn copy_directory_with_progress_preserves_broken_symlinks_when_behaviour_is_set_to_preserve() {
+    let broken_symlink_harness = BrokenSymlinksTree::initialize();
+    let destination_harness = EmptyTree::initialize();
+
+
+    fs_more::directory::copy_directory_with_progress(
+        broken_symlink_harness.as_path(),
+        destination_harness.as_path(),
+        DirectoryCopyWithProgressOptions {
+            symlink_behaviour: SymlinkBehaviour::Keep,
+            broken_symlink_behaviour: BrokenSymlinkBehaviour::Preserve,
+            ..Default::default()
+        },
+        |_| {},
+    )
+    .unwrap();
+
+
+    {
+        let broken_symlink_path_in_destination = destination_harness.child_path(
+            broken_symlink_harness
+                .foo
+                .broken_symlink_txt
+                .as_path_relative_to_harness_root(),
+        );
+
+        broken_symlink_path_in_destination.assert_is_any_broken_symlink();
+    }
+
+
+    broken_symlink_harness.destroy();
+    destination_harness.destroy();
+}
+
+
+#[test]
+fn copy_directory_with_progress_aborts_on_broken_symlink_when_behaviour_is_set_to_abort() {
+    let broken_symlink_harness = BrokenSymlinksTree::initialize();
+    let destination_harness = EmptyTree::initialize();
+
+
+    let copy_error = fs_more::directory::copy_directory_with_progress(
+        broken_symlink_harness.as_path(),
+        destination_harness.as_path(),
+        DirectoryCopyWithProgressOptions {
+            symlink_behaviour: SymlinkBehaviour::Keep,
+            broken_symlink_behaviour: BrokenSymlinkBehaviour::Abort,
+            ..Default::default()
+        },
+        |_| {},
+    )
+    .unwrap_err();
+
+
+    assert_matches!(
+        copy_error,
+        CopyDirectoryError::PreparationError(CopyDirectoryPreparationError::CopyPlanningError(DirectoryExecutionPlanError::SymbolicLinkIsBroken { path }))
+        if paths_equal_no_unc(&path, broken_symlink_harness.foo.broken_symlink_txt.as_path())
+    );
+
+
+    broken_symlink_harness.destroy();
+    destination_harness.destroy();
+}

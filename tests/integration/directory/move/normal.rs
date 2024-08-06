@@ -257,7 +257,7 @@ pub fn move_directory_may_preserve_symlinks_when_destination_directory_exists_an
         DirectoryMoveStrategy::Rename => {
             // "here-we-go" inside the destination will be a symlink.
 
-            remapped_here_we_go_dir_path_in_destination.assert_is_symlink_to_directory();
+            remapped_here_we_go_dir_path_in_destination.assert_is_valid_symlink_to_directory();
         }
         DirectoryMoveStrategy::CopyAndDelete => {
             // The "here-we-go" directory inside the destination will not have its symlink preserved.

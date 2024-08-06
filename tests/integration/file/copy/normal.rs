@@ -395,7 +395,7 @@ pub fn copy_file_does_not_preserve_symlinks() -> TestResult {
     );
 
 
-    symlink_path.assert_is_symlink_to_file_and_destination_matches(harness.yes.no_bin.as_path());
+    symlink_path.assert_is_valid_symlink_to_file_and_destination_matches(harness.yes.no_bin.as_path());
     copy_destination_path.assert_is_file_and_not_symlink();
 
     harness
