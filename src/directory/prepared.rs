@@ -764,21 +764,19 @@ fn check_operation_queue_for_collisions(
                 }
             }
 
-            QueuedOperation::CreateSymlink {
-                symlink_destination_path,
-                ..
-            } => {
+            QueuedOperation::CreateSymlink { symlink_path, .. } => {
                 if !overwriting_existing_destination_files_allowed {
-                    let symlink_destination_exists = symlink_destination_path
-                        .try_exists()
-                        .map_err(|error| DirectoryExecutionPlanError::UnableToAccess {
-                            path: symlink_destination_path.to_path_buf(),
-                            error,
+                    let symlink_destination_exists =
+                        symlink_path.try_exists().map_err(|error| {
+                            DirectoryExecutionPlanError::UnableToAccess {
+                                path: symlink_path.to_path_buf(),
+                                error,
+                            }
                         })?;
 
                     if symlink_destination_exists {
                         return Err(DirectoryExecutionPlanError::DestinationItemAlreadyExists {
-                            path: symlink_destination_path.to_path_buf(),
+                            path: symlink_path.to_path_buf(),
                         });
                     }
                 }
