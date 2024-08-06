@@ -188,6 +188,7 @@ fn attempt_directory_move_by_rename(
                 finished_move: DirectoryMoveFinished {
                     total_bytes_moved: source_directory_details.total_bytes,
                     files_moved: source_directory_details.total_files,
+                    symlinks_moved: source_directory_details.total_symlinks,
                     directories_moved: source_directory_details.total_directories,
                     strategy_used: DirectoryMoveStrategy::Rename,
                 },
