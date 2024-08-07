@@ -186,6 +186,9 @@ pub enum DirectoryExecutionPlanError {
     ///
     /// This error can occur only when `broken_symlink_behaviour` is set to
     /// [`BrokenSymlinkBehaviour::Abort`].
+    ///
+    ///
+    /// [`BrokenSymlinkBehaviour::Abort`]: crate::directory::BrokenSymlinkBehaviour::Abort
     #[error(
         "symbolic link inside source directory is broken, \
         and the behaviour is set to abort"
@@ -406,6 +409,12 @@ pub enum MoveDirectoryExecutionError {
     /// when a move-by-rename fails and a copy-and-delete is performed instead.
     #[error(transparent)]
     CopyDirectoryError(#[from] CopyDirectoryExecutionError),
+
+    #[error(
+        "only rename strategy is enabled (with no copy-and-delete \
+        fallback strategy), but we were unable to rename the directory"
+    )]
+    RenameFailedAndNoFallbackStrategy,
 
     /// An uncategorized unrecoverable IO error. See `error` for more information.
     #[error("uncategorized std::io::Error")]

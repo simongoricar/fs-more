@@ -119,7 +119,7 @@ impl Default for DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
             copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
             symlink_behaviour: SymlinkBehaviour::Keep,
-            broken_symlink_behaviour: BrokenSymlinkBehaviour::Abort,
+            broken_symlink_behaviour: BrokenSymlinkBehaviour::Preserve,
         }
     }
 }

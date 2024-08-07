@@ -32,6 +32,79 @@ use crate::{
 };
 
 
+// TODO implement, document and test
+pub struct DirectoryMoveByCopyOptions {
+    // TODO implement, document and test
+    pub symlink_behaviour: SymlinkBehaviour,
+
+    // TODO implement, document and test
+    pub broken_symlink_behaviour: BrokenSymlinkBehaviour,
+}
+
+impl Default for DirectoryMoveByCopyOptions {
+    fn default() -> Self {
+        Self {
+            symlink_behaviour: SymlinkBehaviour::Keep,
+            broken_symlink_behaviour: BrokenSymlinkBehaviour::Preserve,
+        }
+    }
+}
+
+
+// TODO implement, test, and document
+pub enum DirectoryMoveAllowedStrategies {
+    // TODO implement, test, and document
+    OnlyRename,
+
+    // TODO implement, test, and document
+    OnlyCopyAndDelete {
+        options: DirectoryMoveByCopyOptions,
+    },
+
+    // TODO implement, test, and document
+    Either {
+        copy_and_delete_options: DirectoryMoveByCopyOptions,
+    },
+}
+
+impl DirectoryMoveAllowedStrategies {
+    ///
+    /// Returns `true` if the allowed strategies include moving by rename.
+    ///
+    /// # Invariants
+    /// At least one of [`Self::into_options_if_may_copy_and_delete`] and [`Self::may_rename`] will always return `true` / `Some`.
+    #[inline]
+    pub(crate) fn allowed_to_rename(&self) -> bool {
+        matches!(self, Self::OnlyRename | Self::Either { .. })
+    }
+
+    /// Returns `Some(`[`DirectoryMoveByCopyOptions`])` if the allowed strategies include moving by copy-and-delete,
+    /// `None` otherwise.
+    ///
+    /// # Invariants
+    /// At least one of [`Self::into_options_if_may_copy_and_delete`] and [`Self::may_rename`] will always return `true` / `Some`.
+    #[inline]
+    pub(crate) fn into_options_if_allowed_to_copy_and_delete(
+        self,
+    ) -> Option<DirectoryMoveByCopyOptions> {
+        match self {
+            DirectoryMoveAllowedStrategies::OnlyRename => None,
+            DirectoryMoveAllowedStrategies::OnlyCopyAndDelete { options } => Some(options),
+            DirectoryMoveAllowedStrategies::Either {
+                copy_and_delete_options,
+            } => Some(copy_and_delete_options),
+        }
+    }
+}
+
+impl Default for DirectoryMoveAllowedStrategies {
+    fn default() -> Self {
+        Self::Either {
+            copy_and_delete_options: DirectoryMoveByCopyOptions::default(),
+        }
+    }
+}
+
 
 /// Options that influence the [`move_directory`] function.
 pub struct DirectoryMoveOptions {
@@ -45,15 +118,15 @@ pub struct DirectoryMoveOptions {
     /// See [`DestinationDirectoryRule`] for more details and examples.
     pub destination_directory_rule: DestinationDirectoryRule,
 
-    // TODO implement, document and test
-    pub broken_symlink_behaviour: BrokenSymlinkBehaviour,
+    // TODO implement, test, and document
+    pub allowed_strategies: DirectoryMoveAllowedStrategies,
 }
 
 impl Default for DirectoryMoveOptions {
     fn default() -> Self {
         Self {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
-            broken_symlink_behaviour: BrokenSymlinkBehaviour::Abort,
+            allowed_strategies: DirectoryMoveAllowedStrategies::default(),
         }
     }
 }
@@ -271,6 +344,8 @@ fn attempt_directory_move_by_rename(
 ///
 ///
 /// # Move strategies
+/// TODO update with strategy restriction options
+///
 /// Depending on the situation, the move can be performed one of two ways:
 /// - The source directory can be simply renamed to the destination directory.
 ///   This is the preferred (and fastest) method, and will preserve
@@ -335,28 +410,41 @@ where
         collect_source_directory_details(&validated_source_directory.directory_path)?;
 
 
-    match attempt_directory_move_by_rename(
-        &validated_source_directory,
-        &source_details,
-        &validated_destination_directory,
-    )? {
-        DirectoryMoveByRenameAction::Renamed { finished_move } => {
-            return Ok(finished_move);
-        }
-        DirectoryMoveByRenameAction::Impossible => {}
+    if options.allowed_strategies.allowed_to_rename() {
+        match attempt_directory_move_by_rename(
+            &validated_source_directory,
+            &source_details,
+            &validated_destination_directory,
+        )? {
+            DirectoryMoveByRenameAction::Renamed { finished_move } => {
+                return Ok(finished_move);
+            }
+            DirectoryMoveByRenameAction::Impossible => {}
+        };
+    }
+
+
+    let Some(copy_and_delete_options) = options
+        .allowed_strategies
+        .into_options_if_allowed_to_copy_and_delete()
+    else {
+        // This branch can execute only when a rename was attempted and failed,
+        // and the user disabled the copy-and-delete fallback strategy.
+        return Err(MoveDirectoryError::ExecutionError(
+            MoveDirectoryExecutionError::RenameFailedAndNoFallbackStrategy,
+        ));
     };
 
 
-    // At this point a simple rename was either impossible or failed.
-    // We need to copy and delete instead.
-
+    // At this point a simple rename was either impossible or failed,
+    // but the copy-and-delete fallback is enabled, so we should do that.
     let prepared_copy = DirectoryCopyPrepared::prepare_with_validated(
         validated_source_directory.clone(),
         validated_destination_directory,
         options.destination_directory_rule,
         CopyDirectoryDepthLimit::Unlimited,
-        SymlinkBehaviour::Keep,
-        options.broken_symlink_behaviour,
+        copy_and_delete_options.symlink_behaviour,
+        copy_and_delete_options.broken_symlink_behaviour,
     )
     .map_err(MoveDirectoryPreparationError::CopyPlanningError)?;
 
@@ -365,8 +453,8 @@ where
         DirectoryCopyOptions {
             destination_directory_rule: options.destination_directory_rule,
             copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
-            symlink_behaviour: SymlinkBehaviour::Keep,
-            broken_symlink_behaviour: options.broken_symlink_behaviour,
+            symlink_behaviour: copy_and_delete_options.symlink_behaviour,
+            broken_symlink_behaviour: copy_and_delete_options.broken_symlink_behaviour,
         },
     )
     .map_err(MoveDirectoryExecutionError::CopyDirectoryError)?;
@@ -397,16 +485,14 @@ where
 }
 
 
-/// Options that influence the [`move_directory_with_progress`] function.
-pub struct DirectoryMoveWithProgressOptions {
-    /// Specifies whether you allow the destination directory to exist before moving
-    /// and whether it must be empty or not.
-    ///
-    /// If you allow a non-empty destination directory, you may also specify whether you allow
-    /// destination files or subdirectories to already exist (and be overwritten).
-    ///
-    /// See [`DestinationDirectoryRule`] for more details and examples.
-    pub destination_directory_rule: DestinationDirectoryRule,
+
+
+// TODO implement, document and test
+pub struct DirectoryMoveWithProgressByCopyOptions {
+    // TODO implement, document and test
+    // TODO Note that changing this from Keep might make more moves possible, but would result in inconsistent behaviour
+    //      between strategies, so only do it if you know what you are doing.
+    pub symlink_behaviour: SymlinkBehaviour,
 
     // TODO implement, document and test
     pub broken_symlink_behaviour: BrokenSymlinkBehaviour,
@@ -429,14 +515,97 @@ pub struct DirectoryMoveWithProgressOptions {
     pub progress_update_byte_interval: u64,
 }
 
+impl Default for DirectoryMoveWithProgressByCopyOptions {
+    fn default() -> Self {
+        Self {
+            symlink_behaviour: SymlinkBehaviour::Keep,
+            broken_symlink_behaviour: BrokenSymlinkBehaviour::Preserve,
+            read_buffer_size: DEFAULT_READ_BUFFER_SIZE,
+            write_buffer_size: DEFAULT_WRITE_BUFFER_SIZE,
+            progress_update_byte_interval: DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL,
+        }
+    }
+}
+
+
+// TODO implement, test, and document
+pub enum DirectoryMoveWithProgressAllowedStrategies {
+    // TODO implement, test, and document
+    OnlyRename,
+
+    // TODO implement, test, and document
+    OnlyCopyAndDelete {
+        options: DirectoryMoveWithProgressByCopyOptions,
+    },
+
+    // TODO implement, test, and document
+    Either {
+        copy_and_delete_options: DirectoryMoveWithProgressByCopyOptions,
+    },
+}
+
+impl DirectoryMoveWithProgressAllowedStrategies {
+    ///
+    /// Returns `true` if the allowed strategies include moving by rename.
+    ///
+    /// # Invariants
+    /// At least one of [`Self::into_options_if_may_copy_and_delete`] and [`Self::may_rename`] will always return `true` / `Some`.
+    #[inline]
+    pub(crate) fn allowed_to_rename(&self) -> bool {
+        matches!(self, Self::OnlyRename | Self::Either { .. })
+    }
+
+    /// Returns `Some(`[`DirectoryMoveWithProgressByCopyOptions`])` if the allowed strategies include moving by copy-and-delete,
+    /// `None` otherwise.
+    ///
+    /// # Invariants
+    /// At least one of [`Self::into_options_if_may_copy_and_delete`] and [`Self::may_rename`] will always return `true` / `Some`.
+    #[inline]
+    pub(crate) fn into_options_if_allowed_to_copy_and_delete(
+        self,
+    ) -> Option<DirectoryMoveWithProgressByCopyOptions> {
+        match self {
+            DirectoryMoveWithProgressAllowedStrategies::OnlyRename => None,
+            DirectoryMoveWithProgressAllowedStrategies::OnlyCopyAndDelete { options } => {
+                Some(options)
+            }
+            DirectoryMoveWithProgressAllowedStrategies::Either {
+                copy_and_delete_options,
+            } => Some(copy_and_delete_options),
+        }
+    }
+}
+
+impl Default for DirectoryMoveWithProgressAllowedStrategies {
+    fn default() -> Self {
+        Self::Either {
+            copy_and_delete_options: DirectoryMoveWithProgressByCopyOptions::default(),
+        }
+    }
+}
+
+
+
+/// Options that influence the [`move_directory_with_progress`] function.
+pub struct DirectoryMoveWithProgressOptions {
+    /// Specifies whether you allow the destination directory to exist before moving
+    /// and whether it must be empty or not.
+    ///
+    /// If you allow a non-empty destination directory, you may also specify whether you allow
+    /// destination files or subdirectories to already exist (and be overwritten).
+    ///
+    /// See [`DestinationDirectoryRule`] for more details and examples.
+    pub destination_directory_rule: DestinationDirectoryRule,
+
+    // TODO implement, test, and document
+    pub allowed_strategies: DirectoryMoveWithProgressAllowedStrategies,
+}
+
 impl Default for DirectoryMoveWithProgressOptions {
     fn default() -> Self {
         Self {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
-            broken_symlink_behaviour: BrokenSymlinkBehaviour::Abort,
-            read_buffer_size: DEFAULT_READ_BUFFER_SIZE,
-            write_buffer_size: DEFAULT_WRITE_BUFFER_SIZE,
-            progress_update_byte_interval: DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL,
+            allowed_strategies: DirectoryMoveWithProgressAllowedStrategies::default(),
         }
     }
 }
@@ -463,13 +632,14 @@ pub enum DirectoryMoveOperation {
         progress: FileProgress,
     },
 
+    /// Describes a symbolic link being created.
     CreatingSymbolicLink {
         /// Path to the symlink being created.
         destination_symbolic_link_file_path: PathBuf,
     },
 
-    /// Describes removal of the source directory
-    /// (happens at the very end of moving a directory).
+    /// Describes removal of the source directory.
+    /// This happens at the very end when moving a directory.
     RemovingSourceDirectory,
 }
 
@@ -540,6 +710,8 @@ pub struct DirectoryMoveProgress {
 ///
 ///
 /// # Move strategies
+/// TODO update with strategy restriction options
+///
 /// Depending on the situation, the move can be performed one of two ways:
 /// - The source directory can be simply renamed to the destination directory.
 ///   This is the preferred (and fastest) method, and will preserve
@@ -566,7 +738,7 @@ pub struct DirectoryMoveProgress {
 /// a reference to [`DirectoryMoveProgress`] regularly.
 ///
 /// You can control the progress reporting frequency by setting the
-/// [`options.progress_update_byte_interval`] option to a sufficiencly small or large value,
+/// [`progress_update_byte_interval`] option to a sufficiencly small or large value,
 /// but note that smaller intervals are likely to have an additional impact on performance.
 /// The value of this option if the minimum amount of bytes written to a file between
 /// two calls to the provided `progress_handler`.
@@ -587,7 +759,7 @@ pub struct DirectoryMoveProgress {
 ///
 /// [`copy_directory_with_progress`]: super::copy_directory_with_progress
 /// [`options.destination_directory_rule`]: DirectoryMoveWithProgressOptions::destination_directory_rule
-/// [`options.progress_update_byte_interval`]: DirectoryMoveWithProgressOptions::progress_update_byte_interval
+/// [`progress_update_byte_interval`]: DirectoryMoveWithProgressByCopyOptions::progress_update_byte_interval
 /// [`DisallowExisting`]: DestinationDirectoryRule::DisallowExisting
 /// [`AllowEmpty`]: DestinationDirectoryRule::AllowEmpty
 pub fn move_directory_with_progress<S, T, F>(
@@ -628,31 +800,44 @@ where
     // we'll copy and delete instead.
 
 
-    match attempt_directory_move_by_rename(
-        &validated_source_directory,
-        &source_details,
-        &validated_destination_directory,
-    )? {
-        DirectoryMoveByRenameAction::Renamed { finished_move } => {
-            let final_progress_report = DirectoryMoveProgress {
-                bytes_total: source_details.total_bytes,
-                bytes_finished: source_details.total_bytes,
-                files_moved: source_details.total_files,
-                directories_created: source_details.total_directories,
-                // Clarification: this is in the past tense, but in reality `attempt_directory_move_by_rename`
-                // has already removed the empty source directory if needed.
-                // Point is, all operations have finished at this point.
-                current_operation: DirectoryMoveOperation::RemovingSourceDirectory,
-                current_operation_index: 1,
-                total_operations: 2,
-            };
+    if options.allowed_strategies.allowed_to_rename() {
+        match attempt_directory_move_by_rename(
+            &validated_source_directory,
+            &source_details,
+            &validated_destination_directory,
+        )? {
+            DirectoryMoveByRenameAction::Renamed { finished_move } => {
+                let final_progress_report = DirectoryMoveProgress {
+                    bytes_total: source_details.total_bytes,
+                    bytes_finished: source_details.total_bytes,
+                    files_moved: source_details.total_files,
+                    directories_created: source_details.total_directories,
+                    // Clarification: this is in the past tense, but in reality `attempt_directory_move_by_rename`
+                    // has already removed the empty source directory if needed.
+                    // Point is, all operations have finished at this point.
+                    current_operation: DirectoryMoveOperation::RemovingSourceDirectory,
+                    current_operation_index: 1,
+                    total_operations: 2,
+                };
 
-            progress_handler(&final_progress_report);
+                progress_handler(&final_progress_report);
 
 
-            return Ok(finished_move);
-        }
-        DirectoryMoveByRenameAction::Impossible => {}
+                return Ok(finished_move);
+            }
+            DirectoryMoveByRenameAction::Impossible => {}
+        };
+    }
+
+    let Some(copy_and_delete_options) = options
+        .allowed_strategies
+        .into_options_if_allowed_to_copy_and_delete()
+    else {
+        // This branch can execute only when a rename was attempted and failed,
+        // and the user disabled the copy-and-delete fallback strategy.
+        return Err(MoveDirectoryError::ExecutionError(
+            MoveDirectoryExecutionError::RenameFailedAndNoFallbackStrategy,
+        ));
     };
 
 
@@ -661,12 +846,12 @@ where
 
     let copy_options = DirectoryCopyWithProgressOptions {
         destination_directory_rule: options.destination_directory_rule,
-        read_buffer_size: options.read_buffer_size,
-        write_buffer_size: options.write_buffer_size,
-        progress_update_byte_interval: options.progress_update_byte_interval,
+        read_buffer_size: copy_and_delete_options.read_buffer_size,
+        write_buffer_size: copy_and_delete_options.write_buffer_size,
+        progress_update_byte_interval: copy_and_delete_options.progress_update_byte_interval,
         copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
-        symlink_behaviour: SymlinkBehaviour::Keep,
-        broken_symlink_behaviour: options.broken_symlink_behaviour,
+        symlink_behaviour: copy_and_delete_options.symlink_behaviour,
+        broken_symlink_behaviour: copy_and_delete_options.broken_symlink_behaviour,
     };
 
     let prepared_copy = DirectoryCopyPrepared::prepare_with_validated(
@@ -674,8 +859,8 @@ where
         validated_destination_directory,
         copy_options.destination_directory_rule,
         copy_options.copy_depth_limit,
-        SymlinkBehaviour::Keep,
-        options.broken_symlink_behaviour,
+        copy_and_delete_options.symlink_behaviour,
+        copy_and_delete_options.broken_symlink_behaviour,
     )
     .map_err(MoveDirectoryPreparationError::CopyPlanningError)?;
 
