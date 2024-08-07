@@ -10,7 +10,7 @@ use super::{
     common::DestinationDirectoryRule,
     is_directory_empty_unchecked,
     BrokenSymlinkBehaviour,
-    CopyDirectoryDepthLimit,
+    DirectoryCopyDepthLimit,
     SymlinkBehaviour,
 };
 use crate::{
@@ -360,7 +360,7 @@ pub(super) fn validate_source_destination_directory_pair(
 fn scan_and_plan_directory_copy(
     source_directory_path: PathBuf,
     destination_directory_path: PathBuf,
-    copy_depth_limit: CopyDirectoryDepthLimit,
+    copy_depth_limit: DirectoryCopyDepthLimit,
     symlink_behaviour: SymlinkBehaviour,
     broken_symlink_behaviour: BrokenSymlinkBehaviour,
 ) -> Result<Vec<QueuedOperation>, DirectoryExecutionPlanError> {
@@ -481,7 +481,7 @@ fn scan_and_plan_directory_copy(
                 // If we haven't reached the maximum depth yet, we queue the directory
                 // to be scanned for further files and sub-directories.
                 match copy_depth_limit {
-                    CopyDirectoryDepthLimit::Limited { maximum_depth } => {
+                    DirectoryCopyDepthLimit::Limited { maximum_depth } => {
                         if next_directory.depth < maximum_depth {
                             directory_scan_queue.push(PendingDirectoryScan {
                                 directory_path: directory_item_source_path.clone(),
@@ -491,7 +491,7 @@ fn scan_and_plan_directory_copy(
                             });
                         }
                     }
-                    CopyDirectoryDepthLimit::Unlimited => {
+                    DirectoryCopyDepthLimit::Unlimited => {
                         directory_scan_queue.push(PendingDirectoryScan {
                             directory_path: directory_item_source_path.clone(),
                             directory_path_without_symlink_follows:
@@ -682,7 +682,7 @@ fn scan_and_plan_directory_copy(
                             // If we haven't reached the maximum depth yet,
                             // we queue the symlink-followed directory for scanning.
                             match copy_depth_limit {
-                                CopyDirectoryDepthLimit::Limited { maximum_depth } => {
+                                DirectoryCopyDepthLimit::Limited { maximum_depth } => {
                                     if next_directory.depth < maximum_depth {
                                         directory_scan_queue.push(PendingDirectoryScan {
                                             directory_path: directory_item_source_path.clone(),
@@ -692,7 +692,7 @@ fn scan_and_plan_directory_copy(
                                         });
                                     }
                                 }
-                                CopyDirectoryDepthLimit::Unlimited => {
+                                DirectoryCopyDepthLimit::Unlimited => {
                                     directory_scan_queue.push(PendingDirectoryScan {
                                         directory_path: directory_item_source_path,
                                         directory_path_without_symlink_follows:
@@ -835,7 +835,7 @@ impl DirectoryCopyPrepared {
         source_directory_path: &Path,
         destination_directory_path: &Path,
         destination_directory_rule: DestinationDirectoryRule,
-        copy_depth_limit: CopyDirectoryDepthLimit,
+        copy_depth_limit: DirectoryCopyDepthLimit,
         symlink_behaviour: SymlinkBehaviour,
         broken_symlink_behaviour: BrokenSymlinkBehaviour,
     ) -> Result<Self, CopyDirectoryPreparationError> {
@@ -864,7 +864,7 @@ impl DirectoryCopyPrepared {
         validated_source_directory: ValidatedSourceDirectory,
         validated_destination_directory: ValidatedDestinationDirectory,
         destination_directory_rule: DestinationDirectoryRule,
-        copy_depth_limit: CopyDirectoryDepthLimit,
+        copy_depth_limit: DirectoryCopyDepthLimit,
         symlink_behaviour: SymlinkBehaviour,
         broken_symlink_behaviour: BrokenSymlinkBehaviour,
     ) -> Result<Self, DirectoryExecutionPlanError> {
@@ -949,7 +949,7 @@ impl DirectoryCopyPrepared {
         source_directory_path: PathBuf,
         destination_directory_path: PathBuf,
         destination_directory_rule: DestinationDirectoryRule,
-        copy_depth_limit: CopyDirectoryDepthLimit,
+        copy_depth_limit: DirectoryCopyDepthLimit,
         symlink_behaviour: SymlinkBehaviour,
         broken_symlink_behaviour: BrokenSymlinkBehaviour,
     ) -> Result<Vec<QueuedOperation>, DirectoryExecutionPlanError> {

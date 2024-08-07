@@ -36,16 +36,16 @@ pub enum FileError {
     /// The destination file already exists.
     ///
     /// Certain file copy and move options can disable this error:
-    /// - [`FileCopyOptions.existing_destination_file_behaviour`],
-    /// - [`FileCopyWithProgressOptions.existing_destination_file_behaviour`],
-    /// - [`FileMoveOptions.existing_destination_file_behaviour`], and
-    /// - [`FileMoveWithProgressOptions.existing_destination_file_behaviour`].
+    /// - [`FileCopyOptions.colliding_file_behaviour`],
+    /// - [`FileCopyWithProgressOptions.colliding_file_behaviour`],
+    /// - [`FileMoveOptions.colliding_file_behaviour`], and
+    /// - [`FileMoveWithProgressOptions.colliding_file_behaviour`].
     ///
     ///
-    /// [FileCopyOptions.existing_destination_file_behaviour]: [crate::file::FileCopyOptions.existing_destination_file_behaviour]
-    /// [FileCopyWithProgressOptions.existing_destination_file_behaviour]: [crate::file::FileCopyWithProgressOptions.existing_destination_file_behaviour]
-    /// [FileMoveOptions.existing_destination_file_behaviour]: [crate::file:FileMoveOptions]
-    /// [FileMoveWithProgressOptions.existing_destination_file_behaviour]: [crate::file:FileMoveWithProgressOptions]
+    /// [FileCopyOptions.colliding_file_behaviour]: [crate::file::FileCopyOptions.colliding_file_behaviour]
+    /// [FileCopyWithProgressOptions.colliding_file_behaviour]: [crate::file::FileCopyWithProgressOptions.colliding_file_behaviour]
+    /// [FileMoveOptions.colliding_file_behaviour]: [crate::file:FileMoveOptions]
+    /// [FileMoveWithProgressOptions.colliding_file_behaviour]: [crate::file:FileMoveWithProgressOptions]
     #[error("destination path already exists: {}", .path.display())]
     DestinationPathAlreadyExists {
         /// Destination file path that already exists.

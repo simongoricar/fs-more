@@ -35,7 +35,7 @@ Copying a file and getting updates on the progress:
 ```rust,no_run
 use std::path::Path;
 
-use fs_more::file::ExistingFileBehaviour;
+use fs_more::file::CollidingFileBehaviour;
 use fs_more::file::FileCopyWithProgressOptions;
 use fs_more::file::FileCopyFinished;
 
@@ -47,7 +47,7 @@ let finished_copy = fs_more::file::copy_file_with_progress(
     source_path,
     destination_path,
     FileCopyWithProgressOptions {
-        existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+        colliding_file_behaviour: CollidingFileBehaviour::Abort,
         ..Default::default()
     },
     |progress| {

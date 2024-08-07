@@ -1,18 +1,19 @@
 use std::path::{Path, PathBuf};
 
-use crate::{error::SourceSubPathNotUnderBaseSourceDirectory, file::ExistingFileBehaviour};
+use crate::{error::SourceSubPathNotUnderBaseSourceDirectory, file::CollidingFileBehaviour};
 
 
-/// Rules that dictate how existing destination sub-directories
-/// are handled when copying or moving.
+/// Rules that dictate how existing sub-directories inside the
+/// directory copy or move destination are handled when they collide with the
+/// ones we're trying to copy or move from the source.
 ///
 /// See also: [`DestinationDirectoryRule`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
-pub enum ExistingSubDirectoryBehaviour {
-    /// An existing destination sub-directory will cause an error.
+pub enum CollidingSubDirectoryBehaviour {
+    /// An existing (colliding) destination sub-directory will cause an error.
     Abort,
 
-    /// An existing destination sub-directory will have no effect.
+    /// An existing (colliding) destination sub-directory will have no effect.
     Continue,
 }
 
@@ -44,10 +45,10 @@ pub enum ExistingSubDirectoryBehaviour {
 /// ```no_run
 /// # use fs_more::directory::DestinationDirectoryRule;
 /// # use fs_more::directory::ExistingSubDirectoryBehaviour;
-/// # use fs_more::file::ExistingFileBehaviour;
+/// # use fs_more::file::CollidingFileBehaviour;
 /// let rules = DestinationDirectoryRule::AllowNonEmpty {
-///     existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
-///     existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Continue,
+///     colliding_file_behaviour: CollidingFileBehaviour::Abort,
+///     colliding_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Continue,
 /// };
 /// ```
 ///
@@ -62,10 +63,10 @@ pub enum ExistingSubDirectoryBehaviour {
 /// ```no_run
 /// # use fs_more::directory::DestinationDirectoryRule;
 /// # use fs_more::directory::ExistingSubDirectoryBehaviour;
-/// # use fs_more::file::ExistingFileBehaviour;
+/// # use fs_more::file::CollidingFileBehaviour;
 /// let rules = DestinationDirectoryRule::AllowNonEmpty {
-///     existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
-///     existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Continue,
+///     colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
+///     colliding_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Continue,
 /// };
 /// ```
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -88,15 +89,15 @@ pub enum DestinationDirectoryRule {
     /// Unless you know you want precisely this, you should probably avoid this option.
     ///
     /// Missing destination directories will always be created,
-    /// regardless of the `existing_destination_subdirectory_behaviour` option.
-    /// Setting it to [`ExistingSubDirectoryBehaviour::Continue`] simply means that,
+    /// regardless of the `colliding_subdirectory_behaviour` option.
+    /// Setting it to [`CollidingSubDirectoryBehaviour::Continue`] simply means that,
     /// if they already exist on the destination, nothing special will happen.
     AllowNonEmpty {
         /// How to behave for destination files that already exist.
-        existing_destination_file_behaviour: ExistingFileBehaviour,
+        colliding_file_behaviour: CollidingFileBehaviour,
 
         /// How to behave for destination sub-directories that already exist.
-        existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour,
+        colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour,
     },
 }
 
@@ -112,7 +113,7 @@ impl DestinationDirectoryRule {
         matches!(
             self,
             Self::AllowNonEmpty {
-                existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
+                colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
                 ..
             }
         )
@@ -122,8 +123,7 @@ impl DestinationDirectoryRule {
         matches!(
             self,
             Self::AllowNonEmpty {
-                existing_destination_subdirectory_behaviour:
-                    ExistingSubDirectoryBehaviour::Continue,
+                colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Continue,
                 ..
             }
         )

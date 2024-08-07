@@ -11,7 +11,7 @@ use crate::{
     file::{
         copy_file,
         copy_file_with_progress,
-        ExistingFileBehaviour,
+        CollidingFileBehaviour,
         FileCopyOptions,
         FileCopyWithProgressOptions,
         FileProgress,
@@ -24,7 +24,7 @@ use crate::{
 
 /// The maximum depth of a directory copy operation.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum CopyDirectoryDepthLimit {
+pub enum DirectoryCopyDepthLimit {
     /// No depth limit - the entire directory tree will be copied.
     Unlimited,
 
@@ -130,7 +130,7 @@ pub struct DirectoryCopyOptions {
     pub destination_directory_rule: DestinationDirectoryRule,
 
     /// Maximum depth of the source directory to copy over to the destination.
-    pub copy_depth_limit: CopyDirectoryDepthLimit,
+    pub copy_depth_limit: DirectoryCopyDepthLimit,
 
     /// Sets the behaviour for symbolic links when copying a directory.
     pub symlink_behaviour: SymlinkBehaviour,
@@ -142,13 +142,13 @@ pub struct DirectoryCopyOptions {
 impl Default for DirectoryCopyOptions {
     /// Constructs defaults for copying a directory, which are:
     /// - [`DestinationDirectoryRule::AllowEmpty`]: if the destination directory already exists, it must be empty,
-    /// - [`CopyDirectoryDepthLimit::Unlimited`]: there is no copy depth limit,
+    /// - [`DirectoryCopyDepthLimit::Unlimited`]: there is no copy depth limit,
     /// - [`SymlinkBehaviour::Keep`]: symbolic links are not followed, and
     /// - [`BrokenSymlinkBehaviour::Preserve`]: broken symbolic links are kept as-is, i.e. broken.
     fn default() -> Self {
         Self {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
-            copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
+            copy_depth_limit: DirectoryCopyDepthLimit::Unlimited,
             symlink_behaviour: SymlinkBehaviour::Keep,
             broken_symlink_behaviour: BrokenSymlinkBehaviour::Preserve,
         }
@@ -271,9 +271,9 @@ pub(crate) fn copy_directory_unchecked(
                     source_file_path,
                     &destination_file_path,
                     FileCopyOptions {
-                        existing_destination_file_behaviour: match can_overwrite_files {
-                            true => ExistingFileBehaviour::Overwrite,
-                            false => ExistingFileBehaviour::Abort,
+                        colliding_file_behaviour: match can_overwrite_files {
+                            true => CollidingFileBehaviour::Overwrite,
+                            false => CollidingFileBehaviour::Abort,
                         },
                     },
                 )
@@ -737,7 +737,7 @@ pub struct DirectoryCopyWithProgressOptions {
     pub destination_directory_rule: DestinationDirectoryRule,
 
     /// Maximum depth of the source directory to copy.
-    pub copy_depth_limit: CopyDirectoryDepthLimit,
+    pub copy_depth_limit: DirectoryCopyDepthLimit,
 
     /// Sets the behaviour for symbolic links when copying a directory.
     pub symlink_behaviour: SymlinkBehaviour,
@@ -767,7 +767,7 @@ pub struct DirectoryCopyWithProgressOptions {
 impl Default for DirectoryCopyWithProgressOptions {
     /// Constructs defaults for copying a directory, which are:
     /// - [`DestinationDirectoryRule::AllowEmpty`]: if the destination directory already exists, it must be empty,
-    /// - [`CopyDirectoryDepthLimit::Unlimited`]: there is no copy depth limit,
+    /// - [`DirectoryCopyDepthLimit::Unlimited`]: there is no copy depth limit,
     /// - [`SymlinkBehaviour::Keep`]: symbolic links are not followed,
     /// - [`BrokenSymlinkBehaviour::Preserve`]: broken symbolic links are kept as-is, i.e. broken,
     /// - the read and write buffers are 64 KiB large, and
@@ -775,7 +775,7 @@ impl Default for DirectoryCopyWithProgressOptions {
     fn default() -> Self {
         Self {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
-            copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
+            copy_depth_limit: DirectoryCopyDepthLimit::Unlimited,
             symlink_behaviour: SymlinkBehaviour::Keep,
             broken_symlink_behaviour: BrokenSymlinkBehaviour::Abort,
             read_buffer_size: DEFAULT_READ_BUFFER_SIZE,
@@ -864,10 +864,10 @@ where
         source_file_path,
         &destination_path,
         FileCopyWithProgressOptions {
-            existing_destination_file_behaviour: match options.destination_directory_rule {
-                DestinationDirectoryRule::DisallowExisting => ExistingFileBehaviour::Abort,
-                DestinationDirectoryRule::AllowEmpty => ExistingFileBehaviour::Abort,
-                DestinationDirectoryRule::AllowNonEmpty { existing_destination_file_behaviour, .. } => existing_destination_file_behaviour,
+            colliding_file_behaviour: match options.destination_directory_rule {
+                DestinationDirectoryRule::DisallowExisting => CollidingFileBehaviour::Abort,
+                DestinationDirectoryRule::AllowEmpty => CollidingFileBehaviour::Abort,
+                DestinationDirectoryRule::AllowNonEmpty { colliding_file_behaviour, .. } => colliding_file_behaviour,
             },
             read_buffer_size: options.read_buffer_size,
             write_buffer_size: options.write_buffer_size,

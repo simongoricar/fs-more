@@ -38,11 +38,12 @@ pub use size::*;
 use crate::{directory::try_exists_without_follow, error::FileError};
 
 
-/// Controls behaviour for existing destination files when copying or moving.
+/// Controls behaviour for existing files on the destination side
+/// that collide with the one we're trying to copy or move there.
 ///
 /// See also: [`FileCopyOptions`] and [`FileMoveOptions`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum ExistingFileBehaviour {
+pub enum CollidingFileBehaviour {
     /// Ensures that an error will be returned from the corresponding function
     /// when the destination file already exists.
     Abort,
@@ -160,7 +161,7 @@ pub(crate) struct ValidatedDestinationFilePath {
 pub(crate) enum DestinationValidationAction {
     /// The validation logic concluded that no action should be taken
     /// (the file should not be copied or moved) since the destination file already exists,
-    /// and `existing_destination_file_behaviour` is set to [`ExistingFileBehaviour::Skip`].
+    /// and `colliding_file_behaviour` is set to [`CollidingFileBehaviour::Skip`].
     SkipCopyOrMove,
 
     /// The validation logic found no path validation errors.
@@ -168,7 +169,7 @@ pub(crate) enum DestinationValidationAction {
 }
 
 
-/// Given a destination file path, validate that it respects `existing_destination_file_behaviour`,
+/// Given a destination file path, validate that it respects `colliding_file_behaviour`,
 /// and that if it is a symlink, that it points to a file.
 ///
 /// If the given path is a symlink to a file, the returned path will be a resolved (canonical) one,
@@ -176,10 +177,10 @@ pub(crate) enum DestinationValidationAction {
 fn validate_destination_file_path(
     validated_source_file_path: &ValidatedSourceFilePath,
     destination_file_path: &Path,
-    existing_destination_file_behaviour: ExistingFileBehaviour,
+    colliding_file_behaviour: CollidingFileBehaviour,
 ) -> Result<DestinationValidationAction, FileError> {
     // Ensure the destination file path doesn't exist yet
-    // (unless `options.existing_destination_file_behaviour` allows that),
+    // (unless `options.colliding_file_behaviour` allows that),
     // and that it isn't a directory.
 
     let destination_file_exists =
@@ -225,19 +226,19 @@ fn validate_destination_file_path(
         }
 
 
-        // Ensure we respect the [`ExistingFileBehaviour`] option if
+        // Ensure we respect the [`CollidingFileBehaviour`] option if
         // the destination file already exists.
         if destination_file_exists {
-            match existing_destination_file_behaviour {
-                ExistingFileBehaviour::Abort => {
+            match colliding_file_behaviour {
+                CollidingFileBehaviour::Abort => {
                     return Err(FileError::DestinationPathAlreadyExists {
                         path: destination_file_path.to_path_buf(),
                     })
                 }
-                ExistingFileBehaviour::Skip => {
+                CollidingFileBehaviour::Skip => {
                     return Ok(DestinationValidationAction::SkipCopyOrMove);
                 }
-                ExistingFileBehaviour::Overwrite => {}
+                CollidingFileBehaviour::Overwrite => {}
             };
         }
 

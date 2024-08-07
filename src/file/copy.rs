@@ -9,8 +9,8 @@ use super::{
     progress::{FileProgress, ProgressWriter},
     validate_destination_file_path,
     validate_source_file_path,
+    CollidingFileBehaviour,
     DestinationValidationAction,
-    ExistingFileBehaviour,
     ValidatedDestinationFilePath,
     ValidatedSourceFilePath,
 };
@@ -27,7 +27,7 @@ use crate::{
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct FileCopyOptions {
     /// How to behave for a destination file that already exists.
-    pub existing_destination_file_behaviour: ExistingFileBehaviour,
+    pub colliding_file_behaviour: CollidingFileBehaviour,
 }
 
 
@@ -35,7 +35,7 @@ pub struct FileCopyOptions {
 impl Default for FileCopyOptions {
     fn default() -> Self {
         Self {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+            colliding_file_behaviour: CollidingFileBehaviour::Abort,
         }
     }
 }
@@ -62,10 +62,10 @@ pub enum FileCopyFinished {
     /// The destination file already existed, and the copy operation was skipped.
     ///
     /// This can only be returned when existing destination file behaviour
-    /// is set to [`ExistingFileBehaviour::Skip`].
+    /// is set to [`CollidingFileBehaviour::Skip`].
     ///
     ///
-    /// [`options.existing_destination_file_behaviour`]: FileCopyOptions::existing_destination_file_behaviour
+    /// [`options.colliding_file_behaviour`]: FileCopyOptions::colliding_file_behaviour
     Skipped,
 }
 
@@ -105,8 +105,8 @@ pub enum FileCopyFinished {
 /// - If the source path has issues (does not exist, does not have the correct permissions, etc.), one of
 ///   [`SourceFileNotFound`], [`SourcePathNotAFile`], or [`UnableToAccessSourceFile`]
 ///   variants will be returned.
-/// - If the destination already exists, and [`options.existing_destination_file_behaviour`]
-///   is set to [`ExistingFileBehaviour::Abort`], then a [`DestinationPathAlreadyExists`]
+/// - If the destination already exists, and [`options.colliding_file_behaviour`]
+///   is set to [`CollidingFileBehaviour::Abort`], then a [`DestinationPathAlreadyExists`]
 ///   will be returned.
 /// - If the source and destination paths are canonically actually the same file,
 ///   then copying will be aborted with [`SourceAndDestinationAreTheSame`].
@@ -144,7 +144,7 @@ pub enum FileCopyFinished {
 /// </details>
 ///
 ///
-/// [`options.existing_destination_file_behaviour`]: FileCopyOptions::existing_destination_file_behaviour
+/// [`options.colliding_file_behaviour`]: FileCopyOptions::colliding_file_behaviour
 /// [`SourceFileNotFound`]: FileError::SourceFileNotFound
 /// [`SourcePathNotAFile`]: FileError::SourcePathNotAFile
 /// [`UnableToAccessSourceFile`]: FileError::UnableToAccessSourceFile
@@ -175,7 +175,7 @@ where
     } = match validate_destination_file_path(
         &validated_source_file_path,
         destination_file_path,
-        options.existing_destination_file_behaviour,
+        options.colliding_file_behaviour,
     )? {
         DestinationValidationAction::Continue(validated_path) => validated_path,
         DestinationValidationAction::SkipCopyOrMove => {
@@ -209,7 +209,7 @@ where
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct FileCopyWithProgressOptions {
     /// How to behave for destination files that already exist.
-    pub existing_destination_file_behaviour: ExistingFileBehaviour,
+    pub colliding_file_behaviour: CollidingFileBehaviour,
 
     /// Internal buffer size used for reading the source file.
     ///
@@ -237,12 +237,12 @@ pub struct FileCopyWithProgressOptions {
 
 impl Default for FileCopyWithProgressOptions {
     /// Constructs relatively safe defaults for copying a file:
-    /// - aborts if there is an existing destination file ([`ExistingFileBehaviour::Abort`]),
+    /// - aborts if there is an existing destination file ([`CollidingFileBehaviour::Abort`]),
     /// - sets buffer size for reading and writing to 64 KiB, and
     /// - sets the progress update closure call interval to 512 KiB.
     fn default() -> Self {
         Self {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+            colliding_file_behaviour: CollidingFileBehaviour::Abort,
             read_buffer_size: DEFAULT_READ_BUFFER_SIZE,
             write_buffer_size: DEFAULT_WRITE_BUFFER_SIZE,
             progress_update_byte_interval: DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL,
@@ -383,8 +383,8 @@ where
 /// - If the source path has issues (does not exist, does not have the correct permissions, etc.), one of
 ///   [`SourceFileNotFound`], [`SourcePathNotAFile`], or [`UnableToAccessSourceFile`]
 ///   variants will be returned.
-/// - If the destination already exists, and [`options.existing_destination_file_behaviour`]
-///   is set to [`ExistingFileBehaviour::Abort`], then a [`DestinationPathAlreadyExists`]
+/// - If the destination already exists, and [`options.colliding_file_behaviour`]
+///   is set to [`CollidingFileBehaviour::Abort`], then a [`DestinationPathAlreadyExists`]
 ///   will be returned.
 /// - If the source and destination paths are canonically actually the same file,
 ///   then copying will be aborted with [`SourceAndDestinationAreTheSame`].
@@ -422,7 +422,7 @@ where
 ///
 ///
 /// [`options.progress_update_byte_interval`]: FileCopyWithProgressOptions::progress_update_byte_interval
-/// [`options.existing_destination_file_behaviour`]: FileCopyOptions::existing_destination_file_behaviour
+/// [`options.colliding_file_behaviour`]: FileCopyOptions::colliding_file_behaviour
 /// [`SourceFileNotFound`]: FileError::SourceFileNotFound
 /// [`SourcePathNotAFile`]: FileError::SourcePathNotAFile
 /// [`UnableToAccessSourceFile`]: FileError::UnableToAccessSourceFile
@@ -455,7 +455,7 @@ where
     } = match validate_destination_file_path(
         &validated_source_file_path,
         destination_file_path,
-        options.existing_destination_file_behaviour,
+        options.colliding_file_behaviour,
     )? {
         DestinationValidationAction::Continue(validated_path) => validated_path,
         DestinationValidationAction::SkipCopyOrMove => {

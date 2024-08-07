@@ -1,7 +1,7 @@
 use fs_more::{
     error::FileError,
     file::{
-        ExistingFileBehaviour,
+        CollidingFileBehaviour,
         FileMoveFinished,
         FileMoveMethod,
         FileMoveWithProgressOptions,
@@ -33,7 +33,7 @@ pub fn move_file_with_progress_correctly_moves_the_file() -> TestResult {
         harness.yes.no_bin.as_path(),
         &destination_file_path,
         FileMoveWithProgressOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+            colliding_file_behaviour: CollidingFileBehaviour::Abort,
             ..Default::default()
         },
         |progress| {
@@ -84,7 +84,7 @@ pub fn move_file_with_progress_errors_when_trying_to_copy_into_self() -> TestRes
         harness.yes.no_bin.as_path(),
         harness.yes.no_bin.as_path(),
         FileMoveWithProgressOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+            colliding_file_behaviour: CollidingFileBehaviour::Abort,
             ..Default::default()
         },
         |_| {},
@@ -119,7 +119,7 @@ pub fn move_file_with_progress_errors_when_trying_to_copy_into_self_even_with_ov
         harness.yes.no_bin.as_path(),
         harness.yes.no_bin.as_path(),
         FileMoveWithProgressOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
+            colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
             ..Default::default()
         },
         |_| {},
@@ -180,7 +180,7 @@ pub fn move_file_with_progress_errors_when_trying_to_copy_into_case_insensitive_
         harness.yes.hello_world_txt.as_path(),
         &hello_world_uppercased_file_path,
         FileMoveWithProgressOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+            colliding_file_behaviour: CollidingFileBehaviour::Abort,
             ..Default::default()
         },
         |_| {},
@@ -249,7 +249,7 @@ pub fn move_file_with_progress_errors_when_source_is_symlink_to_destination() ->
         &symlink_path,
         harness.yes.hello_world_txt.as_path(),
         FileMoveWithProgressOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
+            colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
             ..Default::default()
         },
         |progress| {
@@ -291,7 +291,7 @@ pub fn move_file_with_progress_overwrites_destination_file_when_behaviour_is_ove
         harness.yes.hello_world_txt.as_path(),
         harness.yes.no_bin.as_path(),
         FileMoveWithProgressOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
+            colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
             ..Default::default()
         },
         |_| {},
@@ -327,7 +327,7 @@ pub fn move_file_with_progress_errors_on_existing_destination_file_when_behaviou
         harness.yes.hello_world_txt.as_path(),
         harness.yes.no_bin.as_path(),
         FileMoveWithProgressOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+            colliding_file_behaviour: CollidingFileBehaviour::Abort,
             ..Default::default()
         },
         |_| {},
@@ -375,7 +375,7 @@ pub fn move_file_with_progress_may_preserve_symlinks_when_moving_by_rename() -> 
         &symlink_file_path,
         &symlink_moved_file_path,
         FileMoveWithProgressOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+            colliding_file_behaviour: CollidingFileBehaviour::Abort,
             ..Default::default()
         },
         |_| {},

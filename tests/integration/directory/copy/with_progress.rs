@@ -1,14 +1,14 @@
 use fs_more::{
     directory::{
         BrokenSymlinkBehaviour,
-        CopyDirectoryDepthLimit,
+        CollidingSubDirectoryBehaviour,
         DestinationDirectoryRule,
+        DirectoryCopyDepthLimit,
         DirectoryCopyOperation,
         DirectoryCopyProgress,
         DirectoryCopyWithProgressOptions,
         DirectoryScanDepthLimit,
         DirectoryScanOptions,
-        ExistingSubDirectoryBehaviour,
         SymlinkBehaviour,
     },
     error::{
@@ -17,7 +17,7 @@ use fs_more::{
         DestinationDirectoryPathValidationError,
         DirectoryExecutionPlanError,
     },
-    file::{ExistingFileBehaviour, FileCopyOptions},
+    file::{CollidingFileBehaviour, FileCopyOptions},
 };
 use fs_more_test_harness::{
     collect_directory_statistics_via_scan,
@@ -186,8 +186,8 @@ pub fn copy_directory_with_progress_respects_copy_depth_limit() -> TestResult {
     const MAXIMUM_SCAN_DEPTH: DirectoryScanDepthLimit =
         DirectoryScanDepthLimit::Limited { maximum_depth: 2 };
 
-    const MAXIMUM_COPY_DEPTH: CopyDirectoryDepthLimit =
-        CopyDirectoryDepthLimit::Limited { maximum_depth: 2 };
+    const MAXIMUM_COPY_DEPTH: DirectoryCopyDepthLimit =
+        DirectoryCopyDepthLimit::Limited { maximum_depth: 2 };
 
 
     let deep_harness_stats = collect_directory_statistics_via_scan_with_options(
@@ -243,9 +243,9 @@ pub fn copy_directory_with_progress_errors_when_source_and_destination_are_the_s
         deep_harness.as_path(),
         DirectoryCopyWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
-                existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
-                existing_destination_subdirectory_behaviour:
-                    ExistingSubDirectoryBehaviour::Continue,
+                colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
+                colliding_subdirectory_behaviour:
+                    CollidingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },
@@ -281,9 +281,9 @@ pub fn copy_directory_with_progress_errors_when_destination_is_inside_source_pat
         deep_harness.foo.as_path(),
         DirectoryCopyWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
-                existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
-                existing_destination_subdirectory_behaviour:
-                    ExistingSubDirectoryBehaviour::Continue,
+                colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
+                colliding_subdirectory_behaviour:
+                    CollidingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },
@@ -374,7 +374,7 @@ pub fn copy_directory_with_progress_errors_when_destination_file_collides_and_it
             deep_harness.foo.bar.c_bin.as_path(),
             &empty_harness_colliding_file_path,
             FileCopyOptions {
-                existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+                colliding_file_behaviour: CollidingFileBehaviour::Abort,
             },
         )
         .unwrap();
@@ -399,9 +399,9 @@ pub fn copy_directory_with_progress_errors_when_destination_file_collides_and_it
         empty_harness.as_path(),
         DirectoryCopyWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
-                existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
-                existing_destination_subdirectory_behaviour:
-                    ExistingSubDirectoryBehaviour::Continue,
+                colliding_file_behaviour: CollidingFileBehaviour::Abort,
+                colliding_subdirectory_behaviour:
+                    CollidingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },
@@ -461,8 +461,8 @@ pub fn copy_directory_with_progress_errors_when_destination_subdirectory_collide
         empty_harness.as_path(),
         DirectoryCopyWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
-                existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
-                existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
+                colliding_file_behaviour: CollidingFileBehaviour::Abort,
+                colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Abort,
             },
             ..Default::default()
         },
@@ -558,7 +558,7 @@ pub fn copy_directory_with_progress_respects_copy_depth_limit_if_source_contains
         deep_harness.as_path(),
         empty_harness.as_path(),
         DirectoryCopyWithProgressOptions {
-            copy_depth_limit: CopyDirectoryDepthLimit::Limited { maximum_depth: 1 },
+            copy_depth_limit: DirectoryCopyDepthLimit::Limited { maximum_depth: 1 },
             symlink_behaviour: SymlinkBehaviour::Follow,
             ..Default::default()
         },
@@ -655,7 +655,7 @@ pub fn copy_directory_with_progress_respects_copy_depth_limit_if_source_contains
         deep_harness.as_path(),
         empty_harness.as_path(),
         DirectoryCopyWithProgressOptions {
-            copy_depth_limit: CopyDirectoryDepthLimit::Limited { maximum_depth: 1 },
+            copy_depth_limit: DirectoryCopyDepthLimit::Limited { maximum_depth: 1 },
             symlink_behaviour: SymlinkBehaviour::Keep,
             ..Default::default()
         },
@@ -717,8 +717,8 @@ pub fn copy_directory_with_progress_preemptively_checks_for_directory_collisions
         empty_harness.as_path(),
         DirectoryCopyWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
-                existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
-                existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
+                colliding_file_behaviour: CollidingFileBehaviour::Abort,
+                colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Abort,
             },
             ..Default::default()
         },
@@ -765,7 +765,7 @@ pub fn copy_directory_with_progress_preemptively_checks_for_file_collisions() ->
             deep_harness.a_bin.as_path(),
             &remapped_path,
             FileCopyOptions {
-                existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+                colliding_file_behaviour: CollidingFileBehaviour::Abort,
             },
         )
         .unwrap();
@@ -783,9 +783,9 @@ pub fn copy_directory_with_progress_preemptively_checks_for_file_collisions() ->
         empty_harness.as_path(),
         DirectoryCopyWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
-                existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
-                existing_destination_subdirectory_behaviour:
-                    ExistingSubDirectoryBehaviour::Continue,
+                colliding_file_behaviour: CollidingFileBehaviour::Abort,
+                colliding_subdirectory_behaviour:
+                    CollidingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },
@@ -851,9 +851,9 @@ pub fn copy_directory_with_progress_errors_when_source_is_symlink_to_destination
         deep_harness.as_path(),
         DirectoryCopyWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
-                existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
-                existing_destination_subdirectory_behaviour:
-                    ExistingSubDirectoryBehaviour::Continue,
+                colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
+                colliding_subdirectory_behaviour:
+                    CollidingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },

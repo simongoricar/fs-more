@@ -16,8 +16,8 @@ use super::{
         ValidatedSourceDirectory,
     },
     BrokenSymlinkBehaviour,
-    CopyDirectoryDepthLimit,
     DestinationDirectoryRule,
+    DirectoryCopyDepthLimit,
     DirectoryCopyOperation,
     DirectoryCopyOptions,
     DirectoryCopyWithProgressOptions,
@@ -512,7 +512,7 @@ where
         validated_source_directory.clone(),
         validated_destination_directory,
         options.destination_directory_rule,
-        CopyDirectoryDepthLimit::Unlimited,
+        DirectoryCopyDepthLimit::Unlimited,
         copy_and_delete_options.symlink_behaviour,
         copy_and_delete_options.broken_symlink_behaviour,
     )
@@ -522,7 +522,7 @@ where
         prepared_copy,
         DirectoryCopyOptions {
             destination_directory_rule: options.destination_directory_rule,
-            copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
+            copy_depth_limit: DirectoryCopyDepthLimit::Unlimited,
             symlink_behaviour: copy_and_delete_options.symlink_behaviour,
             broken_symlink_behaviour: copy_and_delete_options.broken_symlink_behaviour,
         },
@@ -972,7 +972,7 @@ where
         read_buffer_size: copy_and_delete_options.read_buffer_size,
         write_buffer_size: copy_and_delete_options.write_buffer_size,
         progress_update_byte_interval: copy_and_delete_options.progress_update_byte_interval,
-        copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
+        copy_depth_limit: DirectoryCopyDepthLimit::Unlimited,
         symlink_behaviour: copy_and_delete_options.symlink_behaviour,
         broken_symlink_behaviour: copy_and_delete_options.broken_symlink_behaviour,
     };

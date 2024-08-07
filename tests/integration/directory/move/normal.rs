@@ -1,13 +1,13 @@
 use fs_more::{
     directory::{
-        CopyDirectoryDepthLimit,
+        CollidingSubDirectoryBehaviour,
         DestinationDirectoryRule,
+        DirectoryCopyDepthLimit,
         DirectoryCopyOptions,
         DirectoryMoveAllowedStrategies,
         DirectoryMoveByCopyOptions,
         DirectoryMoveOptions,
         DirectoryMoveStrategy,
-        ExistingSubDirectoryBehaviour,
         SymlinkBehaviour,
     },
     error::{
@@ -15,7 +15,7 @@ use fs_more::{
         MoveDirectoryError,
         MoveDirectoryPreparationError,
     },
-    file::ExistingFileBehaviour,
+    file::CollidingFileBehaviour,
 };
 use fs_more_test_harness::{
     collect_directory_statistics_via_scan,
@@ -88,8 +88,8 @@ pub fn move_directory_errors_when_source_is_symlink_to_destination_directory() -
         deep_harness.as_path(),
         DirectoryMoveOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
-                existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
-                existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
+                colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
+                colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Abort,
             },
             ..Default::default()
         },
@@ -148,7 +148,7 @@ pub fn move_directory_preserves_symlinks_on_non_empty_destination_directory_with
             deep_harness_non_symlink_copy.child_path("here-we-go"),
             DirectoryCopyOptions {
                 destination_directory_rule: DestinationDirectoryRule::DisallowExisting,
-                copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
+                copy_depth_limit: DirectoryCopyDepthLimit::Unlimited,
                 ..Default::default()
             },
         )
@@ -170,8 +170,8 @@ pub fn move_directory_preserves_symlinks_on_non_empty_destination_directory_with
         move_destination_harness.as_path(),
         DirectoryMoveOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
-                existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
-                existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
+                colliding_file_behaviour: CollidingFileBehaviour::Abort,
+                colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Abort,
             },
             allowed_strategies: DirectoryMoveAllowedStrategies::OnlyRename,
         },
@@ -226,7 +226,7 @@ pub fn move_directory_does_not_preserve_symlinks_on_empty_destination_directory_
             deep_harness_non_symlink_copy.child_path("here-we-go"),
             DirectoryCopyOptions {
                 destination_directory_rule: DestinationDirectoryRule::DisallowExisting,
-                copy_depth_limit: CopyDirectoryDepthLimit::Unlimited,
+                copy_depth_limit: DirectoryCopyDepthLimit::Unlimited,
                 ..Default::default()
             },
         )
@@ -248,8 +248,8 @@ pub fn move_directory_does_not_preserve_symlinks_on_empty_destination_directory_
         copy_destination_harness.as_path(),
         DirectoryMoveOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
-                existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
-                existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
+                colliding_file_behaviour: CollidingFileBehaviour::Abort,
+                colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Abort,
             },
             allowed_strategies: DirectoryMoveAllowedStrategies::OnlyCopyAndDelete {
                 options: DirectoryMoveByCopyOptions {
@@ -300,8 +300,8 @@ pub fn move_directory_performs_merge_without_overwrite_when_copying_to_non_empty
         destination_harness.as_path(),
         DirectoryMoveOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
-                existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
-                existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
+                colliding_file_behaviour: CollidingFileBehaviour::Abort,
+                colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Abort,
             },
             ..Default::default()
         },

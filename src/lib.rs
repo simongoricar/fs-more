@@ -79,7 +79,7 @@
 //! # use fs_more::error::FileError;
 //! # use fs_more::file::FileCopyWithProgressOptions;
 //! # use fs_more::file::FileCopyFinished;
-//! # use fs_more::file::ExistingFileBehaviour;
+//! # use fs_more::file::CollidingFileBehaviour;
 //! # fn main() -> Result<(), FileError> {
 //! let source_path = Path::new("./source-file.txt");
 //! let destination_path = Path::new("./target-file.txt");
@@ -88,7 +88,7 @@
 //!     source_path,
 //!     destination_path,
 //!     FileCopyWithProgressOptions {
-//!         existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+//!         colliding_file_behaviour: CollidingFileBehaviour::Abort,
 //!         ..Default::default()
 //!     },
 //!     |progress| {

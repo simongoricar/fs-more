@@ -1,6 +1,6 @@
 use fs_more::{
     error::FileError,
-    file::{ExistingFileBehaviour, FileCopyFinished, FileCopyOptions},
+    file::{CollidingFileBehaviour, FileCopyFinished, FileCopyOptions},
 };
 use fs_more_test_harness::{prelude::*, trees::structures::simple::SimpleTree};
 
@@ -23,7 +23,7 @@ pub fn copy_file_creates_an_identical_copy() -> TestResult {
         harness.yes.hello_world_txt.as_path(),
         &destination_file_path,
         FileCopyOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+            colliding_file_behaviour: CollidingFileBehaviour::Abort,
         },
     );
 
@@ -56,7 +56,7 @@ pub fn copy_file_errors_when_trying_to_copy_into_self() -> TestResult {
         harness.yes.no_bin.as_path(),
         harness.yes.no_bin.as_path(),
         FileCopyOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
+            colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
         },
     );
 
@@ -111,7 +111,7 @@ pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
         harness.yes.hello_world_txt.as_path(),
         &hello_world_uppercased_file_path,
         FileCopyOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+            colliding_file_behaviour: CollidingFileBehaviour::Abort,
         },
     );
 
@@ -188,7 +188,7 @@ pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated
         harness.yes.hello_world_txt.as_path(),
         &destination_file_path,
         FileCopyOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+            colliding_file_behaviour: CollidingFileBehaviour::Abort,
         },
     );
 
@@ -238,7 +238,7 @@ pub fn copy_file_overwrites_destination_file_when_behaviour_is_overwrite() -> Te
         harness.yes.no_bin.as_path(),
         harness.yes.hello_world_txt.as_path(),
         FileCopyOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
+            colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
         },
     );
 
@@ -273,7 +273,7 @@ pub fn copy_file_errors_on_existing_destination_file_when_behaviour_is_abort() -
         harness.yes.no_bin.as_path(),
         harness.yes.hello_world_txt.as_path(),
         FileCopyOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+            colliding_file_behaviour: CollidingFileBehaviour::Abort,
         },
     );
 
@@ -306,7 +306,7 @@ pub fn copy_file_skips_existing_destination_file_when_behaviour_is_skip() -> Tes
         harness.yes.hello_world_txt.as_path(),
         harness.yes.no_bin.as_path(),
         FileCopyOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Skip,
+            colliding_file_behaviour: CollidingFileBehaviour::Skip,
         },
     );
 
@@ -342,7 +342,7 @@ pub fn copy_file_errors_when_source_path_is_symlink_to_destination_file() -> Tes
         &source_symlink_path,
         harness.yes.hello_world_txt.as_path(),
         FileCopyOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Overwrite,
+            colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
         },
     );
 
@@ -383,7 +383,7 @@ pub fn copy_file_does_not_preserve_symlinks() -> TestResult {
         &symlink_path,
         &copy_destination_path,
         FileCopyOptions {
-            existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
+            colliding_file_behaviour: CollidingFileBehaviour::Abort,
         },
     );
 
@@ -395,7 +395,8 @@ pub fn copy_file_does_not_preserve_symlinks() -> TestResult {
     );
 
 
-    symlink_path.assert_is_valid_symlink_to_file_and_destination_matches(harness.yes.no_bin.as_path());
+    symlink_path
+        .assert_is_valid_symlink_to_file_and_destination_matches(harness.yes.no_bin.as_path());
     copy_destination_path.assert_is_file_and_not_symlink();
 
     harness
