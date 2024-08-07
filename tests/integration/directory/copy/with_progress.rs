@@ -1057,7 +1057,7 @@ fn copy_directory_with_progress_preserves_broken_symlinks_when_behaviour_is_set_
         destination_harness.as_path(),
         DirectoryCopyWithProgressOptions {
             symlink_behaviour: SymlinkBehaviour::Keep,
-            broken_symlink_behaviour: BrokenSymlinkBehaviour::Preserve,
+            broken_symlink_behaviour: BrokenSymlinkBehaviour::Keep,
             ..Default::default()
         },
         |_| {},

@@ -542,7 +542,7 @@ fn scan_and_plan_directory_copy(
                         use std::os::windows::fs::FileTypeExt;
 
                         match broken_symlink_behaviour {
-                            BrokenSymlinkBehaviour::Preserve => {
+                            BrokenSymlinkBehaviour::Keep => {
                                 let unresolved_symlink_file_type =
                                     unresolved_symlink_metadata.file_type();
 
@@ -575,7 +575,7 @@ fn scan_and_plan_directory_copy(
                     #[cfg(unix)]
                     {
                         match broken_symlink_behaviour {
-                            BrokenSymlinkBehaviour::Preserve => {
+                            BrokenSymlinkBehaviour::Keep => {
                                 operation_queue.push(QueuedOperation::CreateSymlink {
                                     symlink_path: directory_item_destination_path,
                                     source_symlink_size_bytes: unresolved_symlink_file_size,

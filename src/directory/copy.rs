@@ -109,7 +109,7 @@ pub enum BrokenSymlinkBehaviour {
     /// it is possible that a symbolic link cannot be created on the destination —
     /// for example in certain cases when source and destination are on different
     /// mount points — in which case an error will be returned.
-    Preserve,
+    Keep,
 
     /// Indicates a broken symbolic link should result in an error while preparing the copy or move.
     Abort,
@@ -144,13 +144,13 @@ impl Default for DirectoryCopyOptions {
     /// - [`DestinationDirectoryRule::AllowEmpty`]: if the destination directory already exists, it must be empty,
     /// - [`DirectoryCopyDepthLimit::Unlimited`]: there is no copy depth limit,
     /// - [`SymlinkBehaviour::Keep`]: symbolic links are not followed, and
-    /// - [`BrokenSymlinkBehaviour::Preserve`]: broken symbolic links are kept as-is, i.e. broken.
+    /// - [`BrokenSymlinkBehaviour::Keep`]: broken symbolic links are kept as-is, i.e. broken.
     fn default() -> Self {
         Self {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
             copy_depth_limit: DirectoryCopyDepthLimit::Unlimited,
             symlink_behaviour: SymlinkBehaviour::Keep,
-            broken_symlink_behaviour: BrokenSymlinkBehaviour::Preserve,
+            broken_symlink_behaviour: BrokenSymlinkBehaviour::Keep,
         }
     }
 }
@@ -769,7 +769,7 @@ impl Default for DirectoryCopyWithProgressOptions {
     /// - [`DestinationDirectoryRule::AllowEmpty`]: if the destination directory already exists, it must be empty,
     /// - [`DirectoryCopyDepthLimit::Unlimited`]: there is no copy depth limit,
     /// - [`SymlinkBehaviour::Keep`]: symbolic links are not followed,
-    /// - [`BrokenSymlinkBehaviour::Preserve`]: broken symbolic links are kept as-is, i.e. broken,
+    /// - [`BrokenSymlinkBehaviour::Keep`]: broken symbolic links are kept as-is, i.e. broken,
     /// - the read and write buffers are 64 KiB large, and
     /// - the progress reporting closure byte interval is set to 512 KiB.
     fn default() -> Self {

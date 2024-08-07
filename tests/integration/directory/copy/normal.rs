@@ -925,7 +925,7 @@ fn copy_directory_preserves_broken_symlinks_when_behaviour_is_set_to_preserve() 
         destination_harness.as_path(),
         DirectoryCopyOptions {
             symlink_behaviour: SymlinkBehaviour::Keep,
-            broken_symlink_behaviour: BrokenSymlinkBehaviour::Preserve,
+            broken_symlink_behaviour: BrokenSymlinkBehaviour::Keep,
             ..Default::default()
         },
     )

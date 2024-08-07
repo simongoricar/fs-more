@@ -67,7 +67,7 @@ impl Default for DirectoryMoveByCopyOptions {
     fn default() -> Self {
         Self {
             symlink_behaviour: SymlinkBehaviour::Keep,
-            broken_symlink_behaviour: BrokenSymlinkBehaviour::Preserve,
+            broken_symlink_behaviour: BrokenSymlinkBehaviour::Keep,
         }
     }
 }
@@ -612,7 +612,7 @@ impl Default for DirectoryMoveWithProgressByCopyOptions {
     fn default() -> Self {
         Self {
             symlink_behaviour: SymlinkBehaviour::Keep,
-            broken_symlink_behaviour: BrokenSymlinkBehaviour::Preserve,
+            broken_symlink_behaviour: BrokenSymlinkBehaviour::Keep,
             read_buffer_size: DEFAULT_READ_BUFFER_SIZE,
             write_buffer_size: DEFAULT_WRITE_BUFFER_SIZE,
             progress_update_byte_interval: DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL,
