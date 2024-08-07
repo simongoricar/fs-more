@@ -402,7 +402,7 @@ fn attempt_directory_move_by_rename(
 /// # Options
 /// See [`DirectoryMoveOptions`] for a full set of available directory moving options.
 ///
-/// ## Considerations
+/// ### `destination_directory_rule` considerations
 /// If you allow the destination directory to exist and be non-empty,
 /// source directory contents will be merged (!) into the destination directory.
 /// This is *not* the default, and you should probably consider the consequences
@@ -821,7 +821,7 @@ pub struct DirectoryMoveProgress {
 /// # Options
 /// See [`DirectoryMoveWithProgressOptions`] for a full set of available directory moving options.
 ///
-/// ## Considerations
+/// ### `destination_directory_rule` considerations
 /// If you allow the destination directory to exist and be non-empty,
 /// source directory contents will be merged (!) into the destination directory.
 /// This is *not* the default, and you should probably consider the consequences

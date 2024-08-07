@@ -72,15 +72,46 @@ pub enum CopyDirectoryDepthLimit {
 }
 
 
+
+/// How to behave when encountering symbolic links during directory copies or moves.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum SymlinkBehaviour {
+    /// Indicates the symbolic link should be preserved on the destination.
+    ///
+    /// It is possible that a symbolic link cannot be created on the destination,
+    /// for example in certain cases when source and destination are on different
+    /// mount points, in which case an error will be returned.
+    ///
+    /// Broken symbolic links in this mode will be handled with the
+    /// [`BrokenSymlinkBehaviour`] mode used alongside it.
     Keep,
+
+    /// Indicates the symbolic link should be resolved and its destination content
+    /// should be copied or moved to the destination instead of preserving the symbolic link.
+    ///
+    /// Broken symbolic links will always cause errors in this mode,
+    /// regardless of [`BrokenSymlinkBehaviour`] mode.
     Follow,
 }
 
+
+
+/// How to behave when encountering broken symbolic links during directory copies or moves.
+///
+/// This option is generally available alongside [`SymlinkBehaviour`].
+/// Note that [`BrokenSymlinkBehaviour`] options are only used when
+/// [`SymlinkBehaviour::Keep`] is used.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum BrokenSymlinkBehaviour {
+    /// Indicates that the broken symbolic link should be kept as-is on the destination, i.e. broken.
+    ///
+    /// Just like for normal symbolic links,
+    /// it is possible that a symbolic link cannot be created on the destination —
+    /// for example in certain cases when source and destination are on different
+    /// mount points — in which case an error will be returned.
     Preserve,
+
+    /// Indicates a broken symbolic link should result in an error while preparing the copy or move.
     Abort,
 }
 
@@ -101,19 +132,19 @@ pub struct DirectoryCopyOptions {
     /// Maximum depth of the source directory to copy over to the destination.
     pub copy_depth_limit: CopyDirectoryDepthLimit,
 
-    // TODO implement, document and test
+    /// Sets the behaviour for symbolic links when copying a directory.
     pub symlink_behaviour: SymlinkBehaviour,
 
-    // TODO implement, document and test
+    /// Sets the behaviour for broken symbolic links when copying a directory.
     pub broken_symlink_behaviour: BrokenSymlinkBehaviour,
 }
 
 impl Default for DirectoryCopyOptions {
-    /// Constructs defaults for copying a directory:
-    /// - if the destination directory already exists, it must be empty ([`DestinationDirectoryRule::AllowEmpty`]), and
-    /// - there is no copy depth limit ([`CopyDirectoryDepthLimit::Unlimited`]).
-    ///
-    /// TODO update with new symlink behaviours
+    /// Constructs defaults for copying a directory, which are:
+    /// - [`DestinationDirectoryRule::AllowEmpty`]: if the destination directory already exists, it must be empty,
+    /// - [`CopyDirectoryDepthLimit::Unlimited`]: there is no copy depth limit,
+    /// - [`SymlinkBehaviour::Keep`]: symbolic links are not followed, and
+    /// - [`BrokenSymlinkBehaviour::Preserve`]: broken symbolic links are kept as-is, i.e. broken.
     fn default() -> Self {
         Self {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
@@ -368,30 +399,26 @@ pub(crate) fn copy_directory_unchecked(
 /// Copies a directory from the source to the destination directory.
 ///
 /// Contents of the source directory will be copied into the destination directory.
-/// If needed, the destination directory will be created before the copying begins.
+/// If needed, the destination directory will be created before copying begins.
 ///
 ///
 /// # Symbolic links
-/// TODO update with new options
-///
-/// Symbolic links are followed, but not preserved.
-///
 /// If the provided `source_directory_path` itself leads to a symlink that points to a directory,
 /// the link will be followed and the contents of the link target directory will be copied.
 ///
-/// Similarly, if one of the entries *inside* the source directory is a symlink to either a directory
-/// or file, the link will be followed, and the corresponding contents of the target directory or file
-/// will be copied to the destination.
+/// Regarding symbolic links *inside* the source directory, the chosen [`symlink_behaviour`] is respected.
 ///
-/// This matches the behaviour of `cp` with `--recursive --dereference` flags on Unix[^unix-cp-rd].
+/// This matches the behaviour of `cp` with `--recursive` (and optionally `--dereference`)
+/// flags on Unix[^unix-cp-rd].
 ///
 ///
 /// # Options
-/// See [`DirectoryCopyOptions`] for a full set of available directory copying options.
+/// See [`DirectoryCopyOptions`] for the full set of available directory copying options.
 ///
+/// ### `destination_directory_rule` considerations
 /// If you allow the destination directory to exist and be non-empty,
-/// source directory contents will be merged into the destination directory.
-/// Note that this is not the default, and you should probably consider the consequences
+/// source directory contents will be merged (!) into the destination directory.
+/// This is *not* the default, and you should probably consider the consequences
 /// very carefully before setting the corresponding [`options.destination_directory_rule`]
 /// option to anything other than [`DisallowExisting`] or [`AllowEmpty`].
 ///
@@ -417,6 +444,7 @@ pub(crate) fn copy_directory_unchecked(
 ///
 /// [`options.destination_directory_rule`]: DirectoryCopyOptions::destination_directory_rule
 /// [`options.copy_depth_limit`]: DirectoryCopyOptions::copy_depth_limit
+/// [`symlink_behaviour`]: DirectoryCopyOptions::symlink_behaviour
 /// [`DisallowExisting`]: DestinationDirectoryRule::DisallowExisting
 /// [`AllowEmpty`]: DestinationDirectoryRule::AllowEmpty
 /// [`AllowNonEmpty`]: DestinationDirectoryRule::AllowNonEmpty
@@ -432,8 +460,6 @@ where
     S: AsRef<Path>,
     T: AsRef<Path>,
 {
-    // TODO update function documentation (regarding symlink options)
-
     let prepared_copy = DirectoryCopyPrepared::prepare(
         source_directory_path.as_ref(),
         destination_directory_path.as_ref(),
@@ -471,6 +497,7 @@ pub enum DirectoryCopyOperation {
         progress: FileProgress,
     },
 
+    /// A symbolic link is being created.
     CreatingSymbolicLink {
         /// Path to the symlink being created.
         destination_symbolic_link_file_path: PathBuf,
@@ -712,10 +739,10 @@ pub struct DirectoryCopyWithProgressOptions {
     /// Maximum depth of the source directory to copy.
     pub copy_depth_limit: CopyDirectoryDepthLimit,
 
-    // TODO implement, document and test
+    /// Sets the behaviour for symbolic links when copying a directory.
     pub symlink_behaviour: SymlinkBehaviour,
 
-    // TODO implement, document and test
+    /// Sets the behaviour for broken symbolic links when copying a directory.
     pub broken_symlink_behaviour: BrokenSymlinkBehaviour,
 
     /// Internal buffer size used for reading source files.
@@ -738,13 +765,13 @@ pub struct DirectoryCopyWithProgressOptions {
 }
 
 impl Default for DirectoryCopyWithProgressOptions {
-    /// Constructs defaults for copying a directory:
-    /// - if the destination directory already exists, it must be empty ([`DestinationDirectoryRule::AllowEmpty`]), and
-    /// - there is no copy depth limit ([`CopyDirectoryDepthLimit::Unlimited`]),
-    /// - read and write buffers are 64 KiB large, and
+    /// Constructs defaults for copying a directory, which are:
+    /// - [`DestinationDirectoryRule::AllowEmpty`]: if the destination directory already exists, it must be empty,
+    /// - [`CopyDirectoryDepthLimit::Unlimited`]: there is no copy depth limit,
+    /// - [`SymlinkBehaviour::Keep`]: symbolic links are not followed,
+    /// - [`BrokenSymlinkBehaviour::Preserve`]: broken symbolic links are kept as-is, i.e. broken,
+    /// - the read and write buffers are 64 KiB large, and
     /// - the progress reporting closure byte interval is set to 512 KiB.
-    ///
-    /// TODO update with new symlink behaviours
     fn default() -> Self {
         Self {
             destination_directory_rule: DestinationDirectoryRule::AllowEmpty,
@@ -974,6 +1001,7 @@ struct SymlinkCreationInfo {
 
     unfollowed_symlink_file_size_bytes: u64,
 }
+
 
 fn execute_create_symlink_operation_with_progress<F>(
     symlink_info: SymlinkCreationInfo,
@@ -1224,30 +1252,26 @@ where
 /// Copies a directory from the source to the destination directory, with progress reporting.
 ///
 /// Contents of the source directory will be copied into the destination directory.
-/// If needed, the destination directory will be created before the copying begins.
+/// If needed, the destination directory will be created before copying begins.
 ///
 ///
 /// # Symbolic links
-/// TODO update with new options
-///
-/// Symbolic links are followed, but not preserved.
-///
 /// If the provided `source_directory_path` itself leads to a symlink that points to a directory,
 /// the link will be followed and the contents of the link target directory will be copied.
 ///
-/// Similarly, if one of the entries *inside* the source directory is a symlink to either a directory
-/// or file, the link will be followed, and the corresponding contents of the target directory or file
-/// will be copied to the destination.
+/// Regarding symbolic links *inside* the source directory, the chosen [`symlink_behaviour`] is respected.
 ///
-/// This matches the behaviour of `cp` with `--recursive --dereference` flags on Unix[^unix-cp-rd].
+/// This matches the behaviour of `cp` with `--recursive` (and optionally `--dereference`)
+/// flags on Unix[^unix-cp-rd].
 ///
 ///
 /// # Options
-/// See [`DirectoryCopyWithProgressOptions`] for a full set of available directory copying options.
+/// See [`DirectoryCopyWithProgressOptions`] for the full set of available directory copying options.
 ///
+/// ### `destination_directory_rule` considerations
 /// If you allow the destination directory to exist and be non-empty,
-/// source directory contents will be merged into the destination directory.
-/// Note that this is not the default, and you should probably consider the consequences
+/// source directory contents will be merged (!) into the destination directory.
+/// This is *not* the default, and you should probably consider the consequences
 /// very carefully before setting the corresponding [`options.destination_directory_rule`]
 /// option to anything other than [`DisallowExisting`] or [`AllowEmpty`].
 ///
@@ -1294,6 +1318,7 @@ where
 /// [`options.progress_update_byte_interval`]: DirectoryCopyWithProgressOptions::progress_update_byte_interval
 /// [`options.destination_directory_rule`]: DirectoryCopyWithProgressOptions::destination_directory_rule
 /// [`options.copy_depth_limit`]: DirectoryCopyWithProgressOptions::copy_depth_limit
+/// [`symlink_behaviour`]: DirectoryCopyWithProgressOptions::symlink_behaviour
 /// [`DisallowExisting`]: DestinationDirectoryRule::DisallowExisting
 /// [`AllowEmpty`]: DestinationDirectoryRule::AllowEmpty
 /// [`AllowNonEmpty`]: DestinationDirectoryRule::AllowNonEmpty
@@ -1311,8 +1336,6 @@ where
     T: AsRef<Path>,
     F: FnMut(&DirectoryCopyProgressRef),
 {
-    // TODO update function documentation (regarding symlink options)
-
     let prepared_copy = DirectoryCopyPrepared::prepare(
         source_directory_path.as_ref(),
         destination_directory_path.as_ref(),
