@@ -366,7 +366,7 @@ pub(crate) fn copy_directory_unchecked(
                 total_bytes_copied += source_symlink_size_bytes;
             }
 
-            #[cfg(not(windows))]
+            #[cfg(unix)]
             QueuedOperation::CreateSymlink {
                 symlink_path,
                 source_symlink_size_bytes,
