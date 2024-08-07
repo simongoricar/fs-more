@@ -167,6 +167,11 @@
 #[cfg(doctest)]
 pub struct ReadmeDoctests;
 
+/// This brings in the CONTRIBUTING's doctests (and is present only when testing).
+#[doc = include_str!("../CONTRIBUTING.md")]
+#[cfg(doctest)]
+pub struct ContributionGuideDoctests;
+
 
 
 /// Default file read buffer size, used as a default in progress tracking functions.

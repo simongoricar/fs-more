@@ -190,8 +190,9 @@ this section will focus on one of them - `DeepTree`.
 <br>
 
 To initialize a filesystem tree, call its `initialize` method, like so:
-```rust
+```rust,no_run
 use fs_more_test_harness::prelude::*;
+use fs_more_test_harness::trees::structures::deep::DeepTree;
 
 let deep_harness = DeepTree::initialize();
 ```
@@ -226,9 +227,15 @@ and so on. Where the harness shines is in the tree structure is provides:
 
 Here's a few examples on how we can "traverse" and inspect 
 this tree in our tests:
-```rust
+```rust,no_run
 use std::path::Path;
+
 use fs_more_test_harness::prelude::*;
+use fs_more_test_harness::trees::structures::deep::DeepTree;
+
+
+let deep_harness = DeepTree::initialize();
+
 
 deep_harness.assert_is_directory_and_not_empty();
 
@@ -283,7 +290,12 @@ for more information, take a look at the traits available in
 
 
 Finally, to clean up the harness, call its `destroy` method, like so:
-```rust
+```rust,no_run
+use fs_more_test_harness::prelude::*;
+use fs_more_test_harness::trees::structures::deep::DeepTree;
+
+let deep_harness = DeepTree::initialize();
+
 deep_harness.destroy();
 ```
 
