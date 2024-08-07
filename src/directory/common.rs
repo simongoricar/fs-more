@@ -44,11 +44,11 @@ pub enum CollidingSubDirectoryBehaviour {
 ///
 /// ```no_run
 /// # use fs_more::directory::DestinationDirectoryRule;
-/// # use fs_more::directory::ExistingSubDirectoryBehaviour;
+/// # use fs_more::directory::CollidingSubDirectoryBehaviour;
 /// # use fs_more::file::CollidingFileBehaviour;
 /// let rules = DestinationDirectoryRule::AllowNonEmpty {
 ///     colliding_file_behaviour: CollidingFileBehaviour::Abort,
-///     colliding_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Continue,
+///     colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Continue,
 /// };
 /// ```
 ///
@@ -62,11 +62,11 @@ pub enum CollidingSubDirectoryBehaviour {
 ///
 /// ```no_run
 /// # use fs_more::directory::DestinationDirectoryRule;
-/// # use fs_more::directory::ExistingSubDirectoryBehaviour;
+/// # use fs_more::directory::CollidingSubDirectoryBehaviour;
 /// # use fs_more::file::CollidingFileBehaviour;
 /// let rules = DestinationDirectoryRule::AllowNonEmpty {
 ///     colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
-///     colliding_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Continue,
+///     colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Continue,
 /// };
 /// ```
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
