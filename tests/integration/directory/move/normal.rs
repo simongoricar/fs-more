@@ -1,5 +1,6 @@
 use fs_more::{
     directory::{
+        BrokenSymlinkBehaviour,
         CollidingSubDirectoryBehaviour,
         DestinationDirectoryRule,
         DirectoryCopyDepthLimit,
@@ -12,6 +13,7 @@ use fs_more::{
     },
     error::{
         DestinationDirectoryPathValidationError,
+        DirectoryExecutionPlanError,
         MoveDirectoryError,
         MoveDirectoryPreparationError,
     },
@@ -20,7 +22,12 @@ use fs_more::{
 use fs_more_test_harness::{
     collect_directory_statistics_via_scan,
     prelude::*,
-    trees::structures::{deep::DeepTree, empty::EmptyTree, simple::SimpleTree},
+    trees::structures::{
+        broken_symlinks::BrokenSymlinksTree,
+        deep::DeepTree,
+        empty::EmptyTree,
+        simple::SimpleTree,
+    },
 };
 
 
@@ -451,4 +458,43 @@ fn move_directory_preserves_source_directory_symlink_when_using_rename_strategy(
 
     harness_with_only_symlink.destroy();
     simple_tree.destroy();
+}
+
+
+#[test]
+fn move_directory_aborts_on_broken_symlink_when_using_copy_and_delete_strategy_and_behaviour_is_set_to_abort(
+) {
+    let broken_symlink_tree = BrokenSymlinksTree::initialize();
+    let destination_tree = EmptyTree::initialize();
+
+
+    let move_error = fs_more::directory::move_directory(
+        broken_symlink_tree.as_path(),
+        destination_tree.as_path(),
+        DirectoryMoveOptions {
+            allowed_strategies: DirectoryMoveAllowedStrategies::OnlyCopyAndDelete {
+                options: DirectoryMoveByCopyOptions {
+                    symlink_behaviour: SymlinkBehaviour::Keep,
+                    broken_symlink_behaviour: BrokenSymlinkBehaviour::Abort,
+                },
+            },
+            ..Default::default()
+        },
+    )
+    .unwrap_err();
+
+
+    assert_matches!(
+        move_error,
+        MoveDirectoryError::PreparationError(
+            MoveDirectoryPreparationError::CopyPlanningError(
+                DirectoryExecutionPlanError::SymbolicLinkIsBroken { path }
+            )
+        )
+        if paths_equal_no_unc(&path, broken_symlink_tree.foo.broken_symlink_txt.as_path())
+    );
+
+
+    destination_tree.destroy();
+    broken_symlink_tree.destroy();
 }
