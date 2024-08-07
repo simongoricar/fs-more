@@ -142,6 +142,14 @@ pub trait AssertablePath {
         P: AsRef<Path>;
 
     /// Asserts the path points to a symlink to a directory,
+    /// and that the destination of the symlink matches the provided `expected_destination_path`.
+    fn assert_is_broken_symlink_to_directory_and_destination_matches<P>(
+        &self,
+        expected_destination_path: P,
+    ) where
+        P: AsRef<Path>;
+
+    /// Asserts the path points to a symlink to a directory,
     /// and returns the symlink destination.
     fn assert_is_valid_symlink_to_directory_and_resolve_destination(&self) -> PathBuf;
 

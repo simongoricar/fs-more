@@ -364,6 +364,32 @@ where
     }
 
     #[track_caller]
+    fn assert_is_broken_symlink_to_directory_and_destination_matches<P>(
+        &self,
+        expected_destination_path: P,
+    ) where
+        P: AsRef<Path>,
+    {
+        self.assert_is_any_broken_symlink();
+
+
+        let resolved_symlink_destination =
+            fs::read_link(self.as_path()).expect("failed to read directory symlink");
+
+        resolved_symlink_destination.assert_not_exists();
+
+        assert_eq!(
+            expected_destination_path.as_ref(),
+            resolved_symlink_destination,
+            "\"{}\" should be a broken symbolic link to \"{}\", \
+            but it points to \"{}\" instead",
+            self.as_path().display(),
+            expected_destination_path.as_ref().display(),
+            resolved_symlink_destination.display()
+        );
+    }
+
+    #[track_caller]
     fn assert_is_valid_symlink_to_directory_and_resolve_destination(&self) -> PathBuf {
         self.assert_is_valid_symlink_to_directory();
 
