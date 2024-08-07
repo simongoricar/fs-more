@@ -244,8 +244,7 @@ pub fn copy_directory_with_progress_errors_when_source_and_destination_are_the_s
         DirectoryCopyWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
-                colliding_subdirectory_behaviour:
-                    CollidingSubDirectoryBehaviour::Continue,
+                colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },
@@ -282,8 +281,7 @@ pub fn copy_directory_with_progress_errors_when_destination_is_inside_source_pat
         DirectoryCopyWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
-                colliding_subdirectory_behaviour:
-                    CollidingSubDirectoryBehaviour::Continue,
+                colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },
@@ -400,8 +398,7 @@ pub fn copy_directory_with_progress_errors_when_destination_file_collides_and_it
         DirectoryCopyWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 colliding_file_behaviour: CollidingFileBehaviour::Abort,
-                colliding_subdirectory_behaviour:
-                    CollidingSubDirectoryBehaviour::Continue,
+                colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },
@@ -784,8 +781,7 @@ pub fn copy_directory_with_progress_preemptively_checks_for_file_collisions() ->
         DirectoryCopyWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 colliding_file_behaviour: CollidingFileBehaviour::Abort,
-                colliding_subdirectory_behaviour:
-                    CollidingSubDirectoryBehaviour::Continue,
+                colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },
@@ -852,8 +848,7 @@ pub fn copy_directory_with_progress_errors_when_source_is_symlink_to_destination
         DirectoryCopyWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
-                colliding_subdirectory_behaviour:
-                    CollidingSubDirectoryBehaviour::Continue,
+                colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },

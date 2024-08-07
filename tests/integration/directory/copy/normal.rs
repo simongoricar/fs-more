@@ -135,8 +135,7 @@ pub fn copy_directory_errors_when_source_and_destination_are_the_same() -> TestR
         DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
-                colliding_subdirectory_behaviour:
-                    CollidingSubDirectoryBehaviour::Continue,
+                colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },
@@ -172,8 +171,7 @@ pub fn copy_directory_errors_when_destination_is_inside_source_path() -> TestRes
         DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
-                colliding_subdirectory_behaviour:
-                    CollidingSubDirectoryBehaviour::Continue,
+                colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },
@@ -287,8 +285,7 @@ pub fn copy_directory_errors_when_destination_file_collides_and_its_behaviour_is
         DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 colliding_file_behaviour: CollidingFileBehaviour::Abort,
-                colliding_subdirectory_behaviour:
-                    CollidingSubDirectoryBehaviour::Continue,
+                colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },
@@ -666,8 +663,7 @@ pub fn copy_directory_preemptively_checks_for_file_collisions() -> TestResult {
         DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 colliding_file_behaviour: CollidingFileBehaviour::Abort,
-                colliding_subdirectory_behaviour:
-                    CollidingSubDirectoryBehaviour::Continue,
+                colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },
@@ -727,8 +723,7 @@ pub fn copy_directory_errors_when_source_is_symlink_to_destination() -> TestResu
         DirectoryCopyOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
                 colliding_file_behaviour: CollidingFileBehaviour::Overwrite,
-                colliding_subdirectory_behaviour:
-                    CollidingSubDirectoryBehaviour::Continue,
+                colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Continue,
             },
             ..Default::default()
         },
