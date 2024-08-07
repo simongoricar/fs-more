@@ -6,8 +6,11 @@ use fs_more::{
         DirectoryMoveOperation,
         DirectoryMoveProgress,
         DirectoryMoveStrategy,
+        DirectoryMoveWithProgressAllowedStrategies,
+        DirectoryMoveWithProgressByCopyOptions,
         DirectoryMoveWithProgressOptions,
         ExistingSubDirectoryBehaviour,
+        SymlinkBehaviour,
     },
     error::{
         DestinationDirectoryPathValidationError,
@@ -255,15 +258,18 @@ pub fn move_directory_with_progress_errors_when_source_is_symlink_to_destination
 
 
 #[test]
-pub fn move_directory_with_progress_does_not_preserve_symlinks_when_destination_directory_already_exists_and_is_not_empty(
-) -> TestResult {
+pub fn move_directory_with_progress_preserves_symlinks_on_non_empty_destination_directory_with_only_rename_strategy_enabled(
+) {
     let deep_harness = DeepTree::initialize();
     let deep_harness_untouched = DeepTree::initialize();
     let simple_harness = SimpleTree::initialize();
 
     let deep_harness_non_symlink_copy = DeepTree::initialize();
 
-    let move_destination_harness = SimpleTree::initialize();
+    let move_destination_harness = EmptyTree::initialize();
+
+    // We need this on Windows, because for a rename to work, the destination directory must not exist.
+    move_destination_harness.assert_is_empty_directory_and_remove();
 
 
     {
@@ -301,20 +307,22 @@ pub fn move_directory_with_progress_does_not_preserve_symlinks_when_destination_
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
                 existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
             },
-            ..Default::default()
+            allowed_strategies: DirectoryMoveWithProgressAllowedStrategies::OnlyRename,
         },
         |_| {},
     )
     .unwrap();
 
-    if let DirectoryMoveStrategy::Rename = finished_move.strategy_used {
-        panic!("directory was renamed even though the destination was not empty")
+    if finished_move.strategy_used != DirectoryMoveStrategy::Rename {
+        panic!("directory was copy-and-deleted even though that strategy was disabled");
     }
 
 
     let remapped_previous_symlink_path = move_destination_harness.child_path("here-we-go");
-    remapped_previous_symlink_path.assert_is_directory_and_not_symlink();
-    remapped_previous_symlink_path
+    let resolved_remapped_previous_symlink_path = remapped_previous_symlink_path
+        .assert_is_valid_symlink_to_directory_and_resolve_destination();
+
+    resolved_remapped_previous_symlink_path
         .assert_is_directory_and_fully_matches_secondary_directory(simple_harness.as_path());
 
 
@@ -328,15 +336,14 @@ pub fn move_directory_with_progress_does_not_preserve_symlinks_when_destination_
     simple_harness.destroy();
     deep_harness.destroy();
     deep_harness_untouched.destroy();
-    Ok(())
 }
 
 
 
 
 #[test]
-pub fn move_directory_with_progress_may_preserve_symlinks_when_destination_directory_exists_and_is_empty(
-) -> TestResult {
+pub fn move_directory_does_not_preserve_symlinks_on_empty_destination_directory_with_only_copy_and_delete_strategy_and_symlink_following(
+) {
     let deep_harness = DeepTree::initialize();
     let simple_harness = SimpleTree::initialize();
 
@@ -380,32 +387,28 @@ pub fn move_directory_with_progress_may_preserve_symlinks_when_destination_direc
                 existing_destination_file_behaviour: ExistingFileBehaviour::Abort,
                 existing_destination_subdirectory_behaviour: ExistingSubDirectoryBehaviour::Abort,
             },
-            ..Default::default()
+            allowed_strategies: DirectoryMoveWithProgressAllowedStrategies::OnlyCopyAndDelete {
+                options: DirectoryMoveWithProgressByCopyOptions {
+                    symlink_behaviour: SymlinkBehaviour::Follow,
+                    ..Default::default()
+                },
+            },
         },
         |_| {},
     )
     .unwrap();
 
 
-    let remapped_here_we_go_dir_path_in_destination =
-        copy_destination_harness.child_path("here-we-go");
-
-    match finished_move.strategy_used {
-        DirectoryMoveStrategy::Rename => {
-            // "here-we-go" inside the destination will be a symlink.
-
-            remapped_here_we_go_dir_path_in_destination.assert_is_valid_symlink_to_directory();
-        }
-        DirectoryMoveStrategy::CopyAndDelete => {
-            // The "here-we-go" directory inside the destination will not have its symlink preserved.
-            let remapped_here_we_go_dir_path_in_destination =
-                copy_destination_harness.child_path("here-we-go");
-
-            remapped_here_we_go_dir_path_in_destination.assert_is_directory_and_not_symlink();
-        }
+    if finished_move.strategy_used != DirectoryMoveStrategy::CopyAndDelete {
+        panic!("directory was renamed even though that strategy was disabled");
     }
 
 
+    let remapped_here_we_go_dir_path_in_destination =
+        copy_destination_harness.child_path("here-we-go");
+
+    // The "here-we-go" directory inside the destination will not have its symlink preserved.
+    remapped_here_we_go_dir_path_in_destination.assert_is_directory_and_not_symlink();
     remapped_here_we_go_dir_path_in_destination
         .assert_is_directory_and_fully_matches_secondary_directory(simple_harness.as_path());
 
@@ -415,7 +418,6 @@ pub fn move_directory_with_progress_may_preserve_symlinks_when_destination_direc
     deep_harness_non_symlink_copy.destroy();
     simple_harness.destroy();
     deep_harness.destroy();
-    Ok(())
 }
 
 
