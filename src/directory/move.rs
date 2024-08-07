@@ -213,12 +213,19 @@ fn collect_source_directory_details(
 }
 
 
-
+/// Describes the result of a [`attempt_directory_move_by_rename`] call,
+/// signalling whether the rename succeeded or not.
 pub(crate) enum DirectoryMoveByRenameAction {
+    /// The directory was successfully moved by renaming it to the destination.
     Renamed {
+        /// Details of the finished directory move.
         finished_move: DirectoryMoveFinished,
     },
-    Impossible,
+
+    /// The directory could not be moved by renaming it,
+    /// be it either due to the destination being non-empty or due to
+    /// failing the actual directory rename call.
+    FailedOrImpossible,
 }
 
 
@@ -245,7 +252,7 @@ fn attempt_directory_move_by_rename(
             validated_destination_directory.state,
             DestinationDirectoryState::DoesNotExist | DestinationDirectoryState::IsEmpty
         ) {
-            return Ok(DirectoryMoveByRenameAction::Impossible);
+            return Ok(DirectoryMoveByRenameAction::FailedOrImpossible);
         }
 
 
@@ -268,7 +275,7 @@ fn attempt_directory_move_by_rename(
             });
         }
 
-        Ok(DirectoryMoveByRenameAction::Impossible)
+        Ok(DirectoryMoveByRenameAction::FailedOrImpossible)
     }
 
     #[cfg(windows)]
@@ -280,7 +287,7 @@ fn attempt_directory_move_by_rename(
             validated_destination_directory.state,
             DestinationDirectoryState::DoesNotExist
         ) {
-            return Ok(DirectoryMoveByRenameAction::Impossible);
+            return Ok(DirectoryMoveByRenameAction::FailedOrImpossible);
         }
 
 
@@ -303,7 +310,7 @@ fn attempt_directory_move_by_rename(
             });
         }
 
-        Ok(DirectoryMoveByRenameAction::Impossible)
+        Ok(DirectoryMoveByRenameAction::FailedOrImpossible)
     }
 
     #[cfg(not(any(unix, windows)))]
@@ -419,7 +426,7 @@ where
             DirectoryMoveByRenameAction::Renamed { finished_move } => {
                 return Ok(finished_move);
             }
-            DirectoryMoveByRenameAction::Impossible => {}
+            DirectoryMoveByRenameAction::FailedOrImpossible => {}
         };
     }
 
@@ -825,7 +832,7 @@ where
 
                 return Ok(finished_move);
             }
-            DirectoryMoveByRenameAction::Impossible => {}
+            DirectoryMoveByRenameAction::FailedOrImpossible => {}
         };
     }
 
