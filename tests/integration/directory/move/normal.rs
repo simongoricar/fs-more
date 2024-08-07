@@ -403,7 +403,6 @@ fn move_directory_does_not_rename_source_to_destination_when_destination_is_empt
 }
 
 
-// TODO copy below to with progress as well
 
 #[test]
 fn move_directory_preserves_source_directory_symlink_when_using_rename_strategy() {
