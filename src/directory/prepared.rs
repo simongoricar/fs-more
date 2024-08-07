@@ -84,6 +84,7 @@ pub(crate) fn try_exists_without_follow(path: &Path) -> std::io::Result<bool> {
 #[derive(Clone, Debug)]
 pub(crate) struct ValidatedSourceDirectory {
     pub(crate) directory_path: PathBuf,
+    pub(crate) unfollowed_directory_path: PathBuf,
     pub(crate) original_path_was_symlink_to_directory: bool,
 }
 
@@ -172,6 +173,7 @@ pub(super) fn validate_source_directory_path(
 
         Ok(ValidatedSourceDirectory {
             directory_path: de_unced_canonical_path,
+            unfollowed_directory_path: source_directory_path.to_path_buf(),
             original_path_was_symlink_to_directory: is_symlink_to_directory,
         })
     }
@@ -180,6 +182,7 @@ pub(super) fn validate_source_directory_path(
     {
         Ok(ValidatedSourceDirectory {
             directory_path: canonical_source_directory_path,
+            unfollowed_directory_path: source_directory_path.to_path_buf(),
             original_path_was_symlink_to_directory: is_symlink_to_directory,
         })
     }

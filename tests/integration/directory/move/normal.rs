@@ -403,4 +403,53 @@ fn move_directory_does_not_rename_source_to_destination_when_destination_is_empt
 }
 
 
-// TODO Revisit tests that handle symlinks: remove obsolete tests and add new ones that test the symlink options.
+// TODO copy below to with progress as well
+
+#[test]
+fn move_directory_preserves_source_directory_symlink_when_using_rename_strategy() {
+    let harness_with_only_symlink = EmptyTree::initialize();
+    let simple_tree = SimpleTree::initialize();
+    let destination_tree = EmptyTree::initialize();
+
+
+    let (symlink_to_simple_tree_under_source, symlink_to_simple_tree_under_destination) = {
+        let symlink_to_simple_tree_under_source =
+            harness_with_only_symlink.child_path("symlink-to-simple");
+        symlink_to_simple_tree_under_source.assert_not_exists();
+        symlink_to_simple_tree_under_source.symlink_to_directory(simple_tree.as_path());
+
+        let symlink_to_simple_tree_under_destination =
+            destination_tree.child_path("symlink-to-simple");
+        symlink_to_simple_tree_under_destination.assert_not_exists();
+
+
+        (
+            symlink_to_simple_tree_under_source,
+            symlink_to_simple_tree_under_destination,
+        )
+    };
+
+
+    let finished_move = fs_more::directory::move_directory(
+        &symlink_to_simple_tree_under_source,
+        &symlink_to_simple_tree_under_destination,
+        DirectoryMoveOptions {
+            destination_directory_rule: DestinationDirectoryRule::DisallowExisting,
+            allowed_strategies: DirectoryMoveAllowedStrategies::OnlyRename,
+        },
+    )
+    .unwrap();
+
+
+    assert_eq!(finished_move.strategy_used, DirectoryMoveStrategy::Rename);
+
+
+    symlink_to_simple_tree_under_source.assert_not_exists();
+    simple_tree.assert_is_directory_and_not_empty();
+    symlink_to_simple_tree_under_destination
+        .assert_is_valid_symlink_to_directory_and_destination_matches(simple_tree.as_path());
+
+
+    harness_with_only_symlink.destroy();
+    simple_tree.destroy();
+}

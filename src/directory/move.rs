@@ -252,7 +252,7 @@ fn attempt_directory_move_by_rename(
         // Let's try to rename the source directory to the target.
         // This might still fail due to different mount points.
         if fs::rename(
-            &validated_source_directory.directory_path,
+            &validated_source_directory.unfollowed_directory_path,
             &validated_destination_directory.directory_path,
         )
         .is_ok()
@@ -287,7 +287,7 @@ fn attempt_directory_move_by_rename(
         // On Windows, the destination directory in call to `rename` must not exist for it to work.
         if !validated_destination_directory.state.exists()
             && fs::rename(
-                &validated_source_directory.directory_path,
+                &validated_source_directory.unfollowed_directory_path,
                 &validated_destination_directory.directory_path,
             )
             .is_ok()

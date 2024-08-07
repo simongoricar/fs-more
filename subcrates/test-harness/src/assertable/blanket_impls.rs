@@ -300,9 +300,11 @@ where
             .expect("unable to read file metadata without following");
 
         if !metadata_no_follow.is_symlink() {
+            let path_type = PathType::from_path(self.as_path()).unwrap();
+
             panic!(
-                "path is not a symlink, but {:?}: {}",
-                metadata_no_follow.file_type(),
+                "path is not a symlink, but {}: {}",
+                path_type.to_short_name(),
                 self.as_path().display()
             );
         }
@@ -338,6 +340,9 @@ where
     ) where
         P: AsRef<Path>,
     {
+        self.assert_exists();
+
+
         let canonical_expected_path = expected_destination_path
             .as_ref()
             .canonicalize()
