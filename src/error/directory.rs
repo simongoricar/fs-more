@@ -289,8 +289,10 @@ pub enum CopyDirectoryExecutionError {
         .symlink_path.display()
     )]
     SymlinkCreationError {
+        /// Path to the symbolic link that could not be created.
         symlink_path: PathBuf,
 
+        /// The underlying symlink creation error.
         #[source]
         error: std::io::Error,
     },
@@ -410,6 +412,12 @@ pub enum MoveDirectoryExecutionError {
     #[error(transparent)]
     CopyDirectoryError(#[from] CopyDirectoryExecutionError),
 
+    /// Occurs when the only enabled directory move strategy is rename,
+    /// and that fails.
+    ///
+    /// This commonly indicates that the source and destination directory are
+    /// on different mount points, which would require copy-and-delete, and sometimes
+    /// even following (instead of preserving) symbolic links.
     #[error(
         "only rename strategy is enabled (with no copy-and-delete \
         fallback strategy), but we were unable to rename the directory"

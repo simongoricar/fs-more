@@ -372,6 +372,8 @@ pub(crate) fn copy_directory_unchecked(
 ///
 ///
 /// # Symbolic links
+/// TODO update with new options
+///
 /// Symbolic links are followed, but not preserved.
 ///
 /// If the provided `source_directory_path` itself leads to a symlink that points to a directory,
@@ -1226,6 +1228,8 @@ where
 ///
 ///
 /// # Symbolic links
+/// TODO update with new options
+///
 /// Symbolic links are followed, but not preserved.
 ///
 /// If the provided `source_directory_path` itself leads to a symlink that points to a directory,

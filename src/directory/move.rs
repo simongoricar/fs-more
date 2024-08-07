@@ -32,16 +32,38 @@ use crate::{
 };
 
 
-// TODO implement, document and test
+/// Options for the copy-and-delete strategy when moving a directory.
+///
+/// See also: [`DirectoryMoveOptions`] and [`move_directory`].
 pub struct DirectoryMoveByCopyOptions {
-    // TODO implement, document and test
+    /// Sets the behaviour for symbolic links when moving a directory by copy-and-delete.
+    ///
+    /// This has the same impact as the [`dco-symlink_behaviour`] option under [`DirectoryCopyOptions`].
+    ///
+    /// Note that setting this to [`SymlinkBehaviour::Follow`] instead of
+    /// [`SymlinkBehaviour::Keep`] (which is the default) will result in behaviour
+    /// that differs than the rename method (which will always keep symbolic links).
+    /// In other words, if both strategies are enabled and this is changed from the default,
+    /// you will need to look at which strategy was used after the move to discern
+    /// whether symbolic links were actually preserved or not.
+    ///
+    ///
+    /// [`dco-symlink_behaviour`]: crate::directory::DirectoryCopyOptions::symlink_behaviour
     pub symlink_behaviour: SymlinkBehaviour,
 
-    // TODO implement, document and test
+    /// Sets the behaviour for broken symbolic links when moving a directory by copy-and-delete.
+    ///
+    /// This has the same impact as the [`dco-broken_symlink_behaviour`] option under [`DirectoryCopyOptions`].
+    ///
+    ///
+    /// [`dco-broken_symlink_behaviour`]: crate::directory::DirectoryCopyOptions::broken_symlink_behaviour
     pub broken_symlink_behaviour: BrokenSymlinkBehaviour,
 }
 
 impl Default for DirectoryMoveByCopyOptions {
+    /// Initializes the default options for the copy-and-delete strategy when moving a directory:
+    /// - symbolic links are kept, and
+    /// - broken symbolic links are preserved as-is (i.e. kept broken).
     fn default() -> Self {
         Self {
             symlink_behaviour: SymlinkBehaviour::Keep,
@@ -51,18 +73,40 @@ impl Default for DirectoryMoveByCopyOptions {
 }
 
 
-// TODO implement, test, and document
+/// Describes the allowed strategies for moving a directory.
+///
+/// This ensures at least one of "rename" or "copy-and-delete" strategies are enabled at any point.
+/// Unless you have a good reason for picking something else, [`Self::Either`]
+/// is highly recommended. It ensures we always try to rename the directory if the
+/// conditions are right, and fall back to the slower copy-and-delete strategy if that fails.
+///
+/// See also: [`DirectoryMoveOptions`] and [`move_directory`].
 pub enum DirectoryMoveAllowedStrategies {
-    // TODO implement, test, and document
+    /// Disables the move by copy-and-delete strategy, leaving only the rename strategy.
+    ///
+    /// If renaming fails, for example due to source and destination being on different mount points,
+    /// the corresponding function will return
+    /// [`ExecutionError`]`(`[`RenameFailedAndNoFallbackStrategy`]`)`.
+    ///
+    ///
+    /// [`ExecutionError`]: crate::error::MoveDirectoryError::ExecutionError
+    /// [`RenameFailedAndNoFallbackStrategy`]: crate::error::MoveDirectoryExecutionError::RenameFailedAndNoFallbackStrategy
     OnlyRename,
 
-    // TODO implement, test, and document
+    /// Disables the move by rename strategy, leaving only the less efficient,
+    /// but more general, copy-and-delete strategy.
     OnlyCopyAndDelete {
+        /// Options for the copy-and-delete strategy.
         options: DirectoryMoveByCopyOptions,
     },
 
-    // TODO implement, test, and document
+    /// Enables both the rename and copy-and-delete strategies,
+    /// leaving the optimal choice in the hands of the library.
+    ///
+    /// Generally speaking, a rename will be attempted under the right conditions,
+    /// with the copy-and-delete performed as a fallback if the rename fails.
     Either {
+        /// Options for the copy-and-delete strategy.
         copy_and_delete_options: DirectoryMoveByCopyOptions,
     },
 }
@@ -98,6 +142,11 @@ impl DirectoryMoveAllowedStrategies {
 }
 
 impl Default for DirectoryMoveAllowedStrategies {
+    /// Returns the default directory move strategy configuration,
+    /// which is with both rename and copy-and-delete enabled.
+    ///
+    /// For details on the default copy-and-delete options,
+    /// see [`DirectoryMoveByCopyOptions::default`].
     fn default() -> Self {
         Self::Either {
             copy_and_delete_options: DirectoryMoveByCopyOptions::default(),
@@ -107,6 +156,12 @@ impl Default for DirectoryMoveAllowedStrategies {
 
 
 /// Options that influence the [`move_directory`] function.
+///
+/// ## Considerations
+/// If you allow the destination directory to exist and be non-empty,
+/// source directory contents will be merged (!) into the destination directory.
+/// This is not the default, and you should probably consider the consequences
+/// very carefully before using that option.
 pub struct DirectoryMoveOptions {
     /// Specifies whether you allow the target directory to exist before moving
     /// and whether it must be empty or not.
@@ -118,7 +173,7 @@ pub struct DirectoryMoveOptions {
     /// See [`DestinationDirectoryRule`] for more details and examples.
     pub destination_directory_rule: DestinationDirectoryRule,
 
-    // TODO implement, test, and document
+    /// Sets the allowed directory move strategies.
     pub allowed_strategies: DirectoryMoveAllowedStrategies,
 }
 
@@ -133,11 +188,14 @@ impl Default for DirectoryMoveOptions {
 
 
 
-/// Describes a strategy for performing a directory move.
+/// Describes a strategy usef when a directory move was performed.
 ///
 /// This is included in [`DirectoryMoveFinished`] to allow
 /// callers to understand how the directory was moved.
-/// Note that *the caller can not request that a specific move strategy be used*.
+///
+/// This is used only as a return value; if you want to control the
+/// available directory move strategies, see [`DirectoryMoveAllowedStrategies`]
+/// and the options described in [`move_directory`] / [`move_directory_with_progress`].
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum DirectoryMoveStrategy {
     /// The source directory was simply renamed from the source path to the target path.
@@ -229,11 +287,11 @@ pub(crate) enum DirectoryMoveByRenameAction {
 }
 
 
-/// Attempts a directory move by using the [`std::fs::rename`]
-/// (or `fs_err::rename` is using the `fs-err` feature).
+/// Attempts a directory move by using [`std::fs::rename`]
+/// (or `fs_err::rename` if the `fs-err` feature flag is enabled).
 ///
-/// Returns [`DirectoryMoveByRenameAction`], which indicates whether the move-by-rename
-/// succeeded, or failed due to source and destination being on different mount points or drives.
+/// Returns [`DirectoryMoveByRenameAction`], which indicates whether the move by rename
+/// succeeded or failed due to source and destination being on different mount points or drives.
 fn attempt_directory_move_by_rename(
     validated_source_directory: &ValidatedSourceDirectory,
     source_directory_details: &DirectoryContentDetails,
@@ -242,7 +300,6 @@ fn attempt_directory_move_by_rename(
     // We can attempt to simply rename the directory. This is much faster,
     // but will fail if the source and target paths aren't on the same mount point or filesystem
     // or, if on Windows, the target directory already exists.
-
 
     #[cfg(unix)]
     {
@@ -334,36 +391,42 @@ fn attempt_directory_move_by_rename(
 /// If the rename fails, the link will be followed and not preserved
 /// by performing a directory copy, after which the symlink will be removed.
 ///
-/// For symlinks *inside* the source directory, the behaviour is different depending on the move strategy:
-/// - If a move by rename succeeds, any symbolic links inside the source directory, valid or not, will be preserved.
-/// - If the copy-and-delete fallback is used, all symbolic links are followed and not preserved
-///   (see details in [`copy_directory`]).
+/// For symlinks *inside* the source directory, the behaviour is different depending on the move strategy
+/// (individual strategies can be disabled, see section below):
+/// - If the destination is non-existent (or empty), a move by rename will be attempted first.
+///   In that case, any symbolic links inside the source directory, valid or not, will be preserved.
+/// - If the copy-and-delete fallback is used, the behaviour depends on the [`symlink_behaviour`]
+///   option for that particular strategy (the default is to keep symbolic links as-is).
 ///
 ///
 /// # Options
 /// See [`DirectoryMoveOptions`] for a full set of available directory moving options.
 ///
+/// ## Considerations
 /// If you allow the destination directory to exist and be non-empty,
-/// source directory contents will be merged into the destination directory.
-/// Note that this is not the default, and you should probably consider the consequences
+/// source directory contents will be merged (!) into the destination directory.
+/// This is *not* the default, and you should probably consider the consequences
 /// very carefully before setting the corresponding [`options.destination_directory_rule`]
 /// option to anything other than [`DisallowExisting`] or [`AllowEmpty`].
 ///
 ///
 /// # Move strategies
-/// TODO update with strategy restriction options
-///
-/// Depending on the situation, the move can be performed one of two ways:
+/// The move can be performed using either of the two available strategies:
 /// - The source directory can be simply renamed to the destination directory.
-///   This is the preferred (and fastest) method, and will preserve
-///   the `source_directory_path` symlink, if it is one.
-///   In addition to some other platform-specifics<sup>*</sup>,
-///   this strategy requires that the destination directory is empty or doesn't exist.
+///   This is the preferred (and fastest) method. Additionally, if `source_directory_path` is itself
+///   a symbolic link it has the side effect of preserving that.
+///   This strategy requires that the destination directory is either empty or doesn't exist,
+///   though precise conditions depend on platform<sup>*</sup>.
 /// - If the directory can't be renamed, the function will fall back to a copy-and-rename strategy.
+///
+/// **By default, a rename is attempted first, with copy-and-delete available as a fallback.**
+/// Either of these strategies can be disabled in the options struct (see [`allowed_strategies`]),
+/// but at least one must always be enabled.
+///
 ///
 /// For more information, see [`DirectoryMoveStrategy`].
 ///
-/// <sup>* Windows: the destination directory must not exist; if it does,
+/// <sup>* Windows: the destination directory must not exist at all; if it does,
 /// *even if it is empty*, the rename strategy will fail.</sup>
 ///
 ///
@@ -382,6 +445,8 @@ fn attempt_directory_move_by_rename(
 ///
 ///
 /// [`copy_directory`]: super::copy_directory
+/// [`symlink_behaviour`]: DirectoryMoveByCopyOptions::symlink_behaviour
+/// [`allowed_strategies`]: DirectoryMoveOptions::allowed_strategies
 /// [`options.destination_directory_rule`]: DirectoryMoveOptions::destination_directory_rule
 /// [`DisallowExisting`]: DestinationDirectoryRule::DisallowExisting
 /// [`AllowEmpty`]: DestinationDirectoryRule::AllowEmpty
@@ -394,8 +459,6 @@ where
     S: AsRef<Path>,
     T: AsRef<Path>,
 {
-    // TODO update function documentation (regarding symlink options)
-
     let validated_source_directory = validate_source_directory_path(source_directory_path.as_ref())
         .map_err(MoveDirectoryPreparationError::SourceDirectoryValidationError)?;
 
@@ -494,14 +557,34 @@ where
 
 
 
-// TODO implement, document and test
+/// Options for the copy-and-delete strategy when moving a directory
+/// (with progress tracking).
+///
+/// See also: [`DirectoryMoveWithProgressOptions`] and [`move_directory_with_progress`].
 pub struct DirectoryMoveWithProgressByCopyOptions {
-    // TODO implement, document and test
-    // TODO Note that changing this from Keep might make more moves possible, but would result in inconsistent behaviour
-    //      between strategies, so only do it if you know what you are doing.
+    /// Sets the behaviour for symbolic links when moving a directory by copy-and-delete.
+    ///
+    /// This has the same impact as the [`dco-symlink_behaviour`] option
+    /// under [`DirectoryCopyWithProgressOptions`].
+    ///
+    /// Note that setting this to [`SymlinkBehaviour::Follow`] instead of
+    /// [`SymlinkBehaviour::Keep`] (which is the default) will result in behaviour
+    /// that differs than the rename method (which will always keep symbolic links).
+    /// In other words, if both strategies are enabled and this is changed from the default,
+    /// you will need to look at which strategy was used after the move to discern
+    /// whether symbolic links were actually preserved or not.
+    ///
+    ///
+    /// [`dco-symlink_behaviour`]: crate::directory::DirectoryCopyWithProgressOptions::symlink_behaviour
     pub symlink_behaviour: SymlinkBehaviour,
 
-    // TODO implement, document and test
+    /// Sets the behaviour for broken symbolic links when moving a directory by copy-and-delete.
+    ///
+    /// This has the same impact as the [`dco-broken_symlink_behaviour`] option
+    /// under [`DirectoryCopyWithProgressOptions`].
+    ///
+    ///
+    /// [`dco-broken_symlink_behaviour`]: crate::directory::DirectoryCopyWithProgressOptions::broken_symlink_behaviour
     pub broken_symlink_behaviour: BrokenSymlinkBehaviour,
 
     /// Internal buffer size used for reading source files.
@@ -509,7 +592,7 @@ pub struct DirectoryMoveWithProgressByCopyOptions {
     /// Defaults to 64 KiB.
     pub read_buffer_size: usize,
 
-    /// Internal buffer size used for writing to a destination file.
+    /// Internal buffer size used for writing to destination files.
     ///
     /// Defaults to 64 KiB.
     pub write_buffer_size: usize,
@@ -535,18 +618,41 @@ impl Default for DirectoryMoveWithProgressByCopyOptions {
 }
 
 
-// TODO implement, test, and document
+/// Describes the allowed strategies for moving a directory
+/// (with progress tracking).
+///
+/// This ensures at least one of "rename" or "copy-and-delete" strategies are enabled at any point.
+/// Unless you have a good reason for picking something else, [`Self::Either`]
+/// is highly recommended. It ensures we always try to rename the directory if the
+/// conditions are right, and fall back to the slower copy-and-delete strategy if that fails.
+///
+/// See also: [`DirectoryMoveWithProgressOptions`] and [`move_directory_with_progress`].
 pub enum DirectoryMoveWithProgressAllowedStrategies {
-    // TODO implement, test, and document
+    /// Disables the move by copy-and-delete strategy, leaving only the rename strategy.
+    ///
+    /// If renaming fails, for example due to source and destination being on different
+    /// mount points, the corresponding function will return
+    /// [`ExecutionError`]`(`[`RenameFailedAndNoFallbackStrategy`]`)`.
+    ///
+    ///
+    /// [`ExecutionError`]: crate::error::MoveDirectoryError::ExecutionError
+    /// [`RenameFailedAndNoFallbackStrategy`]: crate::error::MoveDirectoryExecutionError::RenameFailedAndNoFallbackStrategy
     OnlyRename,
 
-    // TODO implement, test, and document
+    /// Disables the move by rename strategy, leaving only the less efficient,
+    /// but more general, copy-and-delete strategy.
     OnlyCopyAndDelete {
+        /// Options for the copy-and-delete strategy.
         options: DirectoryMoveWithProgressByCopyOptions,
     },
 
-    // TODO implement, test, and document
+    /// Enables both the rename and copy-and-delete strategies,
+    /// leaving the optimal choice in the hands of the library.
+    ///
+    /// Generally speaking, a rename will be attempted under the right conditions,
+    /// with the copy-and-delete performed as a fallback if the rename fails.
     Either {
+        /// Options for the copy-and-delete strategy.
         copy_and_delete_options: DirectoryMoveWithProgressByCopyOptions,
     },
 }
@@ -584,6 +690,11 @@ impl DirectoryMoveWithProgressAllowedStrategies {
 }
 
 impl Default for DirectoryMoveWithProgressAllowedStrategies {
+    /// Returns the default directory move strategy configuration,
+    /// which is with both rename and copy-and-delete enabled.
+    ///
+    /// For details on the default copy-and-delete options,
+    /// see [`DirectoryMoveWithProgressByCopyOptions::default`].
     fn default() -> Self {
         Self::Either {
             copy_and_delete_options: DirectoryMoveWithProgressByCopyOptions::default(),
@@ -604,7 +715,7 @@ pub struct DirectoryMoveWithProgressOptions {
     /// See [`DestinationDirectoryRule`] for more details and examples.
     pub destination_directory_rule: DestinationDirectoryRule,
 
-    // TODO implement, test, and document
+    /// Sets the allowed directory move strategies.
     pub allowed_strategies: DirectoryMoveWithProgressAllowedStrategies,
 }
 
@@ -699,37 +810,42 @@ pub struct DirectoryMoveProgress {
 /// If the rename fails, the link will be followed and not preserved
 /// by performing a directory copy, after which the symlink will be removed.
 ///
-/// For symlinks *inside* the source directory, the behaviour is different depending on the move strategy:
-/// - If a move by rename succeeds, any symbolic links inside the source directory, valid or not, will be preserved.
-/// - If the copy-and-delete fallback is used, all symbolic links are followed and not preserved
-///   (see details in [`copy_directory_with_progress`]).
-///
+/// For symlinks *inside* the source directory, the behaviour is different depending on the move strategy
+/// (individual strategies can be disabled, see section below):
+/// - If the destination is non-existent (or empty), a move by rename will be attempted first.
+///   In that case, any symbolic links inside the source directory, valid or not, will be preserved.
+/// - If the copy-and-delete fallback is used, the behaviour depends on the [`symlink_behaviour`]
+///   option for that particular strategy (the default is to keep symbolic links as-is).
 ///
 ///
 /// # Options
 /// See [`DirectoryMoveWithProgressOptions`] for a full set of available directory moving options.
 ///
+/// ## Considerations
 /// If you allow the destination directory to exist and be non-empty,
-/// source directory contents will be merged into the destination directory.
-/// Note that this is not the default, and you should probably consider the consequences
+/// source directory contents will be merged (!) into the destination directory.
+/// This is *not* the default, and you should probably consider the consequences
 /// very carefully before setting the corresponding [`options.destination_directory_rule`]
 /// option to anything other than [`DisallowExisting`] or [`AllowEmpty`].
 ///
 ///
 /// # Move strategies
-/// TODO update with strategy restriction options
-///
-/// Depending on the situation, the move can be performed one of two ways:
+/// The move can be performed using either of the two available strategies:
 /// - The source directory can be simply renamed to the destination directory.
-///   This is the preferred (and fastest) method, and will preserve
-///   the `source_directory_path` symlink, if it is one.
-///   In addition to some other platform-specifics<sup>*</sup>,
-///   this strategy requires that the destination directory is empty or doesn't exist.
+///   This is the preferred (and fastest) method. Additionally, if `source_directory_path` is itself
+///   a symbolic link it has the side effect of preserving that.
+///   This strategy requires that the destination directory is either empty or doesn't exist,
+///   though precise conditions depend on platform<sup>*</sup>.
 /// - If the directory can't be renamed, the function will fall back to a copy-and-rename strategy.
+///
+/// **By default, a rename is attempted first, with copy-and-delete available as a fallback.**
+/// Either of these strategies can be disabled in the options struct (see [`allowed_strategies`]),
+/// but at least one must always be enabled.
+///
 ///
 /// For more information, see [`DirectoryMoveStrategy`].
 ///
-/// <sup>* Windows: the destination directory must not exist; if it does,
+/// <sup>* Windows: the destination directory must not exist at all; if it does,
 /// *even if it is empty*, the rename strategy will fail.</sup>
 ///
 ///
@@ -765,6 +881,8 @@ pub struct DirectoryMoveProgress {
 ///
 ///
 /// [`copy_directory_with_progress`]: super::copy_directory_with_progress
+/// [`symlink_behaviour`]: DirectoryMoveWithProgressByCopyOptions::symlink_behaviour
+/// [`allowed_strategies`]: DirectoryMoveWithProgressOptions::allowed_strategies
 /// [`options.destination_directory_rule`]: DirectoryMoveWithProgressOptions::destination_directory_rule
 /// [`progress_update_byte_interval`]: DirectoryMoveWithProgressByCopyOptions::progress_update_byte_interval
 /// [`DisallowExisting`]: DestinationDirectoryRule::DisallowExisting
@@ -780,8 +898,6 @@ where
     T: AsRef<Path>,
     F: FnMut(&DirectoryMoveProgress),
 {
-    // TODO update function documentation (regarding symlink options)
-
     let validated_source_directory = validate_source_directory_path(source_directory_path.as_ref())
         .map_err(MoveDirectoryPreparationError::SourceDirectoryValidationError)?;
 
