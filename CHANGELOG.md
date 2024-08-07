@@ -5,6 +5,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+This is a pretty significant release with a large set of breaking changes (yet again).
+
+Alongside several fields, parameters, and types being renamed, there are three important additions and changes to point out:
+- `DirectoryScan` has been removed in favor of the new iterator-based `DirectoryScanner` inspired by the wonderful `walkdir` crate,
+- directory copy and move function now have options that specify how to behave when encountering valid as well as broken symbolic links,
+- the `file_size_in_bytes` function no longer follows symbolic links.
+
+
+### Added
+- Added new iterator-based directory scanner (see `DirectoryScanner`; the old scanner has been removed).
+  The same data can be acquired as before, the only difference is that the new iterator 
+  will yield individual entries, so you'll need to sort e.g. files and directories yourself.
+- Directory copy and move functions now have two new options: `symlink_behaviour` and `broken_symlink_behaviour`.
+  Callers can now customize whether symbolic links are preserved in the destination, or followed (dereferenced),
+  as well as customize how `fs-more` should behave when broken symbolic links are encountered.
+- The internal test harness now has support for generating trees with broken symbolic links, 
+  so we can properly test that sort of behaviour.
+- Directory move functions have two possible strategies: rename and copy-and-delete (this is not new). 
+  The new thing are the newly-added options that control which strategies the function may use.
+  For example, you may now configure `move_directory` to perform a move only by renaming, only by copy-and-deleting,
+  or by trying to rename with copy-and-deleting as a fallback (this is the default, which is the same as in previous versions).
+  This set of options is provided as a convenience for unusual cases - in the vast majority of situations, stick to `Either`,
+  which will automatically select the best strategy.
+
+
+### Changed
+- `ExistingSubDirectoryBehaviour` has been renamed to `CollidingSubDirectoryBehaviour`, and its appearance in
+  fields and parameters has been renamed from `existing_destination_subdirectory_behaviour` to `colliding_subdirectory_behaviour`.
+- `ExistingFileBehaviour` has been renamed to `CollidingFileBehaviour`, and its appearance in
+  fields and parameters has been renamed from `existing_destination_file_behaviour` to `colliding_file_behaviour`.
+- `CopyDirectoryDepthLimit` has been renamed to `DirectoryCopyDepthLimit` to be in line with the type naming scheme elsewhere.
+- The `file_size_in_bytes` function no longer follows symbolic links, and instead returns the size of the link itself.
+- Option struct fields for directory move functions have been shuffled around - certain options have been moved.
+
+
+### Fixed
+- Reported in #1: `move_directory` and `move_directory_with_progress` now correctly attempt to move a directory by renaming it
+  when the destination doesn't exist; the underlying code previously never triggered due to an improper condition.
+- Reported in #2: directory copy and move functions no longer refuse to operate on directories containing broken symbolic links,
+  and instead respect the provided `broken_symlink_behaviour` option. 
+  By default, any broken symbolic links will be kept as is, i.e. broken.
+- `move_directory` and `move_directory_with_progress` no longer erroneously rename the symlink destination
+  instead of the symlink itself when the provided source path is a symlink to a directory.
+- Internal `Path::try_exists` calls have been preventatively migrated over to a custom internal 
+  `try_exists_without_follow` that does not follow symbolic links, in order to avoid edge cases 
+  when encountering broken symbolic links (none known, but better safe than sorry).
+
+
+### Removed
+- Removed old directory scanner in favor of the new iterator-based one.
+
 
 ---
 
