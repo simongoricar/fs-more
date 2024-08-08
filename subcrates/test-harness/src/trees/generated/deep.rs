@@ -7,14 +7,14 @@
 //! The full file tree is as follows:
 //! ```md
 //! .
-//! |-- a.bin (random data, 32 KiB)
+//! |-> a.bin (binary data, 32 KiB)
 //! |-- foo
 //! |   |-- bar
 //! |   |   |-- hello
 //! |   |   |   |-- world
-//! |   |   |   |   |-- d.bin (random data, 256 KiB)
-//! |   |   |-- c.bin (random data, 128 KiB)
-//! |   |-- b.bin (random data, 64 KiB)
+//! |   |   |   |   |-> d.bin (binary data, 256 KiB)
+//! |   |   |-> c.bin (binary data, 128 KiB)
+//! |   |-> b.bin (binary data, 64 KiB)
 //! ```
 //!
 //! <sup>DO NOT MODIFY THIS FILE. INSTEAD, MODIFY THE SOURCE JSON DATA FILE,
@@ -439,14 +439,14 @@ This harness has the following sub-entries at the top level (files, sub-director
 The full file tree is as follows:
 ```md
 .
-|-- a.bin (random data, 32 KiB)
+|-> a.bin (binary data, 32 KiB)
 |-- foo
 |   |-- bar
 |   |   |-- hello
 |   |   |   |-- world
-|   |   |   |   |-- d.bin (random data, 256 KiB)
-|   |   |-- c.bin (random data, 128 KiB)
-|   |-- b.bin (random data, 64 KiB)
+|   |   |   |   |-> d.bin (binary data, 256 KiB)
+|   |   |-> c.bin (binary data, 128 KiB)
+|   |-> b.bin (binary data, 64 KiB)
 ```
 
 

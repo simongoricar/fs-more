@@ -7,10 +7,10 @@
 //! The full file tree is as follows:
 //! ```md
 //! .
-//! |-- empty.txt (empty)
+//! |-> empty.txt (empty)
 //! |-- yes
-//! |   |-- no.bin (random data, 16 KiB)
-//! |   |-- hello-world.txt (text data, 12 B)
+//! |   |-> no.bin (binary data, 16 KiB)
+//! |   |-> hello-world.txt (text data, 12 B)
 //! ```
 //!
 //! <sup>DO NOT MODIFY THIS FILE. INSTEAD, MODIFY THE SOURCE JSON DATA FILE,
@@ -229,10 +229,10 @@ This harness has the following sub-entries at the top level (files, sub-director
 The full file tree is as follows:
 ```md
 .
-|-- empty.txt (empty)
+|-> empty.txt (empty)
 |-- yes
-|   |-- no.bin (random data, 16 KiB)
-|   |-- hello-world.txt (text data, 12 B)
+|   |-> no.bin (binary data, 16 KiB)
+|   |-> hello-world.txt (text data, 12 B)
 ```
 
 

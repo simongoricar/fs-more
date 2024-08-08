@@ -45,41 +45,98 @@ fn format_tree_structure_as_string(schema: &FileSystemHarnessSchema) -> String {
         }
 
         if next_item.depth > 0 {
-            formatted_line.push_str("|-- ");
+            formatted_line.push_str(
+                if matches!(next_item.entry, FileSystemHarnessEntry::Directory(_)) {
+                    "|-- "
+                } else {
+                    "|-> "
+                },
+            );
         }
+
 
         formatted_line.push_str(
             match next_item.entry {
-                FileSystemHarnessEntry::File(file) => {
-                    let file_description =
-                        match file.data.as_ref().unwrap_or(&FileDataConfiguration::Empty) {
-                            FileDataConfiguration::Empty => "empty".to_string(),
-                            FileDataConfiguration::Text { content } => {
-                                let human_size =
-                                    humansize::format_size(content.len(), humansize::BINARY);
+                FileSystemHarnessEntry::File(file_entry) => {
+                    let short_file_description = match file_entry
+                        .data
+                        .as_ref()
+                        .unwrap_or(&FileDataConfiguration::Empty)
+                    {
+                        FileDataConfiguration::Empty => "empty".to_string(),
+                        FileDataConfiguration::Text { content } => {
+                            let formatted_length_of_content =
+                                humansize::format_size(content.len(), humansize::BINARY);
 
-                                format!("text data, {}", human_size)
-                            }
-                            FileDataConfiguration::DeterministicRandom {
-                                file_size_bytes, ..
-                            } => {
-                                let human_size =
-                                    humansize::format_size(*file_size_bytes, humansize::BINARY);
+                            format!("text data, {}", formatted_length_of_content)
+                        }
+                        FileDataConfiguration::DeterministicRandom {
+                            file_size_bytes, ..
+                        } => {
+                            let formatted_number_of_bytes =
+                                humansize::format_size(*file_size_bytes, humansize::BINARY);
 
-                                format!("random data, {}", human_size)
-                            }
-                        };
+                            format!("binary data, {}", formatted_number_of_bytes)
+                        }
+                    };
 
-                    format!("{} ({})", file.name.as_str(), file_description)
+                    let entry_suffix_if_contains_id = match file_entry.id.as_ref() {
+                        Some(entry_id) => {
+                            format!(" [ID \"{}\"]", entry_id)
+                        }
+                        None => "".to_string(),
+                    };
+
+
+                    format!(
+                        "{} ({}){}",
+                        file_entry.name, short_file_description, entry_suffix_if_contains_id
+                    )
                 }
-                FileSystemHarnessEntry::Directory(directory) => directory.name.to_string(),
-                FileSystemHarnessEntry::Symlink(symlink) => symlink.name.to_string(),
-                FileSystemHarnessEntry::BrokenSymlink(broken_symlink) => {
-                    broken_symlink.name.to_string()
+                FileSystemHarnessEntry::Directory(dir_entry) => {
+                    let entry_suffix_if_contains_id = match dir_entry.id.as_ref() {
+                        Some(entry_id) => {
+                            format!(" [ID \"{}\"]", entry_id)
+                        }
+                        None => "".to_string(),
+                    };
+
+                    format!("{}{}", dir_entry.name, entry_suffix_if_contains_id)
+                }
+                FileSystemHarnessEntry::Symlink(symlink_entry) => {
+                    let entry_suffix_if_contains_id = match symlink_entry.id.as_ref() {
+                        Some(entry_id) => {
+                            format!(" [ID \"{}\"]", entry_id)
+                        }
+                        None => "".to_string(),
+                    };
+
+                    format!(
+                        "{} (symlink to \"{}\"){}",
+                        symlink_entry.name,
+                        symlink_entry.destination_entry_id,
+                        entry_suffix_if_contains_id
+                    )
+                }
+                FileSystemHarnessEntry::BrokenSymlink(broken_symlink_entry) => {
+                    let entry_suffix_if_contains_id = match broken_symlink_entry.id.as_ref() {
+                        Some(entry_id) => {
+                            format!(" [ID \"{}\"]", entry_id)
+                        }
+                        None => "".to_string(),
+                    };
+
+                    format!(
+                        "{} (broken symlink to \"{}\"){}",
+                        broken_symlink_entry.name,
+                        broken_symlink_entry.destination_relative_path,
+                        entry_suffix_if_contains_id
+                    )
                 }
             }
             .as_str(),
         );
+
 
         formatted_lines.push(formatted_line);
 
