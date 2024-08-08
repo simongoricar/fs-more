@@ -13,13 +13,12 @@
 //!
 //! Visit the **[`directory`]** and **[`file`][mod@file]** modules
 //! for a deeper overview of the available features.
+//! <br> Also, you can find the error types in the [`error`] module.
 //!
 //!
 //! <br>
 //!
 //! # Feature flags
-//! The following feature flags contain optional functionality:
-//!
 //! <table>
 //!  <thead style="background-color: rgba(0, 0, 0, 0.18)">
 //!   <tr>
@@ -115,6 +114,8 @@
 //! # }
 //! ```
 //!
+//! <br>
+//!
 //! Moving a directory and getting updates on the progress:
 //! ```no_run
 //! # use std::path::Path;
@@ -162,12 +163,12 @@
 #![warn(missing_docs)]
 
 
-/// This brings in the README's doctests (and is present only when testing).
+/// This brings in the README.md's doctests (and is present only when testing).
 #[doc = include_str!("../README.md")]
 #[cfg(doctest)]
 pub struct ReadmeDoctests;
 
-/// This brings in the CONTRIBUTING's doctests (and is present only when testing).
+/// This brings in the CONTRIBUTING.md's doctests (and is present only when testing).
 #[doc = include_str!("../CONTRIBUTING.md")]
 #[cfg(doctest)]
 pub struct ContributionGuideDoctests;
@@ -205,6 +206,7 @@ const DEFAULT_WRITE_BUFFER_SIZE: usize = 1024 * 64;
 /// - [`DirectoryCopyWithProgressOptions`][crate::directory::DirectoryCopyWithProgressOptions]
 /// - [`DirectoryMoveWithProgressOptions`][crate::directory::DirectoryMoveWithProgressOptions]
 const DEFAULT_PROGRESS_UPDATE_BYTE_INTERVAL: u64 = 1024 * 512;
+
 
 #[macro_use]
 mod macros;

@@ -117,8 +117,6 @@ println!(
 <br>
 
 ## Feature flags
-The following feature flags contain optional functionality:
-
 <table>
 <thead>
   <tr>
