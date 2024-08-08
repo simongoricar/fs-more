@@ -38,25 +38,27 @@ use crate::{
 pub struct DirectoryMoveByCopyOptions {
     /// Sets the behaviour for symbolic links when moving a directory by copy-and-delete.
     ///
-    /// This has the same impact as the [`dco-symlink_behaviour`] option under [`DirectoryCopyOptions`].
-    ///
     /// Note that setting this to [`SymlinkBehaviour::Follow`] instead of
-    /// [`SymlinkBehaviour::Keep`] (which is the default) will result in behaviour
-    /// that differs than the rename method (which will always keep symbolic links).
+    /// [`SymlinkBehaviour::Keep`] (keep is the default) will result in behaviour
+    /// that differs than the rename method (that one will always keep symbolic links).
     /// In other words, if both strategies are enabled and this is changed from the default,
     /// you will need to look at which strategy was used after the move to discern
     /// whether symbolic links were actually preserved or not.
     ///
+    /// This has the same impact as the [`symlink_behaviour`][dco-symlink_behaviour]
+    /// option under [`DirectoryCopyOptions`].
     ///
-    /// [`dco-symlink_behaviour`]: crate::directory::DirectoryCopyOptions::symlink_behaviour
+    ///
+    /// [dco-symlink_behaviour]: crate::directory::DirectoryCopyOptions::symlink_behaviour
     pub symlink_behaviour: SymlinkBehaviour,
 
     /// Sets the behaviour for broken symbolic links when moving a directory by copy-and-delete.
     ///
-    /// This has the same impact as the [`dco-broken_symlink_behaviour`] option under [`DirectoryCopyOptions`].
+    /// This has the same impact as the [`broken_symlink_behaviour`][dco-broken_symlink_behaviour]
+    /// option under [`DirectoryCopyOptions`].
     ///
     ///
-    /// [`dco-broken_symlink_behaviour`]: crate::directory::DirectoryCopyOptions::broken_symlink_behaviour
+    /// [dco-broken_symlink_behaviour]: crate::directory::DirectoryCopyOptions::broken_symlink_behaviour
     pub broken_symlink_behaviour: BrokenSymlinkBehaviour,
 }
 
@@ -157,7 +159,7 @@ impl Default for DirectoryMoveAllowedStrategies {
 
 /// Options that influence the [`move_directory`] function.
 ///
-/// ## Considerations
+/// ## `destination_directory_rule` considerations
 /// If you allow the destination directory to exist and be non-empty,
 /// source directory contents will be merged (!) into the destination directory.
 /// This is not the default, and you should probably consider the consequences
@@ -174,6 +176,7 @@ pub struct DirectoryMoveOptions {
     pub destination_directory_rule: DestinationDirectoryRule,
 
     /// Sets the allowed directory move strategies.
+    /// Per-strategy options are also configured here.
     pub allowed_strategies: DirectoryMoveAllowedStrategies,
 }
 
@@ -567,30 +570,30 @@ where
 pub struct DirectoryMoveWithProgressByCopyOptions {
     /// Sets the behaviour for symbolic links when moving a directory by copy-and-delete.
     ///
-    /// This has the same impact as the [`dco-symlink_behaviour`] option
-    /// under [`DirectoryCopyWithProgressOptions`].
-    ///
     /// Note that setting this to [`SymlinkBehaviour::Follow`] instead of
-    /// [`SymlinkBehaviour::Keep`] (which is the default) will result in behaviour
-    /// that differs than the rename method (which will always keep symbolic links).
+    /// [`SymlinkBehaviour::Keep`] (keep is the default) will result in behaviour
+    /// that differs than the rename method (that one will always keep symbolic links).
     /// In other words, if both strategies are enabled and this is changed from the default,
     /// you will need to look at which strategy was used after the move to discern
     /// whether symbolic links were actually preserved or not.
     ///
+    /// This has the same impact as the [`symlink_behaviour`][dco-symlink_behaviour] option
+    /// under [`DirectoryCopyWithProgressOptions`].
     ///
-    /// [`dco-symlink_behaviour`]: crate::directory::DirectoryCopyWithProgressOptions::symlink_behaviour
+    ///
+    /// [dco-symlink_behaviour]: crate::directory::DirectoryCopyWithProgressOptions::symlink_behaviour
     pub symlink_behaviour: SymlinkBehaviour,
 
     /// Sets the behaviour for broken symbolic links when moving a directory by copy-and-delete.
     ///
-    /// This has the same impact as the [`dco-broken_symlink_behaviour`] option
+    /// This has the same impact as the [`broken_symlink_behaviour`][dco-broken_symlink_behaviour] option
     /// under [`DirectoryCopyWithProgressOptions`].
     ///
     ///
-    /// [`dco-broken_symlink_behaviour`]: crate::directory::DirectoryCopyWithProgressOptions::broken_symlink_behaviour
+    /// [dco-broken_symlink_behaviour]: crate::directory::DirectoryCopyWithProgressOptions::broken_symlink_behaviour
     pub broken_symlink_behaviour: BrokenSymlinkBehaviour,
 
-    /// Internal buffer size used for reading source files.
+    /// Internal buffer size used for reading from source files.
     ///
     /// Defaults to 64 KiB.
     pub read_buffer_size: usize,
@@ -708,6 +711,12 @@ impl Default for DirectoryMoveWithProgressAllowedStrategies {
 
 
 /// Options that influence the [`move_directory_with_progress`] function.
+///
+/// ## `destination_directory_rule` considerations
+/// If you allow the destination directory to exist and be non-empty,
+/// source directory contents will be merged (!) into the destination directory.
+/// This is not the default, and you should probably consider the consequences
+/// very carefully before using that option.
 pub struct DirectoryMoveWithProgressOptions {
     /// Specifies whether you allow the destination directory to exist before moving
     /// and whether it must be empty or not.
@@ -719,6 +728,7 @@ pub struct DirectoryMoveWithProgressOptions {
     pub destination_directory_rule: DestinationDirectoryRule,
 
     /// Sets the allowed directory move strategies.
+    /// Per-strategy options are also configured here.
     pub allowed_strategies: DirectoryMoveWithProgressAllowedStrategies,
 }
 
@@ -872,8 +882,8 @@ pub struct DirectoryMoveProgress {
 /// The value of this option if the minimum amount of bytes written to a file between
 /// two calls to the provided `progress_handler`.
 ///
-/// This function does not guarantee a precise amount of progress reports;
-/// it does, however, guarantee at least one progress report per file and directory operation.
+/// This function does not guarantee a precise number of progress reports;
+/// it does, however, guarantee at least one progress report per file copy, symlink and directory operation.
 /// It also guarantees one final progress report, when the state indicates the move has been completed.
 ///
 /// If the move can be performed by renaming the directory, only one progress report will be emitted.

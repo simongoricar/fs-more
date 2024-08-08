@@ -144,9 +144,9 @@ This changelog likely doesn't cover all of the changes that the crate got, but h
   but a middle ground seems hard to achieve. So for now, when in doubt, just convert them into generic errors 
   with e.g. `dyn Error` trait objects or `miette`'s `into_diagnostic`.
 - The testing harness has received a full overhaul. Not only are there more assertions available for easier testing,
-  but the filesystem tree harness has been fully rewritten: we now declare the file tree in a JSON file,
+  but the filesystem tree harness has been fully rewritten: we now declare the directory tree in a JSON file,
   and the corresponding Rust code is generated from that schema. Each tree harness is responsible for temporarily initializing 
-  the file tree, and allows us to inspect individual components.
+  the directory tree, and allows us to inspect individual components.
   More details are available in [`CONTRIBUTING.md`](https://github.com/simongoricar/fs-more/blob/master/CONTRIBUTING.md).
 - To create a consistent naming scheme, several structs have been renamed. Previously, things
   like `FinishedDirectoryMove` existed, but now we adhere to `[type][operation][name]`, e.g. `FileMoveOptions`. Examples:

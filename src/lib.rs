@@ -4,8 +4,8 @@
 //!
 //! # Main features
 //! - copy and move files or directories with:
-//!     - in-depth configuration options (existing destination file behaviour, IO buffering settings, copying depth, etc.), and
-//!     - **progress reporting**, if needed,
+//!     - in-depth configuration options (existing destination file behaviour, copying depth, IO buffer sizes, etc.), and
+//!     - **progress reporting**, if wanted,
 //! - scan directories (with options such as scan depth and symlink behaviour), and
 //! - calculate file or directory sizes.
 //!
@@ -38,7 +38,7 @@
 //! if they can be represented as non-UNC paths (e.g., `\\?\C:\foo` as `C:\foo`). This is done both
 //! internally and in external results from e.g., [`DirectoryScanner`].
 //!
-//! This feature is enabled by default and recommended because path canonicalization on Windows very commonly returns UNC paths.
+//! This feature is enabled by default — and highly recommended — because path canonicalization on Windows very commonly returns UNC paths.
 //! `dunce` only has an effect when compiling for Windows targets.
 //!    </td>
 //!   </tr>

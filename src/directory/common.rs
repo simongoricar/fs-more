@@ -31,11 +31,15 @@ pub enum CollidingSubDirectoryBehaviour {
 ///
 /// # Examples
 /// If you want the associated directory copying or moving function to
-/// return an error if the base destination directory already exists,
-/// use [`DestinationDirectoryRule::DisallowExisting`].
+/// return an error if the provided destination directory already exists,
+/// use [`DestinationDirectoryRule::DisallowExisting`]. This is the strictest rule,
+/// requiring the destination to not exist.
 ///
-/// If you want to copy into an existing—but empty—destination directory, use [`DestinationDirectoryRule::AllowEmpty`].
-/// This rule does not require the destination directory to exist, only allows it.
+/// <br>
+///
+/// If you at most want to copy into an empty destination directory, use [`DestinationDirectoryRule::AllowEmpty`].
+/// This rule is slightly more relaxed than the previous one.
+/// It, however, does not require the destination directory to exist - it will be created if missing.
 ///
 /// <br>
 ///
@@ -69,6 +73,16 @@ pub enum CollidingSubDirectoryBehaviour {
 ///     colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour::Continue,
 /// };
 /// ```
+///
+///
+/// # A word of caution
+/// **Do not use [`DestinationDirectoryRule::AllowNonEmpty`] as a default
+/// unless you're sure you are okay with merged directories.**
+///
+/// Again, if the destination directory already has some content,
+/// this would allow a copy or move that results in a destination directory
+/// with *merged* source and destination directory contents.
+/// Unless you know you want precisely this, you should probably avoid this option.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum DestinationDirectoryRule {
     /// Indicates the associated directory function should return an error,
@@ -77,6 +91,8 @@ pub enum DestinationDirectoryRule {
 
     /// Indicates the associated function should return an error,
     /// if the destination directory exists *and is not empty*.
+    ///
+    /// **This is the default.**
     AllowEmpty,
 
     /// Indicates that an existing destination directory should not cause an error,
@@ -90,7 +106,7 @@ pub enum DestinationDirectoryRule {
     ///
     /// Missing destination directories will always be created,
     /// regardless of the `colliding_subdirectory_behaviour` option.
-    /// Setting it to [`CollidingSubDirectoryBehaviour::Continue`] simply means that,
+    /// Setting it to [`CollidingSubDirectoryBehaviour::Continue`] simply means that
     /// if they already exist on the destination, nothing special will happen.
     AllowNonEmpty {
         /// How to behave for destination files that already exist.

@@ -82,15 +82,15 @@ pub enum SymlinkBehaviour {
     /// for example in certain cases when source and destination are on different
     /// mount points, in which case an error will be returned.
     ///
-    /// Broken symbolic links in this mode will be handled with the
-    /// [`BrokenSymlinkBehaviour`] mode used alongside it.
+    /// In this mode, broken symbolic links will be handled with the
+    /// active [`BrokenSymlinkBehaviour`] option used alongside it.
     Keep,
 
     /// Indicates the symbolic link should be resolved and its destination content
     /// should be copied or moved to the destination instead of preserving the symbolic link.
     ///
-    /// Broken symbolic links will always cause errors in this mode,
-    /// regardless of [`BrokenSymlinkBehaviour`] mode.
+    /// In this mode, broken symbolic links will always cause errors,
+    /// regardless of the active [`BrokenSymlinkBehaviour`].
     Follow,
 }
 
@@ -112,6 +112,9 @@ pub enum BrokenSymlinkBehaviour {
     Keep,
 
     /// Indicates a broken symbolic link should result in an error while preparing the copy or move.
+    ///
+    /// Note that unless symbolic link following is enabled alongside this option,
+    /// [`BrokenSymlinkBehaviour::Abort`] will have no effect.
     Abort,
 }
 
@@ -122,7 +125,6 @@ pub enum BrokenSymlinkBehaviour {
 pub struct DirectoryCopyOptions {
     /// Specifies whether you allow the destination directory to exist before copying
     /// and whether it must be empty or not.
-    ///
     /// If you allow a non-empty destination directory, you may also specify
     /// how to behave for existing destination files and sub-directories.
     ///
@@ -177,7 +179,7 @@ pub struct DirectoryCopyFinished {
 
 
 
-/// Perform a copy using prepared data from [`PreparedDirectoryCopy`].
+/// Perform a copy using prepared data from [`DirectoryCopyPrepared`].
 ///
 /// For more details, see [`copy_directory`].
 pub(crate) fn copy_directory_unchecked(
@@ -403,7 +405,10 @@ pub(crate) fn copy_directory_unchecked(
 ///
 ///
 /// # Symbolic links
-/// If the provided `source_directory_path` itself leads to a symlink that points to a directory,
+/// TODO the paragraph below is true, but we should match it to symlink_behaviour instead.
+///      once done, copy to copy_directory_with_progress as well, then update relevant docs in move_directory
+///
+/// If the provided `source_directory_path` is itself a symlink that points to a directory,
 /// the link will be followed and the contents of the link target directory will be copied.
 ///
 /// Regarding symbolic links *inside* the source directory, the chosen [`symlink_behaviour`] is respected.
@@ -745,12 +750,12 @@ pub struct DirectoryCopyWithProgressOptions {
     /// Sets the behaviour for broken symbolic links when copying a directory.
     pub broken_symlink_behaviour: BrokenSymlinkBehaviour,
 
-    /// Internal buffer size used for reading source files.
+    /// Internal buffer size used for reading from source files.
     ///
     /// Defaults to 64 KiB.
     pub read_buffer_size: usize,
 
-    /// Internal buffer size used for writing to a destination file.
+    /// Internal buffer size used for writing to destination files.
     ///
     /// Defaults to 64 KiB.
     pub write_buffer_size: usize,
@@ -761,6 +766,9 @@ pub struct DirectoryCopyWithProgressOptions {
     ///
     /// *Note that the real reporting interval can be larger*
     /// (see [`copy_directory_with_progress`] for more info).
+    ///
+    ///
+    /// [`copy_directory_with_progress`]: copy_directory_with_progress#progress-reporting
     pub progress_update_byte_interval: u64,
 }
 
@@ -1256,7 +1264,7 @@ where
 ///
 ///
 /// # Symbolic links
-/// If the provided `source_directory_path` itself leads to a symlink that points to a directory,
+/// If the provided `source_directory_path` is itself a symlink that points to a directory,
 /// the link will be followed and the contents of the link target directory will be copied.
 ///
 /// Regarding symbolic links *inside* the source directory, the chosen [`symlink_behaviour`] is respected.
@@ -1292,9 +1300,8 @@ where
 /// The value of this option is the minimum amount of bytes written to a file between
 /// two calls to the provided `progress_handler`.
 ///
-/// This function does not guarantee a precise amount of progress reports;
-/// it does, however, guarantee at least one progress report per file copy operation,
-/// and one progress report per directory creation operation.
+/// This function does not guarantee a precise number of progress reports;
+/// it does, however, guarantee at least one progress report per file copy, symlink and directory creation operation.
 /// It also guarantees one final progress report, when the state indicates the copy has been completed.
 ///
 /// For more details on reporting intervals for file copies, see progress reporting section

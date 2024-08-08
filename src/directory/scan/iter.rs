@@ -33,7 +33,7 @@ struct PendingDirectory {
 }
 
 
-/// Represents a file tree ancestor.
+/// Represents a directory tree ancestor.
 ///
 /// Used for symlink cycle detection when
 /// [`DirectoryScanOptions::should_track_ancestors`] returns `true`.

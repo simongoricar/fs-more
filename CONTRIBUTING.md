@@ -169,23 +169,25 @@ To aid in writing tests, the `fs_more_test_harness` crate is available inside `s
 It provides:
 - the `TestResult` type that can be used as an integration test return type,
 - the `detect_case_sensitivity_for_temp_dir` function that detects case-sensitivity of the filesystem,
-- a set of filesystem trees that can be used to initialize the same file tree every time, 
+- a set of filesystem trees that can be used to initialize the same directory tree every time, 
   inspect it as a strongly-typed tree, 
   perform assertions on files and directories inside it, 
   as well as snapshot file data, etc.
 
 
 
-Currently, three filesystem tree harnesses are available:
+Currently, the following filesystem tree harnesses are available:
 - `DeepTree` (`subcrates/test-harness/src/trees/generated/deep.rs`),
-- `SimpleTree` (`subcrates/test-harness/src/trees/generated/simple.rs`), and
+- `SimpleTree` (`subcrates/test-harness/src/trees/generated/simple.rs`),
 - `EmptyTree` (`subcrates/test-harness/src/trees/generated/empty.rs`),
+- `SymlinkedTree` (`subcrates/test-harness/src/trees/generated/symlinked.rs`), and
+- `BrokenSymlinksTree` (`subcrates/test-harness/src/trees/generated/broken_symlinks.rs`).
+
+All of them essentially represent a single consistent directory tree,
+but to showcase how they work, this section will focus on one of them - `DeepTree`. 
 
 > If you're looking for more context about how this harness is constructed
 > and generated, take a look at the next chapter.
-
-All of them function just about the same, but to explain how they work, 
-this section will focus on one of them - `DeepTree`. 
 
 <br>
 
@@ -200,7 +202,7 @@ let deep_harness = DeepTree::initialize();
 Once initialized, `deep_harness.as_path()` will return the path 
 to the temporary directory the harness is initialized at.
 
-What we have at this point is a fully initialized file tree on disk that
+What we have at this point is a fully initialized directory tree on disk that
 we can interact with in our integration tests. But the usability of this
 harness is not just in initializing the same tree every time - it also
 allows us to traverse the tree as a strongly-typed structure!
@@ -209,14 +211,14 @@ For example, the `DeepTree` we're using in this example has
 the following directory structure on disk:
 ```md
 .
-|-- a.bin (random data, 32 KiB)
+|-> a.bin (binary data, 32 KiB)
 |-- foo
 |   |-- bar
 |   |   |-- hello
 |   |   |   |-- world
-|   |   |   |   |-- d.bin (random data, 256 KiB)
-|   |   |-- c.bin (random data, 128 KiB)
-|   |-- b.bin (random data, 64 KiB)
+|   |   |   |   |-> d.bin (binary data, 256 KiB)
+|   |   |-> c.bin (binary data, 128 KiB)
+|   |-> b.bin (binary data, 64 KiB)
 ```
 
 
