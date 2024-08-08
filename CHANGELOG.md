@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This is a pretty significant release with a large set of breaking changes (yet again).
 
 Alongside several fields, parameters, and types being renamed, there are three important additions and changes to point out:
-- `DirectoryScan` has been removed in favor of the new iterator-based `DirectoryScanner` inspired by the wonderful `walkdir` crate,
+- `DirectoryScan` has been removed in favour of the new iterator-based `DirectoryScanner` inspired by the wonderful `walkdir` crate,
 - directory copy and move functions now have options that specify how to behave when encountering valid as well as broken symbolic links,
 - the `file_size_in_bytes` function no longer follows symbolic links.
 
@@ -59,7 +59,7 @@ Alongside several fields, parameters, and types being renamed, there are three i
 
 
 ### Removed
-- Removed old directory scanner in favor of the new iterator-based one.
+- Removed old directory scanner in favour of the new iterator-based one.
 
 
 
@@ -174,7 +174,7 @@ This changelog likely doesn't cover all of the changes that the crate got, but h
 ### Removed
 - The `miette` feature flag has been removed. It previously just derived `Diagnostic` on all error types,
   we did not take advantage of anything that the end user could not do with `into_diagnostic` themselves.
-- The `fs_more_test_harness_macros` procedural macro crate has been removed in favor of the new
+- The `fs_more_test_harness_macros` procedural macro crate has been removed in favour of the new
   `fs_more_test_harness_tree_generator` CLI crate, which is part of the new test harness.
 
 
