@@ -40,7 +40,7 @@ where
 {
     let file_path = file_path.as_ref();
 
-    // TODO Make symbolic link behaviour configurable here (and write tests for that).
+    // TODO Perhaps we should make symbolic link behaviour configurable?
 
     // Ensure the file exists. We use `try_exists`
     // instead of `exists` to catch permission and other IO errors

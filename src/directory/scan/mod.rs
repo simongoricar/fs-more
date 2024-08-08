@@ -294,7 +294,7 @@ pub fn is_directory_empty<P>(directory_path: P) -> Result<bool, DirectoryEmptine
 where
     P: AsRef<Path>,
 {
-    // TODO needs more tests!
+    // TODO Needs a more comprehensive set of tests for edge cases (though I'm not sure what they are yet).
 
     let directory_path: &Path = directory_path.as_ref();
 
