@@ -1,4 +1,7 @@
-use fs_more::directory::{DirectoryScanDepthLimit, DirectoryScanOptions, DirectoryScanner};
+use fs_more::{
+    directory::{DirectoryScanDepthLimit, DirectoryScanOptions, DirectoryScanner},
+    error::DirectoryScanError,
+};
 use fs_more_test_harness::{
     assert_path_list_fully_matches_set,
     assert_path_list_fully_matches_with_counted_ocucrrences,
@@ -7,6 +10,7 @@ use fs_more_test_harness::{
         deep::DeepTree,
         empty::EmptyTree,
         simple::SimpleTree,
+        symlink_cycle::SymlinkCycleTree,
         symlinked::SymlinkedTree,
     },
 };
@@ -440,4 +444,51 @@ fn scanner_iter_does_not_follow_base_scan_directory_symlink_if_not_enabled() {
 
     tree_harness.destroy();
     scan_source_harness.destroy();
+}
+
+
+
+#[test]
+fn scanner_iter_errors_on_symbolic_link_cycle() {
+    let cyclical_tree = SymlinkCycleTree::initialize();
+
+
+    let scanner = DirectoryScanner::new(
+        cyclical_tree.as_path(),
+        DirectoryScanOptions {
+            maximum_scan_depth: DirectoryScanDepthLimit::Unlimited,
+            follow_symbolic_links: true,
+            ..Default::default()
+        },
+    );
+
+
+    let mut symlink_cycle_detected = false;
+
+    for entry in scanner {
+        match entry {
+            Ok(_) => {}
+            Err(error) => {
+                if let DirectoryScanError::SymlinkCycleEncountered { directory_path } = error {
+                    if directory_path != cyclical_tree.foo.as_path() {
+                        panic!(
+                            "got symlink cycle detection, but incorrect path: {}",
+                            directory_path.display()
+                        );
+                    } else if symlink_cycle_detected {
+                        panic!("got more than one symlink cycle detection");
+                    } else {
+                        symlink_cycle_detected = true;
+                    }
+                } else {
+                    panic!("unexpected error: {}", error);
+                }
+            }
+        }
+    }
+
+    assert!(symlink_cycle_detected);
+
+
+    cyclical_tree.destroy();
 }
