@@ -27,6 +27,7 @@ use fs_more_test_harness::{
         broken_symlinks::BrokenSymlinksTree,
         deep::DeepTree,
         empty::EmptyTree,
+        simple::SimpleTree,
         symlinked::SymlinkedTree,
     },
 };
@@ -485,6 +486,34 @@ pub fn copy_directory_with_progress_errors_when_destination_subdirectory_collide
     deep_harness.destroy();
     empty_harness.destroy();
     Ok(())
+}
+
+
+
+#[test]
+fn copy_directory_with_progress_creates_destination_directory_if_missing() {
+    let source_tree = SimpleTree::initialize();
+    let destination_tree = EmptyTree::initialize();
+
+    let destination_path = destination_tree.child_path("destination/hello/world");
+    destination_path.assert_not_exists();
+
+
+    fs_more::directory::copy_directory_with_progress(
+        source_tree.as_path(),
+        &destination_path,
+        DirectoryCopyWithProgressOptions::default(),
+        |_| {},
+    )
+    .unwrap();
+
+
+    destination_path
+        .assert_is_directory_and_fully_matches_secondary_directory(source_tree.as_path());
+
+
+    source_tree.destroy();
+    destination_tree.destroy();
 }
 
 
@@ -1110,4 +1139,54 @@ fn copy_directory_with_progress_aborts_on_broken_symlink_when_behaviour_is_set_t
 
     broken_symlink_harness.destroy();
     destination_harness.destroy();
+}
+
+
+
+#[test]
+fn copy_directory_with_progress_preserves_source_directory_symbolic_link_when_behaviour_set_to_keep(
+) {
+    let simple_tree = SimpleTree::initialize();
+    let copy_source_tree = EmptyTree::initialize();
+    let copy_destination_tree = EmptyTree::initialize();
+
+    let (copy_source_path, copy_destination_path) = {
+        let source_directory_symlink_path = copy_source_tree.child_path("symlink-to-simple");
+        source_directory_symlink_path.assert_not_exists();
+        source_directory_symlink_path.symlink_to_directory(simple_tree.as_path());
+
+        let destination_directory_symlink_path =
+            copy_destination_tree.child_path("symlink-to-simple");
+        destination_directory_symlink_path.assert_not_exists();
+
+
+        (source_directory_symlink_path, destination_directory_symlink_path)
+    };
+
+
+    let finished_copy = fs_more::directory::copy_directory_with_progress(
+        copy_source_path,
+        &copy_destination_path,
+        DirectoryCopyWithProgressOptions {
+            symlink_behaviour: SymlinkBehaviour::Keep,
+            ..Default::default()
+        },
+        |_| {},
+    )
+    .unwrap();
+
+
+    assert_eq!(finished_copy.files_copied, 0);
+    assert_eq!(finished_copy.directories_created, 0);
+    assert_eq!(finished_copy.symlinks_created, 1);
+
+
+    copy_destination_path
+        .assert_is_valid_symlink_to_directory_and_destination_matches(simple_tree.as_path());
+
+
+
+    copy_source_tree.destroy();
+    copy_destination_tree.destroy();
+    simple_tree.destroy();
 }
