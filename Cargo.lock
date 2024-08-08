@@ -217,7 +217,7 @@ dependencies = [
 
 [[package]]
 name = "fs-more"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "dunce",
  "fs-err",
@@ -227,7 +227,7 @@ dependencies = [
 
 [[package]]
 name = "fs-more-test-harness"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "assert_matches",
  "dunce",
@@ -242,7 +242,7 @@ dependencies = [
 
 [[package]]
 name = "fs-more-test-harness-generator"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "clap",
  "fs-more-test-harness-tree-schema",
@@ -263,7 +263,7 @@ dependencies = [
 
 [[package]]
 name = "fs-more-test-harness-tree-schema"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "schemars",
  "serde",

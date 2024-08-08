@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ---
 
 
+## [0.7.1] - 2024-08-08
+
+### Fixed
+- Fixed incorrect documentation link to options structs on the table in the `directory` module documentation
+  for `move_directory` and `move_directory_with_progress`.
+
+
+
+
 ## [0.7.0] - 2024-08-08
 
 This is a pretty significant release with a large set of breaking changes (yet again).
@@ -224,7 +233,8 @@ Initial development release with the API mostly stable.
 
 
 
-[Unreleased]: https://github.com/simongoricar/fs-more/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/simongoricar/fs-more/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/simongoricar/fs-more/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/simongoricar/fs-more/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/simongoricar/fs-more/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/simongoricar/fs-more/compare/v0.5.1...v0.6.0
