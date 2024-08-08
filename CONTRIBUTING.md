@@ -167,13 +167,14 @@ as well as automatically recompile it when you make changes.
 ### 2.3 Using the test harness
 To aid in writing tests, the `fs_more_test_harness` crate is available inside `subcrates/test-harness`.
 It provides:
-- the `TestResult` type that can be used as an integration test return type,
-- the `detect_case_sensitivity_for_temp_dir` function that detects case-sensitivity of the filesystem,
+- the `detect_case_sensitivity_for_temp_dir` function that detects case-sensitivity of the filesystem, and
 - a set of filesystem trees that can be used to initialize the same directory tree every time, 
   inspect it as a strongly-typed tree, 
   perform assertions on files and directories inside it, 
   as well as snapshot file data, etc.
 
+There is also a `TestResult` type that can be used as a return value in tests to allow for 
+e.g. ?-returning `std::io::Error`s, but is rarely useful.
 
 
 Currently, the following filesystem tree harnesses are available:
