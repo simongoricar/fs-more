@@ -26,7 +26,7 @@ use crate::{
 /// Options that influence the [`copy_file`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct FileCopyOptions {
-    /// How to behave for a destination file that already exists.
+    /// How to behave when the destination file already exists.
     pub colliding_file_behaviour: CollidingFileBehaviour,
 }
 
@@ -208,7 +208,7 @@ where
 /// Options that influence the [`copy_file_with_progress`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct FileCopyWithProgressOptions {
-    /// How to behave for destination files that already exist.
+    /// How to behave when the destination file already exists.
     pub colliding_file_behaviour: CollidingFileBehaviour,
 
     /// Internal buffer size used for reading the source file.
@@ -228,7 +228,7 @@ pub struct FileCopyWithProgressOptions {
     /// decreasing the interval will likely come at some performance cost,
     /// depending on your progress handling closure.
     ///
-    /// *Note that this is the minimum interval.* The actual reporting interval can be larger.
+    /// *Note that this is the minimum interval.* The actual reporting interval may be larger!
     /// Consult [`copy_file_with_progress`] documentation for more details.
     ///
     /// Defaults to 512 KiB.

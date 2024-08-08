@@ -9,7 +9,7 @@ This is a pretty significant release with a large set of breaking changes (yet a
 
 Alongside several fields, parameters, and types being renamed, there are three important additions and changes to point out:
 - `DirectoryScan` has been removed in favor of the new iterator-based `DirectoryScanner` inspired by the wonderful `walkdir` crate,
-- directory copy and move function now have options that specify how to behave when encountering valid as well as broken symbolic links,
+- directory copy and move functions now have options that specify how to behave when encountering valid as well as broken symbolic links,
 - the `file_size_in_bytes` function no longer follows symbolic links.
 
 

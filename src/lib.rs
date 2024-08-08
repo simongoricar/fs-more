@@ -13,7 +13,7 @@
 //!
 //! Visit the **[`directory`]** and **[`file`][mod@file]** modules
 //! for a deeper overview of the available features.
-//! <br> Also, you can find the error types in the [`error`] module.
+//! <br> Additionally, you can find the error types in the [`error`] module.
 //!
 //!
 //! <br>

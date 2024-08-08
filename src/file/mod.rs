@@ -12,7 +12,7 @@
 //! | [`move_file`]               | [`FileMoveOptions`]             | [`FileMoveFinished`] <br><sup style="text-align: right">(or [`FileError`])</sup> |
 //! | [`move_file_with_progress`] | [`FileMoveWithProgressOptions`] | [`FileMoveFinished`] <br><sup style="text-align: right">(or [`FileError`])</sup> |
 //! | [`remove_file`]             |                                 | `()` <br><sup style="text-align: right">(or [`FileRemoveError`])</sup> |
-//! | [`file_size_in_bytes`]      |                                 | `()` <br><sup style="text-align: right">(or [`FileSizeError`])</sup> |
+//! | [`file_size_in_bytes`]      |                                 | [`u64`] <br><sup style="text-align: right">(or [`FileSizeError`])</sup> |
 //!
 //!
 //! [`FileError`]: crate::error::FileError

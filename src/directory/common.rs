@@ -79,10 +79,10 @@ pub enum CollidingSubDirectoryBehaviour {
 /// **Do not use [`DestinationDirectoryRule::AllowNonEmpty`] as a default
 /// unless you're sure you are okay with merged directories.**
 ///
-/// Again, if the destination directory already has some content,
-/// this would allow a copy or move that results in a destination directory
+/// If the destination directory already has some content, this would
+/// allow a copy or move that results in a destination directory
 /// with *merged* source and destination directory contents.
-/// Unless you know you want precisely this, you should probably avoid this option.
+/// Unless this is precisely what you're after, you may want to avoid this option.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum DestinationDirectoryRule {
     /// Indicates the associated directory function should return an error,
@@ -95,24 +95,31 @@ pub enum DestinationDirectoryRule {
     /// **This is the default.**
     AllowEmpty,
 
-    /// Indicates that an existing destination directory should not cause an error,
-    /// even if it is not empty.
+    /// Indicates that an existing (colliding) destination directory should
+    /// not cause an error, even if non-empty.
     ///
     /// **Do not use this as a default if you're not sure what rule to choose.**
-    /// This rule can, if the destination directory already has some content,
+    ///
+    /// If the destination directory already has some content, this would
     /// allow a copy or move that results in a destination directory
     /// with *merged* source and destination directory contents.
-    /// Unless you know you want precisely this, you should probably avoid this option.
+    /// Unless this is precisely what you're after, you may want to avoid this option.
     ///
     /// Missing destination directories will always be created,
     /// regardless of the `colliding_subdirectory_behaviour` option.
     /// Setting it to [`CollidingSubDirectoryBehaviour::Continue`] simply means that
-    /// if they already exist on the destination, nothing special will happen.
+    /// if they already exist on the destination, they will not need to be created.
     AllowNonEmpty {
-        /// How to behave for destination files that already exist.
+        /// How to behave when encountering existing (colliding) destination files.
+        ///
+        /// This option has no effect on existing destination files
+        /// that don't collide with the ones we're copying or moving.
         colliding_file_behaviour: CollidingFileBehaviour,
 
-        /// How to behave for destination sub-directories that already exist.
+        /// How to behave when encountering existing (colliding) destination subdirectories.
+        ///
+        /// This option has no effect on existing destination subdirectories
+        /// that don't collide with the ones we're copying or moving.
         colliding_subdirectory_behaviour: CollidingSubDirectoryBehaviour,
     },
 }

@@ -23,7 +23,7 @@ use crate::{
 /// Options that influence the [`move_file`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct FileMoveOptions {
-    /// How to behave for destination files that already exist.
+    /// How to behave when the destination file already exists.
     pub colliding_file_behaviour: CollidingFileBehaviour,
 }
 
@@ -288,7 +288,7 @@ where
 /// Options that influence the [`move_file_with_progress`] function.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct FileMoveWithProgressOptions {
-    /// How to behave for destination files that already exist.
+    /// How to behave when the destination file already exists.
     pub colliding_file_behaviour: CollidingFileBehaviour,
 
     /// Internal buffer size used for reading the source file.
