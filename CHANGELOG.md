@@ -2,8 +2,13 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
-
 ## [Unreleased]
+
+
+---
+
+
+## [0.7.0] - 2024-08-08
 
 This is a pretty significant release with a large set of breaking changes (yet again).
 
@@ -57,7 +62,7 @@ Alongside several fields, parameters, and types being renamed, there are three i
 - Removed old directory scanner in favor of the new iterator-based one.
 
 
----
+
 
 ## [0.6.1] - 2024-07-10
 
@@ -70,6 +75,7 @@ Alongside several fields, parameters, and types being renamed, there are three i
 ### Fixed
 - Fixed `is_directory_empty` returning incorrect results.
 - Fixed invalid link to `DirectoryScan` in `README.md`.
+
 
 
 
@@ -89,6 +95,7 @@ Alongside several fields, parameters, and types being renamed, there are three i
 
 
 
+
 ## [0.5.1] - 2024-06-15
 
 ### Added
@@ -97,6 +104,7 @@ Alongside several fields, parameters, and types being renamed, there are three i
 ### Fixed
 - Fixed code examples in `README.md` that previously wouldn't compile.
 - Fixed GitHub Pages publishing workflow (previously redirected to a sub-page incorrectly).
+
 
 
 
@@ -171,6 +179,7 @@ This changelog likely doesn't cover all of the changes that the crate got, but h
 
 
 
+
 ## [0.4.0] - 2024-03-13
 
 ### Changed
@@ -182,11 +191,14 @@ This changelog likely doesn't cover all of the changes that the crate got, but h
 - `TargetDirectoryRule` no longer publicly exposes the three methods that previously returned a bool indicating its existing target directory and overwriting behaviour.
 
 
+
+
 ## [0.3.0] - 2024-01-14
 
 ### Added
 - Add `miette` feature flag that derives `miette::Diagnostic` on all error types,
   enabling covenient `wrap_err_with` and the like.
+
 
 
 
@@ -197,10 +209,12 @@ This changelog likely doesn't cover all of the changes that the crate got, but h
 
 
 
+
 ## [0.2.1] - 2024-01-13
 
 ### Fixed
 - Fix `license` field in `Cargo.toml`
+
 
 
 
@@ -210,7 +224,8 @@ Initial development release with the API mostly stable.
 
 
 
-[Unreleased]: https://github.com/simongoricar/fs-more/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/simongoricar/fs-more/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/simongoricar/fs-more/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/simongoricar/fs-more/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/simongoricar/fs-more/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/simongoricar/fs-more/compare/v0.5.0...v0.5.1
