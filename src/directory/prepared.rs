@@ -32,32 +32,59 @@ pub(crate) enum SymlinkType {
 }
 
 
-/// Represents a file copy or directory creation operation.
+/// Represents a queued file copy, symlink, or directory creation operation.
 ///
 /// For more details, see the [`build_directory_copy_queue`] function.
 #[derive(Clone, Debug)]
 pub(crate) enum QueuedOperation {
+    /// Copy a file from `source_file_path` to `destination_file_path`.
     CopyFile {
+        /// Where to copy a file from.
         source_file_path: PathBuf,
 
-        source_size_bytes: u64,
-
+        /// Where to copy a file to.
         destination_file_path: PathBuf,
-    },
-    CreateDirectory {
-        source_size_bytes: u64,
 
-        destination_directory_path: PathBuf,
+        /// Size of the `source_file_path` file in bytes.
+        source_size_bytes: u64,
     },
+
+    /// Create a directory at `destination_directory_path`.
+    CreateDirectory {
+        /// Directory to create.
+        destination_directory_path: PathBuf,
+
+        /// Whether to automatically create missing parent directories as well.
+        ///
+        /// This will use [`fs::create_dir_all`] instead of [`fs::create_dir`].
+        create_parent_directories: bool,
+
+        /// Size of the `destination_directory_path` directory in bytes.
+        /// This is the size of the directory "file" itself on the filesystem,
+        /// not a recursive size scan.
+        source_size_bytes: u64,
+    },
+
+    /// Create a symbolic link at `symlink_path`.
     CreateSymlink {
+        /// Where to create the symbolic link.
+        ///
+        /// This is a path under the destination directory, but this is not reflected in the
+        /// field name to avoid mixups with meaning of "destination".
         symlink_path: PathBuf,
 
+        /// This specifies whether the symlink destination is a file or a directory.
+        ///
+        /// This is present only on Windows targets, as we need to use a different API
+        /// according to the symlink destination type.
         #[cfg(windows)]
-        symlink_type: SymlinkType,
+        symlink_destination_type: SymlinkType,
 
-        source_symlink_size_bytes: u64,
-
+        /// Where the symbolink link should point to.
         symlink_destination_path: PathBuf,
+
+        /// Size of the symbolic link we're "copying".
+        source_symlink_size_bytes: u64,
     },
 }
 
@@ -358,13 +385,72 @@ pub(super) fn validate_source_destination_directory_pair(
 /// even if that is necessary for a copy; it is up to the consumer to create
 /// `destination_directory_path`, if need be, before executing the queue.
 fn scan_and_plan_directory_copy(
-    source_directory_path: PathBuf,
-    destination_directory_path: PathBuf,
+    validated_source_directory: &ValidatedSourceDirectory,
+    validated_destination_directory: &ValidatedDestinationDirectory,
     copy_depth_limit: DirectoryCopyDepthLimit,
     symlink_behaviour: SymlinkBehaviour,
     broken_symlink_behaviour: BrokenSymlinkBehaviour,
 ) -> Result<Vec<QueuedOperation>, DirectoryExecutionPlanError> {
     let mut operation_queue: Vec<QueuedOperation> = Vec::new();
+
+
+    // Special case: if the source directory path was a symbolic link to a directory
+    // and the symlink behaviour is set to keep, we should preserve that symlink on the destination.
+    // This means we only need one operation.
+    if symlink_behaviour == SymlinkBehaviour::Keep
+        && validated_source_directory.original_path_was_symlink_to_directory
+    {
+        let source_symlink_size_bytes =
+            fs::symlink_metadata(&validated_source_directory.directory_path)
+                .map_err(|error| DirectoryExecutionPlanError::UnableToAccess {
+                    path: validated_source_directory.directory_path.clone(),
+                    error,
+                })?
+                .len();
+
+
+        #[cfg(windows)]
+        {
+            operation_queue.push(QueuedOperation::CreateSymlink {
+                symlink_path: validated_destination_directory.directory_path.to_path_buf(),
+                symlink_destination_type: SymlinkType::Directory,
+                source_symlink_size_bytes,
+                symlink_destination_path: validated_source_directory.directory_path.to_path_buf(),
+            });
+        }
+
+        #[cfg(not(windows))]
+        {
+            operation_queue.push(QueuedOperation::CreateSymlink {
+                symlink_path: validated_destination_directory.directory_path.to_path_buf(),
+                source_symlink_size_bytes,
+                symlink_destination_path: validated_source_directory.directory_path.to_path_buf(),
+            });
+        }
+
+
+        return Ok(operation_queue);
+    }
+
+
+    // Queue creating the base destination directory if needed.
+    if !validated_destination_directory.state.exists() {
+        let source_path_size_bytes =
+            fs::symlink_metadata(&validated_source_directory.directory_path)
+                .map_err(|error| DirectoryExecutionPlanError::UnableToAccess {
+                    path: validated_source_directory.directory_path.to_path_buf(),
+                    error,
+                })?
+                .len();
+
+        operation_queue.push(QueuedOperation::CreateDirectory {
+            source_size_bytes: source_path_size_bytes,
+            destination_directory_path: validated_destination_directory
+                .directory_path
+                .to_path_buf(),
+            create_parent_directories: true,
+        });
+    }
 
 
     // Scan the source directory and queue all copy and
@@ -377,8 +463,8 @@ fn scan_and_plan_directory_copy(
 
     let mut directory_scan_queue = Vec::new();
     directory_scan_queue.push(PendingDirectoryScan {
-        directory_path: source_directory_path.clone(),
-        directory_path_without_symlink_follows: source_directory_path.clone(),
+        directory_path: validated_source_directory.directory_path.clone(),
+        directory_path_without_symlink_follows: validated_source_directory.directory_path.clone(),
         depth: 0,
     });
 
@@ -426,9 +512,9 @@ fn scan_and_plan_directory_copy(
             // Remaps `new_directory_path_without_symlink_follows` (relative to `next_directory.source_directory_path`)
             // onto `destination_directory_path`, preserving directory structure.
             let directory_item_destination_path = join_relative_source_path_onto_destination(
-                &source_directory_path,
+                &validated_source_directory.directory_path,
                 &new_directory_path_without_symlink_follows,
-                &destination_directory_path,
+                &validated_destination_directory.directory_path,
             )
             .map_err(|error| {
                 DirectoryExecutionPlanError::EntryEscapesSourceDirectory { path: error.path }
@@ -475,6 +561,7 @@ fn scan_and_plan_directory_copy(
                 operation_queue.push(QueuedOperation::CreateDirectory {
                     source_size_bytes: directory_size_in_bytes,
                     destination_directory_path: directory_item_destination_path,
+                    create_parent_directories: false,
                 });
 
 
@@ -559,7 +646,7 @@ fn scan_and_plan_directory_copy(
 
                                 operation_queue.push(QueuedOperation::CreateSymlink {
                                     symlink_path: directory_item_destination_path,
-                                    symlink_type: symbolic_link_type,
+                                    symlink_destination_type: symbolic_link_type,
                                     source_symlink_size_bytes: unresolved_symlink_file_size,
                                     symlink_destination_path: resolved_symlink_path,
                                 });
@@ -640,7 +727,7 @@ fn scan_and_plan_directory_copy(
 
                             operation_queue.push(QueuedOperation::CreateSymlink {
                                 symlink_path: directory_item_destination_path,
-                                symlink_type,
+                                symlink_destination_type: symlink_type,
                                 source_symlink_size_bytes: resolved_symlink_file_size,
                                 symlink_destination_path: resolved_symlink_path,
                             });
@@ -676,6 +763,7 @@ fn scan_and_plan_directory_copy(
                             operation_queue.push(QueuedOperation::CreateDirectory {
                                 source_size_bytes: resolved_symlink_file_size,
                                 destination_directory_path: directory_item_destination_path,
+                                create_parent_directories: false,
                             });
 
 
@@ -810,13 +898,6 @@ fn check_operation_queue_for_collisions(
 ///
 /// It can be initialized by calling [`Self::prepare`] or [`Self::prepare_with_validated`].
 pub(crate) struct DirectoryCopyPrepared {
-    /// The copy destination.
-    ///
-    /// The destination is already validated, which in this context means that
-    /// it respects the user-provided `options`
-    /// (see [`validate_destination_directory_path`] and [`validate_source_destination_directory_pair`]).
-    pub(crate) validated_destination_directory: ValidatedDestinationDirectory,
-
     /// An array of ordered file copy and directory creation operations
     /// that togeher form a requested directory copy.
     pub(crate) operation_queue: Vec<QueuedOperation>,
@@ -869,8 +950,8 @@ impl DirectoryCopyPrepared {
         broken_symlink_behaviour: BrokenSymlinkBehaviour,
     ) -> Result<Self, DirectoryExecutionPlanError> {
         let operations = Self::prepare_directory_operations(
-            validated_source_directory.directory_path,
-            validated_destination_directory.directory_path.clone(),
+            &validated_source_directory,
+            &validated_destination_directory,
             destination_directory_rule,
             copy_depth_limit,
             symlink_behaviour,
@@ -881,7 +962,6 @@ impl DirectoryCopyPrepared {
 
 
         Ok(Self {
-            validated_destination_directory,
             operation_queue: operations,
             total_bytes: bytes_total,
         })
@@ -946,8 +1026,8 @@ impl DirectoryCopyPrepared {
     /// For example: Windows
     /// [cautions against using transactional NTFS](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-findfirstfiletransacteda)).
     fn prepare_directory_operations(
-        source_directory_path: PathBuf,
-        destination_directory_path: PathBuf,
+        validated_source_directory: &ValidatedSourceDirectory,
+        validated_destination_directory: &ValidatedDestinationDirectory,
         destination_directory_rule: DestinationDirectoryRule,
         copy_depth_limit: DirectoryCopyDepthLimit,
         symlink_behaviour: SymlinkBehaviour,
@@ -955,8 +1035,8 @@ impl DirectoryCopyPrepared {
     ) -> Result<Vec<QueuedOperation>, DirectoryExecutionPlanError> {
         // Initialize a queue of file copy or directory create operations.
         let copy_queue = scan_and_plan_directory_copy(
-            source_directory_path,
-            destination_directory_path,
+            validated_source_directory,
+            validated_destination_directory,
             copy_depth_limit,
             symlink_behaviour,
             broken_symlink_behaviour,

@@ -199,39 +199,17 @@ pub(crate) fn copy_directory_unchecked(
     // no collisions we should worry about. What's left is performing the file copy
     // and directory creation operations *precisely in the order they have been prepared*.
     // If we ignore the order, we could get into situations where
-    // some destination directory doesn't exist yet, but we would want to copy a file into it.
-
+    // some destination directory doesn't exist yet, but we would try to copy a file into it.
 
     let mut total_bytes_copied = 0;
+
     let mut num_files_copied = 0;
     let mut num_symlinks_recreated = 0;
     let mut num_directories_created = 0;
 
 
-    // Create base destination directory if needed.
-    let destination_directory_exists = prepared_directory_copy
-        .validated_destination_directory
-        .state
-        .exists();
-
-    if !destination_directory_exists {
-        fs::create_dir_all(
-            &prepared_directory_copy
-                .validated_destination_directory
-                .directory_path,
-        )
-        .map_err(|error| CopyDirectoryExecutionError::UnableToCreateDirectory {
-            directory_path: prepared_directory_copy
-                .validated_destination_directory
-                .directory_path,
-            error,
-        })?;
-
-        num_directories_created += 1;
-    }
-
-
-    // Execute all queued operations (copying files and creating directories).
+    // Execute all queued operations. This means copying files, creating symbolic links,
+    // and creating directories in the order the queue specifies.
     for operation in prepared_directory_copy.operation_queue {
         match operation {
             QueuedOperation::CopyFile {
@@ -294,6 +272,7 @@ pub(crate) fn copy_directory_unchecked(
             QueuedOperation::CreateDirectory {
                 source_size_bytes,
                 destination_directory_path,
+                create_parent_directories,
             } => {
                 let destination_directory_exists =
                     try_exists_without_follow(&destination_directory_path).map_err(|error| {
@@ -320,12 +299,22 @@ pub(crate) fn copy_directory_unchecked(
                     continue;
                 }
 
-                fs::create_dir(&destination_directory_path).map_err(|error| {
-                    CopyDirectoryExecutionError::UnableToCreateDirectory {
-                        directory_path: destination_directory_path,
-                        error,
-                    }
-                })?;
+
+                if create_parent_directories {
+                    fs::create_dir_all(&destination_directory_path).map_err(|error| {
+                        CopyDirectoryExecutionError::UnableToCreateDirectory {
+                            directory_path: destination_directory_path,
+                            error,
+                        }
+                    })?;
+                } else {
+                    fs::create_dir(&destination_directory_path).map_err(|error| {
+                        CopyDirectoryExecutionError::UnableToCreateDirectory {
+                            directory_path: destination_directory_path,
+                            error,
+                        }
+                    })?;
+                }
 
 
                 num_directories_created += 1;
@@ -335,7 +324,7 @@ pub(crate) fn copy_directory_unchecked(
             #[cfg(windows)]
             QueuedOperation::CreateSymlink {
                 symlink_path,
-                symlink_type,
+                symlink_destination_type: symlink_type,
                 source_symlink_size_bytes,
                 symlink_destination_path,
             } => {
@@ -405,13 +394,13 @@ pub(crate) fn copy_directory_unchecked(
 ///
 ///
 /// # Symbolic links
-/// TODO the paragraph below is true, but we should match it to symlink_behaviour instead.
-///      once done, copy to copy_directory_with_progress as well, then update relevant docs in move_directory
+/// TODO test, then copy docs section to copy_directory_with_progress as well, then update relevant docs in move_directory
 ///
-/// If the provided `source_directory_path` is itself a symlink that points to a directory,
-/// the link will be followed and the contents of the link target directory will be copied.
+/// Symbolic links inside the source directory are handled according to the [`symlink_behaviour`] option.
 ///
-/// Regarding symbolic links *inside* the source directory, the chosen [`symlink_behaviour`] is respected.
+/// Additionally, if the provided `source_directory_path` is itself a symlink to a directory,
+/// and the symbolic link behaviour is set to [`SymlinkBehaviour::Keep`], the link will be preserved
+/// on the destination, meaning `destination_directory_path` will be a symbolic link as well.
 ///
 /// This matches the behaviour of `cp` with `--recursive` (and optionally `--dereference`)
 /// flags on Unix[^unix-cp-rd].
@@ -475,6 +464,7 @@ where
     )?;
 
     let finished_copy = copy_directory_unchecked(prepared_copy, options)?;
+
 
     Ok(finished_copy)
 }
@@ -938,6 +928,7 @@ where
 fn execute_create_directory_operation_with_progress<F>(
     destination_directory_path: PathBuf,
     source_size_bytes: u64,
+    create_parent_directories: bool,
     options: &DirectoryCopyWithProgressOptions,
     progress: &mut DirectoryCopyInternalProgress,
     progress_handler: &mut F,
@@ -983,12 +974,22 @@ where
         progress_handler,
     );
 
-    fs::create_dir(&destination_directory_path).map_err(|error| {
-        CopyDirectoryExecutionError::UnableToCreateDirectory {
-            directory_path: destination_directory_path,
-            error,
-        }
-    })?;
+
+    if create_parent_directories {
+        fs::create_dir_all(&destination_directory_path).map_err(|error| {
+            CopyDirectoryExecutionError::UnableToCreateDirectory {
+                directory_path: destination_directory_path,
+                error,
+            }
+        })?;
+    } else {
+        fs::create_dir(&destination_directory_path).map_err(|error| {
+            CopyDirectoryExecutionError::UnableToCreateDirectory {
+                directory_path: destination_directory_path,
+                error,
+            }
+        })?;
+    }
 
 
     progress.directories_created += 1;
@@ -1129,56 +1130,17 @@ pub(crate) fn execute_prepared_copy_directory_with_progress_unchecked<F>(
 where
     F: FnMut(&DirectoryCopyProgressRef),
 {
-    let validated_destination = prepared_copy.validated_destination_directory;
-
-    // Create destination directory if needed.
-    let mut progress = if validated_destination.state.exists() {
-        if options.destination_directory_rule == DestinationDirectoryRule::DisallowExisting {
-            return Err(CopyDirectoryExecutionError::DestinationEntryUnexpected {
-                path: validated_destination.directory_path,
-            });
-        }
-
-        DirectoryCopyInternalProgress {
-            bytes_total: prepared_copy.total_bytes,
-            bytes_finished: 0,
-            files_copied: 0,
-            symlinks_created: 0,
-            directories_created: 0,
-            // This is an invisible operation - we don't emit this progress struct at all,
-            // but we do need something here before the next operation starts.
-            current_operation: None,
-            current_operation_index: None,
-            total_operations: prepared_copy.operation_queue.len(),
-        }
-    } else {
-        // This time we actually emit progress after creating the destination directory.
-
-        let mut progress = DirectoryCopyInternalProgress {
-            bytes_total: prepared_copy.total_bytes,
-            bytes_finished: 0,
-            files_copied: 0,
-            symlinks_created: 0,
-            directories_created: 0,
-            current_operation: Some(DirectoryCopyOperation::CreatingDirectory {
-                destination_directory_path: validated_destination.directory_path.clone(),
-            }),
-            current_operation_index: Some(0),
-            total_operations: prepared_copy.operation_queue.len() + 1,
-        };
-
-        progress_handler(&progress.to_user_facing_progress());
-
-        fs::create_dir_all(&validated_destination.directory_path).map_err(|error| {
-            CopyDirectoryExecutionError::UnableToCreateDirectory {
-                directory_path: validated_destination.directory_path.clone(),
-                error,
-            }
-        })?;
-
-        progress.directories_created += 1;
-
-        progress
+    let mut progress = DirectoryCopyInternalProgress {
+        bytes_total: prepared_copy.total_bytes,
+        bytes_finished: 0,
+        files_copied: 0,
+        symlinks_created: 0,
+        directories_created: 0,
+        // This is an invisible operation - we don't emit this progress struct at all,
+        // but we do need something here before the next operation starts.
+        current_operation: None,
+        current_operation_index: None,
+        total_operations: prepared_copy.operation_queue.len(),
     };
 
 
@@ -1201,9 +1163,11 @@ where
             QueuedOperation::CreateDirectory {
                 source_size_bytes,
                 destination_directory_path,
+                create_parent_directories,
             } => execute_create_directory_operation_with_progress(
                 destination_directory_path,
                 source_size_bytes,
+                create_parent_directories,
                 &options,
                 &mut progress,
                 &mut progress_handler,
@@ -1212,7 +1176,7 @@ where
             #[cfg(windows)]
             QueuedOperation::CreateSymlink {
                 symlink_path,
-                symlink_type,
+                symlink_destination_type: symlink_type,
                 source_symlink_size_bytes,
                 symlink_destination_path,
             } => execute_create_symlink_operation_with_progress(
