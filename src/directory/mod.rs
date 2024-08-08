@@ -9,8 +9,8 @@
 //! |-----------------------------|---------------------------------|:--------------------:|
 //! | [`copy_directory`]               | [`DirectoryCopyOptions`]             | [`DirectoryCopyFinished`] <br><sup style="text-align: right">(or [`CopyDirectoryError`])</sup> |
 //! | [`copy_directory_with_progress`] | [`DirectoryCopyWithProgressOptions`] | [`DirectoryCopyFinished`] <br><sup style="text-align: right">(or [`CopyDirectoryError`])</sup> |
-//! | [`move_directory`]               | [`DirectoryCopyOptions`]             | [`DirectoryMoveFinished`] <br><sup style="text-align: right">(or [`MoveDirectoryError`])</sup> |
-//! | [`move_directory_with_progress`] | [`DirectoryCopyOptions`]             | [`DirectoryMoveFinished`] <br><sup style="text-align: right">(or [`MoveDirectoryError`])</sup> |
+//! | [`move_directory`]               | [`DirectoryMoveOptions`]             | [`DirectoryMoveFinished`] <br><sup style="text-align: right">(or [`MoveDirectoryError`])</sup> |
+//! | [`move_directory_with_progress`] | [`DirectoryMoveWithProgressOptions`] | [`DirectoryMoveFinished`] <br><sup style="text-align: right">(or [`MoveDirectoryError`])</sup> |
 //! | [`DirectoryScanner::new`]        | [`DirectoryScanOptions`]             | [`DirectoryScanner`] |
 //! | [`directory_size_in_bytes`]      |                                      | [`u64`] <br><sup style="text-align: right">(or [`DirectorySizeScanError`])</sup> |
 //! | [`is_directory_empty`]           |                                      | [`bool`] <br><sup style="text-align: right">(or [`DirectoryEmptinessScanError`])</sup> |
