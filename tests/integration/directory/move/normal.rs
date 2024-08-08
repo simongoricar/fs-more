@@ -33,7 +33,7 @@ use fs_more_test_harness::{
 
 
 #[test]
-pub fn move_directory_moves_all_files_and_subdirectories() -> TestResult {
+fn move_directory_moves_all_files_and_subdirectories() {
     let deep_harness = DeepTree::initialize();
     let deep_harness_untouched = DeepTree::initialize();
     let empty_harness = EmptyTree::initialize();
@@ -68,13 +68,12 @@ pub fn move_directory_moves_all_files_and_subdirectories() -> TestResult {
     deep_harness.destroy();
     deep_harness_untouched.destroy();
     empty_harness.destroy();
-    Ok(())
 }
 
 
 
 #[test]
-pub fn move_directory_errors_when_source_is_symlink_to_destination_directory() -> TestResult {
+fn move_directory_errors_when_source_is_symlink_to_destination_directory() {
     let deep_harness = DeepTree::initialize();
     let deep_harness_untouched = DeepTree::initialize();
     let empty_harness = EmptyTree::initialize();
@@ -124,14 +123,13 @@ pub fn move_directory_errors_when_source_is_symlink_to_destination_directory() -
     deep_harness.destroy();
     deep_harness_untouched.destroy();
     empty_harness.destroy();
-    Ok(())
 }
 
 
 
 
 #[test]
-pub fn move_directory_preserves_symlinks_on_non_empty_destination_directory_with_only_rename_strategy_enabled(
+fn move_directory_preserves_symlinks_on_non_empty_destination_directory_with_only_rename_strategy_enabled(
 ) {
     let deep_harness = DeepTree::initialize();
     let deep_harness_untouched = DeepTree::initialize();
@@ -213,7 +211,7 @@ pub fn move_directory_preserves_symlinks_on_non_empty_destination_directory_with
 
 
 #[test]
-pub fn move_directory_does_not_preserve_symlinks_on_empty_destination_directory_with_only_copy_and_delete_strategy_and_symlink_following(
+fn move_directory_does_not_preserve_symlinks_on_empty_destination_directory_with_only_copy_and_delete_strategy_and_symlink_following(
 ) {
     let deep_harness = DeepTree::initialize();
     let simple_harness = SimpleTree::initialize();
@@ -293,8 +291,8 @@ pub fn move_directory_does_not_preserve_symlinks_on_empty_destination_directory_
 
 
 #[test]
-pub fn move_directory_performs_merge_without_overwrite_when_copying_to_non_empty_destination_with_correct_options(
-) -> TestResult {
+fn move_directory_performs_merge_without_overwrite_when_copying_to_non_empty_destination_with_correct_options(
+) {
     let source_harness = DeepTree::initialize();
     let source_harness_untouched = DeepTree::initialize();
 
@@ -332,7 +330,6 @@ pub fn move_directory_performs_merge_without_overwrite_when_copying_to_non_empty
     source_harness_untouched.destroy();
     destination_harness.destroy();
     destination_harness_untouched.destroy();
-    Ok(())
 }
 
 

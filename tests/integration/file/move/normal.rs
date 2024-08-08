@@ -7,7 +7,7 @@ use fs_more_test_harness::{prelude::*, trees::structures::simple::SimpleTree};
 
 
 #[test]
-pub fn move_file_correctly_moves_the_file() -> TestResult {
+fn move_file_correctly_moves_the_file() {
     let harness = SimpleTree::initialize();
 
     let destination_file_path = harness.child_path("destination-file.txt");
@@ -35,12 +35,11 @@ pub fn move_file_correctly_moves_the_file() -> TestResult {
 
 
     harness.destroy();
-    Ok(())
 }
 
 
 #[test]
-pub fn move_file_errors_when_trying_to_copy_into_self() -> TestResult {
+fn move_file_errors_when_trying_to_copy_into_self() {
     let harness = SimpleTree::initialize();
 
 
@@ -67,14 +66,12 @@ pub fn move_file_errors_when_trying_to_copy_into_self() -> TestResult {
 
 
     harness.destroy();
-    Ok(())
 }
 
 
 
 #[test]
-pub fn move_file_errors_when_trying_to_copy_into_self_even_with_overwrite_behaviour() -> TestResult
-{
+fn move_file_errors_when_trying_to_copy_into_self_even_with_overwrite_behaviour() {
     let harness = SimpleTree::initialize();
 
     let bar_bin_captured = harness.yes.no_bin.capture_with_content();
@@ -100,13 +97,12 @@ pub fn move_file_errors_when_trying_to_copy_into_self_even_with_overwrite_behavi
 
 
     harness.destroy();
-    Ok(())
 }
 
 
 
 #[test]
-pub fn move_file_errors_when_trying_to_copy_into_case_insensitive_self() -> TestResult {
+fn move_file_errors_when_trying_to_copy_into_case_insensitive_self() {
     let is_fs_case_sensitive = detect_case_sensitivity_for_temp_dir();
     let harness = SimpleTree::initialize();
 
@@ -182,13 +178,12 @@ pub fn move_file_errors_when_trying_to_copy_into_case_insensitive_self() -> Test
 
 
     harness.destroy();
-    Ok(())
 }
 
 
 
 #[test]
-pub fn move_file_errors_when_source_is_symlink_to_destination() -> TestResult {
+fn move_file_errors_when_source_is_symlink_to_destination() {
     let harness = SimpleTree::initialize();
 
 
@@ -223,13 +218,12 @@ pub fn move_file_errors_when_source_is_symlink_to_destination() -> TestResult {
 
 
     harness.destroy();
-    Ok(())
 }
 
 
 
 #[test]
-pub fn move_file_overwrites_destination_file_when_behaviour_is_overwrite() -> TestResult {
+fn move_file_overwrites_destination_file_when_behaviour_is_overwrite() {
     let harness = SimpleTree::initialize();
 
     let captured_source_file = harness.yes.hello_world_txt.capture_with_content();
@@ -256,13 +250,12 @@ pub fn move_file_overwrites_destination_file_when_behaviour_is_overwrite() -> Te
 
 
     harness.destroy();
-    Ok(())
 }
 
 
 
 #[test]
-pub fn move_file_errors_on_existing_destination_file_when_behaviour_is_abort() -> TestResult {
+fn move_file_errors_on_existing_destination_file_when_behaviour_is_abort() {
     let harness = SimpleTree::initialize();
 
     let source_file_captured = harness.yes.hello_world_txt.capture_with_content();
@@ -289,7 +282,6 @@ pub fn move_file_errors_on_existing_destination_file_when_behaviour_is_abort() -
 
 
     harness.destroy();
-    Ok(())
 }
 
 
@@ -298,7 +290,7 @@ pub fn move_file_errors_on_existing_destination_file_when_behaviour_is_abort() -
 /// **On Windows**, creating symbolic links requires administrator privileges, unless Developer mode is enabled.
 /// See <https://stackoverflow.com/questions/58038683/allow-mklink-for-a-non-admin-user>.
 #[test]
-pub fn move_file_may_preserve_symlinks_when_moving_by_rename() -> TestResult {
+fn move_file_may_preserve_symlinks_when_moving_by_rename() {
     let harness = SimpleTree::initialize();
 
 
@@ -354,5 +346,4 @@ pub fn move_file_may_preserve_symlinks_when_moving_by_rename() -> TestResult {
 
 
     harness.destroy();
-    Ok(())
 }

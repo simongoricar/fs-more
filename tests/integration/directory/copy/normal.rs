@@ -33,7 +33,7 @@ use fs_more_test_harness::{
 
 
 #[test]
-pub fn copy_directory_creates_an_identical_copy() -> TestResult {
+fn copy_directory_creates_an_identical_copy() {
     let deep_harness = DeepTree::initialize();
     let empty_harness = EmptyTree::initialize();
 
@@ -67,13 +67,12 @@ pub fn copy_directory_creates_an_identical_copy() -> TestResult {
 
     deep_harness.destroy();
     empty_harness.destroy();
-    Ok(())
 }
 
 
 
 #[test]
-pub fn copy_directory_respects_copy_depth_limit() -> TestResult {
+fn copy_directory_respects_copy_depth_limit() {
     let deep_harness = DeepTree::initialize();
     let empty_harness = EmptyTree::initialize();
 
@@ -120,13 +119,12 @@ pub fn copy_directory_respects_copy_depth_limit() -> TestResult {
 
     deep_harness.destroy();
     empty_harness.destroy();
-    Ok(())
 }
 
 
 
 #[test]
-pub fn copy_directory_errors_when_source_and_destination_are_the_same() -> TestResult {
+fn copy_directory_errors_when_source_and_destination_are_the_same() {
     let deep_harness = DeepTree::initialize();
 
 
@@ -156,13 +154,12 @@ pub fn copy_directory_errors_when_source_and_destination_are_the_same() -> TestR
 
 
     deep_harness.destroy();
-    Ok(())
 }
 
 
 
 #[test]
-pub fn copy_directory_errors_when_destination_is_inside_source_path() -> TestResult {
+fn copy_directory_errors_when_destination_is_inside_source_path() {
     let deep_harness = DeepTree::initialize();
 
 
@@ -192,14 +189,12 @@ pub fn copy_directory_errors_when_destination_is_inside_source_path() -> TestRes
 
 
     deep_harness.destroy();
-    Ok(())
 }
 
 
 
 #[test]
-pub fn copy_directory_errors_when_destination_directory_already_exists_and_rule_is_disallow_existing(
-) -> TestResult {
+fn copy_directory_errors_when_destination_directory_already_exists_and_rule_is_disallow_existing() {
     let deep_harness = DeepTree::initialize();
     let empty_harness = EmptyTree::initialize();
 
@@ -232,14 +227,12 @@ pub fn copy_directory_errors_when_destination_directory_already_exists_and_rule_
 
     deep_harness.destroy();
     empty_harness.destroy();
-    Ok(())
 }
 
 
 
 #[test]
-pub fn copy_directory_errors_when_destination_file_collides_and_its_behaviour_is_abort(
-) -> TestResult {
+fn copy_directory_errors_when_destination_file_collides_and_its_behaviour_is_abort() {
     let deep_harness = DeepTree::initialize();
     let empty_harness = EmptyTree::initialize();
 
@@ -309,15 +302,13 @@ pub fn copy_directory_errors_when_destination_file_collides_and_its_behaviour_is
 
     deep_harness.destroy();
     empty_harness.destroy();
-    Ok(())
 }
 
 
 
 
 #[test]
-pub fn copy_directory_errors_when_destination_subdirectory_collides_and_its_behaviour_is_abort(
-) -> TestResult {
+fn copy_directory_errors_when_destination_subdirectory_collides_and_its_behaviour_is_abort() {
     let deep_harness = DeepTree::initialize();
     let empty_harness = EmptyTree::initialize();
 
@@ -370,7 +361,6 @@ pub fn copy_directory_errors_when_destination_subdirectory_collides_and_its_beha
 
     deep_harness.destroy();
     empty_harness.destroy();
-    Ok(())
 }
 
 
@@ -404,7 +394,7 @@ fn copy_directory_creates_destination_directory_if_missing() {
 
 
 #[test]
-pub fn copy_directory_respects_copy_depth_limit_if_source_contains_dir_symlink_and_behaviour_is_set_to_follow(
+fn copy_directory_respects_copy_depth_limit_if_source_contains_dir_symlink_and_behaviour_is_set_to_follow(
 ) {
     let deep_harness = DeepTree::initialize();
     let empty_harness = EmptyTree::initialize();
@@ -496,7 +486,7 @@ pub fn copy_directory_respects_copy_depth_limit_if_source_contains_dir_symlink_a
 
 
 #[test]
-pub fn copy_directory_respects_copy_depth_limit_if_source_contains_symlinks_and_behaviour_is_set_to_keep(
+fn copy_directory_respects_copy_depth_limit_if_source_contains_symlinks_and_behaviour_is_set_to_keep(
 ) {
     let deep_harness = DeepTree::initialize();
     let empty_harness = EmptyTree::initialize();
@@ -602,7 +592,7 @@ pub fn copy_directory_respects_copy_depth_limit_if_source_contains_symlinks_and_
 
 
 #[test]
-pub fn copy_directory_preemptively_checks_for_directory_collisions() -> TestResult {
+fn copy_directory_preemptively_checks_for_directory_collisions() {
     let deep_harness = DeepTree::initialize();
     let empty_harness = EmptyTree::initialize();
 
@@ -651,13 +641,12 @@ pub fn copy_directory_preemptively_checks_for_directory_collisions() -> TestResu
 
     deep_harness.destroy();
     empty_harness.destroy();
-    Ok(())
 }
 
 
 
 #[test]
-pub fn copy_directory_preemptively_checks_for_file_collisions() -> TestResult {
+fn copy_directory_preemptively_checks_for_file_collisions() {
     let deep_harness = DeepTree::initialize();
     let empty_harness = EmptyTree::initialize();
 
@@ -715,7 +704,6 @@ pub fn copy_directory_preemptively_checks_for_file_collisions() -> TestResult {
 
     deep_harness.destroy();
     empty_harness.destroy();
-    Ok(())
 }
 
 
@@ -723,7 +711,7 @@ pub fn copy_directory_preemptively_checks_for_file_collisions() -> TestResult {
 /// Tests fs_more behaviour when copying a "symlink to directory A" to "A".
 /// This should return an error, regardless of overwriting configuration.
 #[test]
-pub fn copy_directory_errors_when_source_is_symlink_to_destination() -> TestResult {
+fn copy_directory_errors_when_source_is_symlink_to_destination() {
     let deep_harness = DeepTree::initialize();
     let deep_harness_untouched = DeepTree::initialize();
     let empty_harness = EmptyTree::initialize();
@@ -781,7 +769,6 @@ pub fn copy_directory_errors_when_source_is_symlink_to_destination() -> TestResu
     deep_harness.destroy();
     deep_harness_untouched.destroy();
     empty_harness.destroy();
-    Ok(())
 }
 
 

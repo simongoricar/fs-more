@@ -317,6 +317,8 @@ fn scanner_iter_follows_symlinks_if_enabled() {
     tree_harness.destroy();
 }
 
+
+
 #[test]
 fn scanner_iter_does_not_follow_symlinks_if_not_enabled() {
     let tree_harness = SymlinkedTree::initialize();

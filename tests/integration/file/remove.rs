@@ -8,7 +8,7 @@ use fs_more_test_harness::{
 
 
 #[test]
-pub fn remove_file_deletes_file() -> TestResult {
+fn remove_file_deletes_file() {
     let harness = SimpleTree::initialize();
 
     let removal_result = fs_more::file::remove_file(harness.yes.hello_world_txt.as_path());
@@ -24,13 +24,12 @@ pub fn remove_file_deletes_file() -> TestResult {
     harness.yes.hello_world_txt.assert_not_exists();
 
     harness.destroy();
-    Ok(())
 }
 
 
 
 #[test]
-pub fn remove_file_does_not_follow_symlinks() -> TestResult {
+fn remove_file_does_not_follow_symlinks() {
     let harness = SimpleTree::initialize();
     let secondary_harness = SimpleTree::initialize();
 
@@ -58,13 +57,12 @@ pub fn remove_file_does_not_follow_symlinks() -> TestResult {
 
 
     harness.destroy();
-    Ok(())
 }
 
 
 
 #[test]
-pub fn remove_file_errors_on_non_existent_file() -> TestResult {
+fn remove_file_errors_on_non_existent_file() {
     let harness = EmptyTree::initialize();
 
     let non_existent_file = harness.child_path("hello-world.txt");
@@ -87,5 +85,4 @@ pub fn remove_file_errors_on_non_existent_file() -> TestResult {
 
 
     harness.destroy();
-    Ok(())
 }

@@ -7,7 +7,7 @@ use fs_more_test_harness::{prelude::*, trees::structures::simple::SimpleTree};
 
 
 #[test]
-pub fn copy_file_creates_an_identical_copy() -> TestResult {
+fn copy_file_creates_an_identical_copy() {
     let harness = SimpleTree::initialize();
 
 
@@ -41,12 +41,11 @@ pub fn copy_file_creates_an_identical_copy() -> TestResult {
 
 
     harness.destroy();
-    Ok(())
 }
 
 
 #[test]
-pub fn copy_file_errors_when_trying_to_copy_into_self() -> TestResult {
+fn copy_file_errors_when_trying_to_copy_into_self() {
     let harness = SimpleTree::initialize();
 
     let captured_file = harness.yes.no_bin.capture_with_content();
@@ -71,13 +70,12 @@ pub fn copy_file_errors_when_trying_to_copy_into_self() -> TestResult {
 
 
     harness.destroy();
-    Ok(())
 }
 
 
 
 #[test]
-pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
+fn copy_file_handles_case_insensitivity_properly() {
     let harness = SimpleTree::initialize();
     let is_fs_case_sensitive = detect_case_sensitivity_for_temp_dir();
 
@@ -145,13 +143,12 @@ pub fn copy_file_handles_case_insensitivity_properly() -> TestResult {
 
 
     harness.destroy();
-    Ok(())
 }
 
 
 
 #[test]
-pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated() -> TestResult {
+fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated() {
     let harness = SimpleTree::initialize();
     let is_fs_case_sensitive = detect_case_sensitivity_for_temp_dir();
 
@@ -221,14 +218,13 @@ pub fn copy_file_errors_when_trying_to_copy_into_self_even_when_more_complicated
 
 
     harness.destroy();
-    Ok(())
 }
 
 
 
 
 #[test]
-pub fn copy_file_overwrites_destination_file_when_behaviour_is_overwrite() -> TestResult {
+fn copy_file_overwrites_destination_file_when_behaviour_is_overwrite() {
     let harness = SimpleTree::initialize();
 
     let source_file_size_bytes = harness.yes.no_bin.size_in_bytes();
@@ -260,12 +256,11 @@ pub fn copy_file_overwrites_destination_file_when_behaviour_is_overwrite() -> Te
 
 
     harness.destroy();
-    Ok(())
 }
 
 
 #[test]
-pub fn copy_file_errors_on_existing_destination_file_when_behaviour_is_abort() -> TestResult {
+fn copy_file_errors_on_existing_destination_file_when_behaviour_is_abort() {
     let harness = SimpleTree::initialize();
 
 
@@ -292,13 +287,12 @@ pub fn copy_file_errors_on_existing_destination_file_when_behaviour_is_abort() -
 
 
     harness.destroy();
-    Ok(())
 }
 
 
 
 #[test]
-pub fn copy_file_skips_existing_destination_file_when_behaviour_is_skip() -> TestResult {
+fn copy_file_skips_existing_destination_file_when_behaviour_is_skip() {
     let harness = SimpleTree::initialize();
 
 
@@ -322,14 +316,13 @@ pub fn copy_file_skips_existing_destination_file_when_behaviour_is_skip() -> Tes
 
 
     harness.destroy();
-    Ok(())
 }
 
 
 /// Tests behaviour when copying "symlink to file A" to "A",
 /// even when the overwriting behaviour is set. This operation must fail.
 #[test]
-pub fn copy_file_errors_when_source_path_is_symlink_to_destination_file() -> TestResult {
+fn copy_file_errors_when_source_path_is_symlink_to_destination_file() {
     let harness = SimpleTree::initialize();
 
 
@@ -355,7 +348,6 @@ pub fn copy_file_errors_when_source_path_is_symlink_to_destination_file() -> Tes
 
 
     harness.destroy();
-    Ok(())
 }
 
 
@@ -363,7 +355,7 @@ pub fn copy_file_errors_when_source_path_is_symlink_to_destination_file() -> Tes
 /// **On Windows**, creating symbolic links requires administrator privileges, unless Developer mode is enabled.
 /// See [https://stackoverflow.com/questions/58038683/allow-mklink-for-a-non-admin-user].
 #[test]
-pub fn copy_file_does_not_preserve_symlinks() -> TestResult {
+fn copy_file_does_not_preserve_symlinks() {
     let harness = SimpleTree::initialize();
 
 
@@ -406,5 +398,4 @@ pub fn copy_file_does_not_preserve_symlinks() -> TestResult {
 
 
     harness.destroy();
-    Ok(())
 }
