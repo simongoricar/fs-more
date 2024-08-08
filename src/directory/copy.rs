@@ -394,8 +394,6 @@ pub(crate) fn copy_directory_unchecked(
 ///
 ///
 /// # Symbolic links
-/// TODO test, then copy docs section to copy_directory_with_progress as well, then update relevant docs in move_directory
-///
 /// Symbolic links inside the source directory are handled according to the [`symlink_behaviour`] option.
 ///
 /// Additionally, if the provided `source_directory_path` is itself a symlink to a directory,
@@ -1228,10 +1226,11 @@ where
 ///
 ///
 /// # Symbolic links
-/// If the provided `source_directory_path` is itself a symlink that points to a directory,
-/// the link will be followed and the contents of the link target directory will be copied.
+/// Symbolic links inside the source directory are handled according to the [`symlink_behaviour`] option.
 ///
-/// Regarding symbolic links *inside* the source directory, the chosen [`symlink_behaviour`] is respected.
+/// Additionally, if the provided `source_directory_path` is itself a symlink to a directory,
+/// and the symbolic link behaviour is set to [`SymlinkBehaviour::Keep`], the link will be preserved
+/// on the destination, meaning `destination_directory_path` will be a symbolic link as well.
 ///
 /// This matches the behaviour of `cp` with `--recursive` (and optionally `--dereference`)
 /// flags on Unix[^unix-cp-rd].
