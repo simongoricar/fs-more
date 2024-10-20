@@ -274,6 +274,7 @@ impl AsRelativePath for SymlinkBackToFoo {
 
 It contains the following files:
 - `d.bin` (field `d_bin`; see [`DBin`])
+
 It contains the following symlinks:
 - `symlink-back-to-foo` (field `symlink_back_to_foo`; see [`SymlinkBackToFoo`])
 
@@ -345,6 +346,7 @@ pub struct Hello {
 
 It contains the following files:
 - `d.bin` (field `d_bin`; see [`DBin`])
+
 It contains the following symlinks:
 - `symlink-back-to-foo` (field `symlink_back_to_foo`; see [`SymlinkBackToFoo`])
 
@@ -385,6 +387,7 @@ impl FileSystemHarnessDirectory for Hello {}
 
 It contains the following sub-directories:
 - `hello` (field `hello`; see [`Hello`])
+
 It contains the following files:
 - `c.bin` (field `c_bin`; see [`CBin`])
 
@@ -448,6 +451,7 @@ impl FileSystemHarnessDirectory for Bar {}
 
 It contains the following sub-directories:
 - `bar` (field `bar`; see [`Bar`])
+
 It contains the following files:
 - `b.bin` (field `b_bin`; see [`BBin`])
 
@@ -468,6 +472,7 @@ pub struct Foo {
 
 It contains the following sub-directories:
 - `hello` (field `hello`; see [`Hello`])
+
 It contains the following files:
 - `c.bin` (field `c_bin`; see [`CBin`])
 

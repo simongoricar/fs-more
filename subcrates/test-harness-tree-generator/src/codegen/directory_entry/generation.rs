@@ -287,7 +287,7 @@ fn construct_documentation_for_directory_entry(
             ));
         }
 
-        format!("\n{}\n", documentation_segments.join("\n"))
+        format!("\n{}\n", documentation_segments.join("\n\n"))
     };
 
     format!(

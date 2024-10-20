@@ -312,6 +312,7 @@ impl FileSystemHarnessDirectory for Hello {}
 
 It contains the following sub-directories:
 - `hello` (field `hello`; see [`Hello`])
+
 It contains the following files:
 - `c.bin` (field `c_bin`; see [`CBin`])
 
@@ -371,6 +372,7 @@ impl FileSystemHarnessDirectory for Bar {}
 
 It contains the following sub-directories:
 - `bar` (field `bar`; see [`Bar`])
+
 It contains the following files:
 - `b.bin` (field `b_bin`; see [`BBin`])
 
@@ -391,6 +393,7 @@ pub struct Foo {
 
 It contains the following sub-directories:
 - `hello` (field `hello`; see [`Hello`])
+
 It contains the following files:
 - `c.bin` (field `c_bin`; see [`CBin`])
 

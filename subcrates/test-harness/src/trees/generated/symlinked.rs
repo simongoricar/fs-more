@@ -362,6 +362,7 @@ impl FileSystemHarnessDirectory for Hello {}
 
 It contains the following sub-directories:
 - `hello` (field `hello`; see [`Hello`])
+
 It contains the following files:
 - `c.bin` (field `c_bin`; see [`CBin`])
 
@@ -469,8 +470,10 @@ impl AsRelativePath for SymlinkToHello {
 
 It contains the following sub-directories:
 - `bar` (field `bar`; see [`Bar`])
+
 It contains the following files:
 - `b.bin` (field `b_bin`; see [`BBin`])
+
 It contains the following symlinks:
 - `symlink-to-d.bin` (field `symlink_to_d_bin`; see [`SymlinkToDBin`])
 - `symlink-to-hello` (field `symlink_to_hello`; see [`SymlinkToHello`])
@@ -499,6 +502,7 @@ pub struct Foo {
 
 It contains the following sub-directories:
 - `hello` (field `hello`; see [`Hello`])
+
 It contains the following files:
 - `c.bin` (field `c_bin`; see [`CBin`])
 
