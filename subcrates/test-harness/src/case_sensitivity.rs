@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 
 use crate::assertable::AssertablePath;
 
@@ -22,7 +22,9 @@ pub fn detect_case_sensitivity_for_temp_dir() -> bool {
     hello_txt_path.assert_not_exists();
     hello_txt_path_lowercase.assert_not_exists();
 
-    File::create_new(temporary_directory.path().join("HELLO.txt"))
+    OpenOptions::new()
+        .create_new(true)
+        .open(&hello_txt_path)
         .expect("failed to create HELLO.txt");
 
     hello_txt_path.assert_is_file_and_not_symlink();

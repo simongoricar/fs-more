@@ -567,7 +567,10 @@ where
                 .expect("failed to create missing parent directory");
         }
 
-        fs::File::create_new(self.as_path()).expect("failed to create empty file");
+        fs::OpenOptions::new()
+            .create_new(true)
+            .open(self.as_path())
+            .expect("failed to create empty file");
 
         self.assert_is_file_and_not_symlink();
     }
