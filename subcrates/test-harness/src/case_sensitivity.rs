@@ -1,4 +1,4 @@
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 
 use crate::assertable::AssertablePath;
 
@@ -24,6 +24,7 @@ pub fn detect_case_sensitivity_for_temp_dir() -> bool {
 
     OpenOptions::new()
         .create_new(true)
+        .write(true)
         .open(&hello_txt_path)
         .expect("failed to create HELLO.txt");
 

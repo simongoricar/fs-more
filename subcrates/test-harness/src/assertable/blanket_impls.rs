@@ -569,6 +569,7 @@ where
 
         fs::OpenOptions::new()
             .create_new(true)
+            .write(true)
             .open(self.as_path())
             .expect("failed to create empty file");
 
