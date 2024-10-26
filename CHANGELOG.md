@@ -4,6 +4,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+This is a small bug fix release.
+
+### Changed
+- The MSRV for `fs-more` has been dropped from `1.77` to `1.74.1`.
+
+### Fixed
+- Fixed `copy_directory` and `copy_directory_with_progress` incorrectly handling relative symlink destinations,
+  erroneously classifying them as broken symlinks.
+
+
+Related issues / PRs:
+- [#3](https://github.com/simongoricar/fs-more/issues/3)
+
 
 ---
 
