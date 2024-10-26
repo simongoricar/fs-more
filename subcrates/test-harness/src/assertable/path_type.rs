@@ -50,6 +50,18 @@ impl PathType {
         if metadata_no_follow.is_symlink() {
             let resolved_symlink_path = fs::read_link(&path)?;
 
+            // Relative symlink paths should be interpreted relative to the directory they are in.
+            let resolved_symlink_path = if resolved_symlink_path.is_relative() {
+                let parent_directory_path = path
+                    .as_ref()
+                    .parent()
+                    .expect("unable to get parent directory path");
+
+                parent_directory_path.join(resolved_symlink_path)
+            } else {
+                resolved_symlink_path
+            };
+
             if !resolved_symlink_path.try_exists()? {
                 return Ok(Self::BrokenSymlink);
             }
