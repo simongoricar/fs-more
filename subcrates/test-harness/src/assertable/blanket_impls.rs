@@ -319,6 +319,43 @@ where
     }
 
     #[track_caller]
+    fn assert_is_any_broken_symlink_and_read_destination(&self) -> PathBuf {
+        self.assert_exists();
+
+        let metadata_no_follow = self
+            .as_path()
+            .symlink_metadata()
+            .expect("unable to read file metadata without following");
+
+        if !metadata_no_follow.is_symlink() {
+            let path_type = PathType::from_path(self.as_path()).unwrap();
+
+            panic!(
+                "path is not a symlink, but {}: {}",
+                path_type.to_short_name(),
+                self.as_path().display()
+            );
+        }
+
+
+        let symlink_destination = self
+            .as_path()
+            .read_link()
+            .expect("unable to read file symlink destination");
+
+        symlink_destination.assert_not_exists();
+
+        symlink_destination
+    }
+
+    #[track_caller]
+    fn assert_is_any_symlink_and_resolve_destination(&self) -> PathBuf {
+        self.assert_is_any_symlink();
+
+        fs::read_link(self.as_path()).expect("failed to read symlink")
+    }
+
+    #[track_caller]
     fn assert_is_valid_symlink_to_directory(&self) {
         self.assert_exists();
 
@@ -411,29 +448,22 @@ where
         }
     }
 
+    #[track_caller]
     fn assert_is_valid_symlink_to_file_and_destination_matches<P>(
         &self,
         expected_destination_path: P,
     ) where
         P: AsRef<Path>,
     {
-        let canonical_expected_path = expected_destination_path
-            .as_ref()
-            .canonicalize()
-            .expect("failed to canonicalize expected destination path");
-
         let destination = self.assert_is_valid_symlink_to_file_and_resolve_destination();
-        let canonical_actual_destination_path = destination
-            .canonicalize()
-            .expect("failed to canonicalize symlink destination path");
 
         assert_eq!(
-            canonical_expected_path,
-            canonical_actual_destination_path,
+            destination.as_path(),
+            expected_destination_path.as_ref(),
             "\"{}\" does not lead to \"{}\", but to \"{}\"",
             self.as_path().display(),
             expected_destination_path.as_ref().display(),
-            canonical_actual_destination_path.display()
+            destination.display()
         );
     }
 

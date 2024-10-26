@@ -122,6 +122,12 @@ pub trait AssertablePath {
     /// This method does not ensure that the link destination is valid.
     fn assert_is_any_symlink(&self);
 
+    /// Asserts the path points to a symlink and returns its destination
+    /// (which can be relative).
+    ///
+    /// This method does not ensure that the link destination is valid.
+    fn assert_is_any_symlink_and_resolve_destination(&self) -> PathBuf;
+
     /// Asserts the path is a symlink and points to a valid destination.
     fn assert_is_any_valid_symlink(&self);
 
@@ -129,6 +135,10 @@ pub trait AssertablePath {
     /// (i.e. the link is broken).
     fn assert_is_any_broken_symlink(&self);
 
+    /// Asserts the path is a symlink and points to an invalid destination
+    /// (i.e. the link is broken) and returns its destination,
+    /// which can be relative.
+    fn assert_is_any_broken_symlink_and_read_destination(&self) -> PathBuf;
 
     /// Asserts the path points to a symlink to a directory.
     fn assert_is_valid_symlink_to_directory(&self);
