@@ -396,6 +396,10 @@ pub(crate) fn copy_directory_unchecked(
 /// # Symbolic links
 /// Symbolic links inside the source directory are handled according to the [`symlink_behaviour`] option.
 ///
+/// If a symbolic link is relative and symbolic link behaviour is set to [`SymlinkBehaviour::Keep`],
+/// the relative path of the symlink will be preserved, even if this results in the symbolic link
+/// now being broken on the destination side.
+///
 /// Additionally, if the provided `source_directory_path` is itself a symlink to a directory,
 /// and the symbolic link behaviour is set to [`SymlinkBehaviour::Keep`], the link will be preserved
 /// on the destination, meaning `destination_directory_path` will be a symbolic link as well.
@@ -1227,6 +1231,10 @@ where
 ///
 /// # Symbolic links
 /// Symbolic links inside the source directory are handled according to the [`symlink_behaviour`] option.
+///
+/// If a symbolic link is relative and symbolic link behaviour is set to [`SymlinkBehaviour::Keep`],
+/// the relative path of the symlink will be preserved, even if this results in the symbolic link
+/// now being broken on the destination side.
 ///
 /// Additionally, if the provided `source_directory_path` is itself a symlink to a directory,
 /// and the symbolic link behaviour is set to [`SymlinkBehaviour::Keep`], the link will be preserved
