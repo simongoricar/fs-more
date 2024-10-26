@@ -599,14 +599,33 @@ fn scan_and_plan_directory_copy(
                         }
                     })?;
 
+                // The absolute symlink destination path will only be resolved if the original path
+                // as-is from fs::read_link is relative. This is because relative symlinks must be interpreted
+                // relative to the directory they are in, not relative to the current directory.
+                let resolved_absolute_symlink_pathbuf = if resolved_symlink_path.is_relative() {
+                    let symlink_parent_directory_path = &next_directory.directory_path;
 
-                let resolved_symlink_path_exists =
-                    try_exists_without_follow(&resolved_symlink_path).map_err(|error| {
-                        DirectoryExecutionPlanError::UnableToAccess {
-                            path: resolved_symlink_path.clone(),
-                            error,
-                        }
-                    })?;
+                    let resolved_absolute_symlink_path =
+                        symlink_parent_directory_path.join(&resolved_symlink_path);
+
+                    Some(resolved_absolute_symlink_path)
+                } else {
+                    None
+                };
+
+
+                let resolved_absolute_symlink_path = resolved_absolute_symlink_pathbuf
+                    .as_ref()
+                    .unwrap_or(&resolved_symlink_path);
+
+
+                let resolved_symlink_path_exists = try_exists_without_follow(
+                    &resolved_absolute_symlink_path,
+                )
+                .map_err(|error| DirectoryExecutionPlanError::UnableToAccess {
+                    path: resolved_absolute_symlink_path.to_path_buf(),
+                    error,
+                })?;
 
 
                 if !resolved_symlink_path_exists {
@@ -692,13 +711,12 @@ fn scan_and_plan_directory_copy(
                 // Symbolic link is valid, we should look at the corresponding
                 // `symlink_behaviour` option.
 
-                let resolved_symlink_metadata =
-                    fs::metadata(&resolved_symlink_path).map_err(|error| {
-                        DirectoryExecutionPlanError::UnableToAccess {
-                            path: resolved_symlink_path.clone(),
-                            error,
-                        }
+                let resolved_symlink_metadata = fs::metadata(&resolved_absolute_symlink_path)
+                    .map_err(|error| DirectoryExecutionPlanError::UnableToAccess {
+                        path: resolved_symlink_path.clone(),
+                        error,
                     })?;
+
 
                 let resolved_symlink_file_type = resolved_symlink_metadata.file_type();
                 let resolved_symlink_file_size = resolved_symlink_metadata.len();
@@ -764,7 +782,7 @@ fn scan_and_plan_directory_copy(
                         // symlink's destination to the copy destination should be queued.
                         if resolved_symlink_file_type.is_file() {
                             operation_queue.push(QueuedOperation::CopyFile {
-                                source_file_path: resolved_symlink_path,
+                                source_file_path: resolved_absolute_symlink_path.to_path_buf(),
                                 source_size_bytes: resolved_symlink_file_size,
                                 destination_file_path: directory_item_destination_path,
                             });
