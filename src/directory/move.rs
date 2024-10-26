@@ -438,7 +438,7 @@ fn attempt_directory_move_by_rename(
 ///
 /// # Return value
 /// Upon success, the function returns the number of files and directories that were moved
-/// as well as the total amount of bytes moved and how the move was performed
+/// as well as the total number of bytes moved and how the move was performed
 /// (see [`DirectoryMoveFinished`]).
 ///
 ///
@@ -563,8 +563,8 @@ where
 
 
 
-/// Options for the copy-and-delete strategy when moving a directory
-/// (with progress tracking).
+/// Options for the copy-and-delete strategy when
+/// configuring a directory move with progress tracking.
 ///
 /// See also: [`DirectoryMoveWithProgressOptions`] and [`move_directory_with_progress`].
 pub struct DirectoryMoveWithProgressByCopyOptions {
@@ -603,7 +603,7 @@ pub struct DirectoryMoveWithProgressByCopyOptions {
     /// Defaults to 64 KiB.
     pub write_buffer_size: usize,
 
-    /// *Minimum* amount of bytes written between two consecutive progress reports.
+    /// *Minimum* number of bytes written between two consecutive progress reports.
     ///
     /// Defaults to 512 KiB.
     ///
@@ -781,10 +781,10 @@ pub enum DirectoryMoveOperation {
 /// see [`move_directory_with_progress`].
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct DirectoryMoveProgress {
-    /// Amount of bytes that need to be moved for the directory move to be complete.
+    /// Number of bytes that need to be moved for the directory move to be complete.
     pub bytes_total: u64,
 
-    /// Amount of bytes that have been moved so far.
+    /// Number of bytes that have been moved so far.
     pub bytes_finished: u64,
 
     /// Number of files that have been moved so far.
@@ -803,7 +803,7 @@ pub struct DirectoryMoveProgress {
     /// The index of the current operation (starts at `0`, goes to `total_operations - 1`).
     pub current_operation_index: usize,
 
-    /// The total amount of operations that need to be performed to move the requested directory.
+    /// The total number of operations that need to be performed to move the requested directory.
     ///
     /// A single operation is one of (see [`DirectoryMoveProgress`]):
     /// - copying a file,
@@ -867,7 +867,7 @@ pub struct DirectoryMoveProgress {
 ///
 /// # Return value
 /// Upon success, the function returns the number of files and directories that were moved
-/// as well as the total amount of bytes moved and how the move was performed
+/// as well as the total number of bytes moved and how the move was performed
 /// (see [`DirectoryMoveFinished`]).
 ///
 ///
@@ -879,7 +879,7 @@ pub struct DirectoryMoveProgress {
 /// You can control the progress reporting frequency by setting the
 /// [`progress_update_byte_interval`] option to a sufficiencly small or large value,
 /// but note that smaller intervals are likely to have an additional impact on performance.
-/// The value of this option if the minimum amount of bytes written to a file between
+/// The value of this option if the minimum number of bytes written to a file between
 /// two calls to the provided `progress_handler`.
 ///
 /// This function does not guarantee a precise number of progress reports;

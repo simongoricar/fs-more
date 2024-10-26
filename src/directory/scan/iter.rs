@@ -65,8 +65,8 @@ struct NextEntryInfo {
 
 /// A recursive breadth-first directory iterator.
 ///
-/// Obtained from calling `into_iter` after
-/// initializing the directory scanner ([`DirectoryScanner::new`]).
+/// Obtained from calling `into_iter` after initializing the directory scanner;
+/// see [`DirectoryScanner::new`].
 ///
 ///
 /// [`DirectoryScanner::new`]: super::DirectoryScanner::new

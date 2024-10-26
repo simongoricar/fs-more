@@ -40,8 +40,11 @@ pub(crate) struct ProgressWriter<W: Write, F: FnMut(&FileProgress)> {
 }
 
 impl<W: Write, F: FnMut(&FileProgress)> ProgressWriter<W, F> {
-    /// Initialize a new `ProgressWriter` by providing a writer, your progress handler,
-    /// the minimum amount of bytes written between two progress reports and the total file size in bytes.
+    /// Initialize a new `ProgressWriter` by providing:
+    /// - a writer,
+    /// - your progress handler,
+    /// - the minimum number of bytes copied between two progress reports, and
+    /// - the total file size in bytes.
     pub fn new(inner: W, handler: F, progress_update_byte_interval: u64, bytes_total: u64) -> Self {
         Self {
             progress: FileProgress {

@@ -161,7 +161,7 @@ impl Default for DirectoryCopyOptions {
 /// Describes a successful directory copy operation.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct DirectoryCopyFinished {
-    /// Total amount of bytes copied.
+    /// Total number of bytes copied.
     pub total_bytes_copied: u64,
 
     /// Total number of files copied.
@@ -421,7 +421,7 @@ pub(crate) fn copy_directory_unchecked(
 ///
 /// # Return value
 /// Upon success, the function returns information about the files and directories that were copied or created
-/// as well as the total amount of bytes copied, see [`DirectoryCopyFinished`].
+/// as well as the total number of bytes copied; see [`DirectoryCopyFinished`].
 ///
 ///
 /// # Errors
@@ -540,7 +540,7 @@ pub struct DirectoryCopyProgressRef<'o> {
     /// Starts at `0`, goes up to (including) `total_operations - 1`.
     pub current_operation_index: usize,
 
-    /// The total amount of operations that need to be performed to
+    /// The total number of operations that need to be performed to
     /// copy the requested directory.
     ///
     /// A single operation is either copying a file or creating a directory,
@@ -603,7 +603,7 @@ pub struct DirectoryCopyProgress {
     /// Starts at `0`, goes up to (including) `total_operations - 1`.
     pub current_operation_index: usize,
 
-    /// The total amount of operations that need to be performed to
+    /// The total number of operations that need to be performed to
     /// copy the requested directory.
     ///
     /// A single operation is either copying a file or creating a directory,
@@ -642,7 +642,7 @@ struct DirectoryCopyInternalProgress {
     /// Starts at `0`, goes up to (including) `total_operations - 1`.
     current_operation_index: Option<usize>,
 
-    /// The total amount of operations that need to be performed to
+    /// The total number of operations that need to be performed to
     /// copy the requested directory.
     ///
     /// A single operation is either copying a file or creating a directory,
@@ -752,7 +752,7 @@ pub struct DirectoryCopyWithProgressOptions {
     /// Defaults to 64 KiB.
     pub write_buffer_size: usize,
 
-    /// *Minimum* amount of bytes written between two consecutive progress reports.
+    /// *Minimum* number of bytes written between two consecutive progress reports.
     ///
     /// Defaults to 512 KiB.
     ///
@@ -1257,7 +1257,7 @@ where
 ///
 /// # Return value
 /// Upon success, the function returns information about the files and directories that were copied or created
-/// as well as the total amount of bytes copied, see [`DirectoryCopyFinished`].
+/// as well as the total number of bytes copied; see [`DirectoryCopyFinished`].
 ///
 ///
 /// ## Progress reporting
@@ -1268,7 +1268,7 @@ where
 /// You can control the progress reporting frequency by setting the
 /// [`options.progress_update_byte_interval`] option to a sufficiently small or large value,
 /// but note that smaller intervals are likely to have an additional impact on performance.
-/// The value of this option is the minimum amount of bytes written to a file between
+/// The value of this option is the minimum number of bytes written to a file between
 /// two calls to the provided `progress_handler`.
 ///
 /// This function does not guarantee a precise number of progress reports;

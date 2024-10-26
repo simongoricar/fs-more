@@ -301,7 +301,7 @@ pub struct FileMoveWithProgressOptions {
     /// Defaults to 64 KiB.
     pub write_buffer_size: usize,
 
-    /// The smallest amount of bytes processed between two consecutive progress reports.
+    /// The smallest number of bytes to be copied between two consecutive progress reports.
     ///
     /// Increase this value to make progress reports less frequent, and decrease it
     /// to make them more frequent.
@@ -366,14 +366,13 @@ impl Default for FileMoveWithProgressOptions {
 ///
 /// You can control the progress update frequency with the
 /// [`options.progress_update_byte_interval`] option.
-/// The value of this option is the minimum amount of bytes written to a file between
+/// The value of this option is the minimum number of bytes written to a file between
 /// two calls to the provided `progress_handler`.
 ///
-/// This function does not guarantee a precise amount of progress reports per file size
-/// and progress reporting interval setting; it does, however, guarantee at least one progress report:
+/// This function does not guarantee a precise number of progress reports per file size
+/// and progress reporting interval. However, it does guarantee at least one progress report:
 /// the final one, which happens when the file has been completely copied.
-/// In most cases though, the number of calls to
-/// the closure will be near the expected amount,
+/// In most cases though, the number of calls to the closure will be near the expected number,
 /// which is `file_size / progress_update_byte_interval`.
 ///
 ///

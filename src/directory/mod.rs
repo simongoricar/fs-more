@@ -11,7 +11,7 @@
 //! | [`copy_directory_with_progress`] | [`DirectoryCopyWithProgressOptions`] | [`DirectoryCopyFinished`] <br><sup style="text-align: right">(or [`CopyDirectoryError`])</sup> |
 //! | [`move_directory`]               | [`DirectoryMoveOptions`]             | [`DirectoryMoveFinished`] <br><sup style="text-align: right">(or [`MoveDirectoryError`])</sup> |
 //! | [`move_directory_with_progress`] | [`DirectoryMoveWithProgressOptions`] | [`DirectoryMoveFinished`] <br><sup style="text-align: right">(or [`MoveDirectoryError`])</sup> |
-//! | [`DirectoryScanner::new`]        | [`DirectoryScanOptions`]             | [`DirectoryScanner`] |
+//! | [`DirectoryScanner::new`]        | [`DirectoryScanOptions`]             | [`DirectoryScanner`] <br><sup style="text-align: right">(and, eventually, [`BreadthFirstDirectoryIter`])</sup> |
 //! | [`directory_size_in_bytes`]      |                                      | [`u64`] <br><sup style="text-align: right">(or [`DirectorySizeScanError`])</sup> |
 //! | [`is_directory_empty`]           |                                      | [`bool`] <br><sup style="text-align: right">(or [`DirectoryEmptinessScanError`])</sup> |
 //!
