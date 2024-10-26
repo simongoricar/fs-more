@@ -4,10 +4,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+
+
+---
+
+## [0.8.0] - 2024-10-26
+
 This is a small bug fix and refactoring release.
 
 ### Changed
 - The MSRV for `fs-more` has been dropped from `1.77` to `1.74.1`.
+- The documentation has received some improvements, mostly typo fixes and rewording.
 
 ### Fixed
 - Fixed `copy_directory` and `copy_directory_with_progress` incorrectly handling relative symlink destinations,
@@ -22,7 +29,6 @@ Related issues / PRs:
 - [#3](https://github.com/simongoricar/fs-more/issues/3)
 
 
----
 
 
 ## [0.7.1] - 2024-08-08
@@ -250,7 +256,8 @@ Initial development release with the API mostly stable.
 
 
 
-[Unreleased]: https://github.com/simongoricar/fs-more/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/simongoricar/fs-more/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/simongoricar/fs-more/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/simongoricar/fs-more/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/simongoricar/fs-more/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/simongoricar/fs-more/compare/v0.6.0...v0.6.1
