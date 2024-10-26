@@ -851,6 +851,57 @@ fn copy_directory_does_not_preserve_symlinks_when_behaviour_is_set_to_follow() {
 
 
 
+
+#[test]
+#[cfg(unix)]
+fn copy_directory_does_not_preserve_relative_symlinks_when_behaviour_is_set_to_follow_on_unix() {
+    use std::path::Path;
+
+
+    let source_tree = SimpleTree::initialize();
+    let destination_tree = EmptyTree::initialize();
+
+
+    let expected_non_symlink_path_in_destination_tree = {
+        let relative_symlink_path = Path::new("./empty.txt");
+
+        let symlink_path_in_source_tree = source_tree.child_path("symlink-to-empty.txt");
+        symlink_path_in_source_tree.symlink_to_file(relative_symlink_path);
+
+        let expected_non_symlink_path_in_destination_tree =
+            destination_tree.child_path("symlink-to-empty.txt");
+        expected_non_symlink_path_in_destination_tree.assert_not_exists();
+
+
+        expected_non_symlink_path_in_destination_tree
+    };
+
+
+
+    fs_more::directory::copy_directory(
+        source_tree.as_path(),
+        destination_tree.as_path(),
+        DirectoryCopyOptions {
+            symlink_behaviour: SymlinkBehaviour::Follow,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+
+
+    expected_non_symlink_path_in_destination_tree.assert_is_file_and_not_symlink();
+    source_tree
+        .empty_txt
+        .assert_initial_state_matches_other_file(expected_non_symlink_path_in_destination_tree);
+
+
+    destination_tree.destroy();
+    source_tree.destroy();
+}
+
+
+
+
 #[test]
 fn copy_directory_preserves_symlinks_when_behaviour_is_set_to_keep() {
     let symlinked_harness = SymlinkedTree::initialize();
@@ -926,6 +977,56 @@ fn copy_directory_preserves_symlinks_when_behaviour_is_set_to_keep() {
     symlinked_harness.destroy();
     empty_harness.destroy();
 }
+
+
+
+
+#[test]
+#[cfg(unix)]
+fn copy_directory_preserves_and_may_make_broken_relative_symlinks_when_behaviour_is_set_to_keep_on_unix(
+) {
+    use std::path::Path;
+
+
+    let source_tree = SimpleTree::initialize();
+    let destination_tree = EmptyTree::initialize();
+
+
+    let relative_symlink_path = Path::new("../empty.txt");
+    let expected_broken_symlink_path_in_destination_tree = {
+        let symlink_path_in_source_tree = source_tree.yes.child_path("symlink-to-empty.txt");
+        symlink_path_in_source_tree.symlink_to_file(relative_symlink_path);
+
+        let expected_broken_symlink_path_in_destination_tree =
+            destination_tree.as_path().join("symlink-to-empty.txt");
+        expected_broken_symlink_path_in_destination_tree.assert_not_exists();
+
+
+        expected_broken_symlink_path_in_destination_tree
+    };
+
+
+    fs_more::directory::copy_directory(
+        source_tree.yes.as_path(),
+        destination_tree.as_path(),
+        DirectoryCopyOptions {
+            symlink_behaviour: SymlinkBehaviour::Keep,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+
+
+    let symlink_destination = expected_broken_symlink_path_in_destination_tree
+        .assert_is_any_broken_symlink_and_read_destination();
+
+    assert_eq!(&symlink_destination, relative_symlink_path);
+
+
+    destination_tree.destroy();
+    source_tree.destroy();
+}
+
 
 
 
