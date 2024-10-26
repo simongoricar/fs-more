@@ -619,13 +619,13 @@ fn scan_and_plan_directory_copy(
                     .unwrap_or(&resolved_symlink_path);
 
 
-                let resolved_symlink_path_exists = try_exists_without_follow(
-                    &resolved_absolute_symlink_path,
-                )
-                .map_err(|error| DirectoryExecutionPlanError::UnableToAccess {
-                    path: resolved_absolute_symlink_path.to_path_buf(),
-                    error,
-                })?;
+                let resolved_symlink_path_exists =
+                    try_exists_without_follow(resolved_absolute_symlink_path).map_err(|error| {
+                        DirectoryExecutionPlanError::UnableToAccess {
+                            path: resolved_absolute_symlink_path.to_path_buf(),
+                            error,
+                        }
+                    })?;
 
 
                 if !resolved_symlink_path_exists {
@@ -711,7 +711,7 @@ fn scan_and_plan_directory_copy(
                 // Symbolic link is valid, we should look at the corresponding
                 // `symlink_behaviour` option.
 
-                let resolved_symlink_metadata = fs::metadata(&resolved_absolute_symlink_path)
+                let resolved_symlink_metadata = fs::metadata(resolved_absolute_symlink_path)
                     .map_err(|error| DirectoryExecutionPlanError::UnableToAccess {
                         path: resolved_symlink_path.clone(),
                         error,
