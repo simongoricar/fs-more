@@ -717,19 +717,17 @@ fn scan_and_plan_directory_copy(
                             } else if resolved_symlink_file_type.is_dir() {
                                 SymlinkType::Directory
                             } else if resolved_symlink_file_type.is_symlink() {
-                                // FIXME Can this branch ever be reached? Is panicking okay?
                                 //       Context for future readers: this branch seems impossible to reach,
-                                //       since we used fs::metadata, which follows symbolic links.
-                                panic!(
+                                //       since we used fs::metadata which follows symbolic links.
+                                unreachable!(
                                     "unexpected filesystem state: followed symbolic link(s), \
                                     but arrived at another symbolic link"
                                 )
                             } else {
-                                // FIXME Can this branch ever be reached? Is panicking okay?
                                 //       Context for future readers: this branch seems impossible to reach,
                                 //       since we used fs::metadata. For this to happen, is_file, is_dir and is_symlink
                                 //       all need to return `false`. If you encounter this panic, report it to the issue tracker.
-                                panic!(
+                                unreachable!(
                                     "unexpected filesystem state: followed symbolic link(s), \
                                     but arrived at something that is none of: file, directory, symlink"
                                 );
@@ -801,10 +799,9 @@ fn scan_and_plan_directory_copy(
                                 }
                             };
                         } else if resolved_symlink_file_type.is_symlink() {
-                            // FIXME Can this branch ever be reached? Is panicking okay?
                             //       Context for future readers: this branch seems impossible to reach,
                             //       since we used fs::metadata, which follows symbolic links.
-                            panic!(
+                            unreachable!(
                                 "unexpected filesystem state: followed symbolic link(s), \
                                 but arrived at another symbolic link"
                             )
