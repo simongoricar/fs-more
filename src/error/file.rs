@@ -42,10 +42,10 @@ pub enum FileError {
     /// - [`FileMoveWithProgressOptions.colliding_file_behaviour`].
     ///
     ///
-    /// [FileCopyOptions.colliding_file_behaviour]: [crate::file::FileCopyOptions.colliding_file_behaviour]
-    /// [FileCopyWithProgressOptions.colliding_file_behaviour]: [crate::file::FileCopyWithProgressOptions.colliding_file_behaviour]
-    /// [FileMoveOptions.colliding_file_behaviour]: [crate::file:FileMoveOptions]
-    /// [FileMoveWithProgressOptions.colliding_file_behaviour]: [crate::file:FileMoveWithProgressOptions]
+    /// [`FileCopyOptions.colliding_file_behaviour`]: crate::file::FileCopyOptions::colliding_file_behaviour
+    /// [`FileCopyWithProgressOptions.colliding_file_behaviour`]: crate::file::FileCopyWithProgressOptions::colliding_file_behaviour
+    /// [`FileMoveOptions.colliding_file_behaviour`]: crate::file::FileMoveOptions::colliding_file_behaviour
+    /// [`FileMoveWithProgressOptions.colliding_file_behaviour`]: crate::file::FileMoveWithProgressOptions::colliding_file_behaviour
     #[error("destination path already exists: {}", .path.display())]
     DestinationPathAlreadyExists {
         /// Destination file path that already exists.

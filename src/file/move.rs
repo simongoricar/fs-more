@@ -312,7 +312,7 @@ pub struct FileMoveWithProgressOptions {
     /// Defaults to 512 KiB.
     ///
     ///
-    /// [`copy_file_with_progress`]: [super::copy_file_with_progress]
+    /// [`copy_file_with_progress`]: super::copy_file_with_progress
     pub progress_update_byte_interval: u64,
 }
 

@@ -48,6 +48,7 @@ pub enum SourceDirectoryPathValidationError {
 }
 
 
+
 /// Destination directory path validation error.
 #[derive(Error, Debug)]
 pub enum DestinationDirectoryPathValidationError {
@@ -127,6 +128,7 @@ pub enum DestinationDirectoryPathValidationError {
         source_directory_path: PathBuf,
     },
 }
+
 
 
 /// Directory copy or move planning error.
@@ -223,6 +225,7 @@ pub(crate) struct SourceSubPathNotUnderBaseSourceDirectory {
 }
 
 
+
 /// Directory copy preparation error.
 #[derive(Error, Debug)]
 pub enum CopyDirectoryPreparationError {
@@ -234,10 +237,11 @@ pub enum CopyDirectoryPreparationError {
     #[error(transparent)]
     DestinationDirectoryValidationError(#[from] DestinationDirectoryPathValidationError),
 
-    /// Directory copy or move planning error.
+    /// A directory copy planning error.
     #[error(transparent)]
     CopyPlanningError(#[from] DirectoryExecutionPlanError),
 }
+
 
 
 /// Directory copy execution error.
@@ -261,7 +265,7 @@ pub enum CopyDirectoryExecutionError {
     /// A file or directory inside the destination directory could not be accessed.
     #[error("unable to access destination path: {}", .path.display())]
     UnableToAccessDestination {
-        /// Path we were unable to access.
+        /// The path we were unable to access.
         path: PathBuf,
 
         /// IO error describing why the directory could not be created.
@@ -275,7 +279,7 @@ pub enum CopyDirectoryExecutionError {
         .file_path.display(),
     )]
     FileCopyError {
-        /// File path that could not be copied.
+        /// The file path that could not be copied.
         file_path: PathBuf,
 
         /// The underlying file copying error.
@@ -289,7 +293,7 @@ pub enum CopyDirectoryExecutionError {
         .symlink_path.display()
     )]
     SymlinkCreationError {
-        /// Path to the symbolic link that could not be created.
+        /// The path to the symbolic link that could not be created.
         symlink_path: PathBuf,
 
         /// The underlying symlink creation error.
@@ -297,8 +301,8 @@ pub enum CopyDirectoryExecutionError {
         error: std::io::Error,
     },
 
-    /// A destination directory, a file or a sub-directory inside it
-    /// has changed since the preparation phase of the directory copy call.
+    /// A destination directory, a file, or a sub-directory inside it
+    /// has changed since the preparation phase of the directory copy.
     ///
     /// We can't guarantee that all destination directory changes
     /// will trigger this, but some more obvious problematic ones, like
@@ -306,21 +310,23 @@ pub enum CopyDirectoryExecutionError {
     ///
     /// This is essentially an unavoidable
     /// [time-of-check time-of-use](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use)
-    /// bug.
+    /// bug, but we try to catch it if possible.
     ///
     /// The `path` field contains the path that already existed, causing this error.
     #[error("destination directory or file has been created externally mid-execution: {}", .path.display())]
     DestinationEntryUnexpected {
-        /// Path of the target directory or file that already exists.
+        /// The path of the target directory or file that already exists.
         path: PathBuf,
     },
 }
 
 
-/// Directory copying error, see [`copy_directory`].
+
+/// Directory copying error (see [`copy_directory`] / [`copy_directory_with_progress`]).
 ///
 ///
-/// [`copy_directory`]: [crate::directory::copy_directory]
+/// [`copy_directory`]: crate::directory::copy_directory
+/// [`copy_directory_with_progress`]: crate::directory::copy_directory_with_progress
 #[derive(Error, Debug)]
 pub enum CopyDirectoryError {
     /// Directory copy preparation error.
@@ -331,6 +337,7 @@ pub enum CopyDirectoryError {
     #[error(transparent)]
     ExecutionError(#[from] CopyDirectoryExecutionError),
 }
+
 
 
 /// Directory move preparation error.
@@ -355,13 +362,14 @@ pub enum MoveDirectoryPreparationError {
 }
 
 
+
 /// Directory move execution error.
 #[derive(Error, Debug)]
 pub enum MoveDirectoryExecutionError {
     /// A file or directory inside the source directory could not be accessed.
     #[error("unable to access source path: {}", .path.display())]
     UnableToAccessSource {
-        /// Path we were unable to access.
+        /// The path we were unable to access.
         path: PathBuf,
 
         /// IO error describing why the directory could not be created.
@@ -389,7 +397,7 @@ pub enum MoveDirectoryExecutionError {
         path: PathBuf,
     },
 
-    /// A destination directory, a file or a sub-directory inside it
+    /// A destination directory, a file, or a sub-directory inside it
     /// has changed since the preparation phase of the directory move call.
     ///
     /// We can't guarantee that all destination directory changes
@@ -398,22 +406,24 @@ pub enum MoveDirectoryExecutionError {
     ///
     /// This is essentially an unavoidable
     /// [time-of-check time-of-use](https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use)
-    /// bug.
+    /// bug, but we try to catch it if possible.
     ///
     /// The `path` field contains the path that already existed, causing this error.
     #[error("destination directory or file has been created externally mid-execution: {}", .path.display())]
     DestinationEntryUnexpected {
-        /// Path of the target directory or file that already exists.
+        /// The path of the target directory or file that already exists.
         path: PathBuf,
     },
 
-    /// Directory copy execution error. These errors can happen
-    /// when a move-by-rename fails and a copy-and-delete is performed instead.
+    /// Directory copy execution error.
+    ///
+    /// These errors can happen when a move-by-rename fails
+    /// and a copy-and-delete is performed instead.
     #[error(transparent)]
     CopyDirectoryError(#[from] CopyDirectoryExecutionError),
 
-    /// Occurs when the only enabled directory move strategy is rename,
-    /// and that fails.
+    /// Occurs when renaming is the only enabled directory move strategy,
+    /// but it fails.
     ///
     /// This commonly indicates that the source and destination directory are
     /// on different mount points, which would require copy-and-delete, and sometimes
@@ -424,7 +434,8 @@ pub enum MoveDirectoryExecutionError {
     )]
     RenameFailedAndNoFallbackStrategy,
 
-    /// An uncategorized unrecoverable IO error. See `error` for more information.
+    /// An uncategorized unrecoverable IO error.
+    /// See `error` field for more information.
     #[error("uncategorized std::io::Error")]
     OtherIoError {
         /// IO error describing the cause of the outer error.
@@ -435,9 +446,11 @@ pub enum MoveDirectoryExecutionError {
 
 
 
-/// Directory moving error, see [`move_directory_with_progress`].
+/// Directory moving error (see [`move_directory`] / [`move_directory_with_progress`]).
 ///
-/// [`move_directory_with_progress`]: [crate::directory::move_directory_with_progress]
+///
+/// [`move_directory`]: crate::directory::move_directory
+/// [`move_directory_with_progress`]: crate::directory::move_directory_with_progress
 #[derive(Error, Debug)]
 pub enum MoveDirectoryError {
     /// Directory move preparation error.
@@ -584,9 +597,11 @@ pub enum DirectoryError {
     },
 }
 
-
-
-/// An error that can occur when querying size of a scanned directory.
+/// An error that can occur when querying the size of a directory
+/// (see [`directory_size_in_bytes`]).
+///
+///
+/// [`directory_size_in_bytes`]: crate::directory::directory_size_in_bytes
 #[derive(Error, Debug)]
 pub enum DirectorySizeScanError {
     /// An error occurred while scanning the directory.
@@ -603,7 +618,11 @@ pub enum DirectorySizeScanError {
 
 
 
-/// An error that can occur when checking whether a directory is empty.
+/// An error that can occur when checking whether a directory is empty
+/// (see [`is_directory_empty`]).
+///
+///
+/// [`is_directory_empty`]: crate::directory::is_directory_empty
 #[derive(Error, Debug)]
 pub enum DirectoryEmptinessScanError {
     /// The provided directory path to scan doesn't exist.
@@ -629,7 +648,7 @@ pub enum DirectoryEmptinessScanError {
     /// The inner [`std::io::Error`] will likely describe a more precise cause of this error.
     #[error("unable to read directory: {}", .directory_path.display())]
     UnableToReadDirectory {
-        /// Directory path that could not be read.
+        /// The directory path that could not be read.
         directory_path: PathBuf,
 
         /// IO error describing why the given root directory could not be read.
@@ -643,7 +662,7 @@ pub enum DirectoryEmptinessScanError {
     /// The inner [`std::io::Error`] will likely describe a more precise cause of this error.
     #[error("unable to read directory entry for {}", .directory_path.display())]
     UnableToReadDirectoryEntry {
-        /// Directory path whose entries could not be read.
+        /// The directory path whose entries could not be read.
         directory_path: PathBuf,
 
         /// IO error describing why the given file or directory could not be read.
@@ -653,38 +672,6 @@ pub enum DirectoryEmptinessScanError {
 }
 
 
-/*
-/// An error that can occur when checking whether a directory is empty.
-#[derive(Error, Debug)]
-#[deprecated]
-pub enum IsDirectoryEmptyError {
-    /// The provided path doesn't exist.
-    #[error("given path does not exist: {}", .directory_path.display())]
-    NotFound {
-        /// Directory path that does not exist.
-        directory_path: PathBuf,
-    },
-
-    /// The provided path exists, but is not a directory.
-    #[error("given path exists, but is not a directory: {}", .path.display())]
-    NotADirectory {
-        /// Path that exists, but should have been a directory.
-        path: PathBuf,
-    },
-
-    /// Could not read the contents of a directory.
-    ///
-    /// For example, this can happen due to missing permissions.
-    #[error("unable to read contents of directory: {}", .directory_path.display())]
-    UnableToReadDirectory {
-        /// Directory path that could not be read.
-        directory_path: PathBuf,
-
-        /// Underlying IO error describing why the directory could not be read.
-        #[source]
-        error: std::io::Error,
-    },
-} */
 
 
 /// An error that can occur when scanning a directory.
@@ -713,7 +700,7 @@ pub enum DirectoryScanError {
     /// The inner [`std::io::Error`] will likely describe a more precise cause of this error.
     #[error("unable to read directory: {}", .directory_path.display())]
     UnableToReadDirectory {
-        /// Directory path that could not be read.
+        /// The drectory path that could not be read.
         directory_path: PathBuf,
 
         /// IO error describing why the given root directory could not be read.
@@ -727,7 +714,7 @@ pub enum DirectoryScanError {
     /// The inner [`std::io::Error`] will likely describe a more precise cause of this error.
     #[error("unable to read directory entry for {}", .directory_path.display())]
     UnableToReadDirectoryEntry {
-        /// Directory path whose entries could not be read.
+        /// The directory path whose entries could not be read.
         directory_path: PathBuf,
 
         /// IO error describing why the given file or directory could not be read.
