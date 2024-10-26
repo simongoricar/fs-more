@@ -4,7 +4,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-This is a small bug fix release.
+This is a small bug fix and refactoring release.
 
 ### Changed
 - The MSRV for `fs-more` has been dropped from `1.77` to `1.74.1`.
@@ -12,6 +12,10 @@ This is a small bug fix release.
 ### Fixed
 - Fixed `copy_directory` and `copy_directory_with_progress` incorrectly handling relative symlink destinations,
   erroneously classifying them as broken symlinks.
+
+### Removed
+- Removed unused `DirectoryError` error type.
+
 
 
 Related issues / PRs:
