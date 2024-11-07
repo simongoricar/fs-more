@@ -47,11 +47,11 @@ dunce = ["dep:dunce"]
 
 
 [dependencies]
-thiserror = "1.0.58"
+thiserror = "2.0.0"
 
 # Optional dependencies (see [features] section above).
-dunce = { version = "1.0.4", optional = true }
-fs-err = { version = "2.11.0", optional = true }
+dunce = { version = "1.0.5", optional = true }
+fs-err = { version = "3.0.0", optional = true }
 
 
 [dev-dependencies]
