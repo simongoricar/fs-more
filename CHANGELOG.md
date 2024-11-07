@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 
+### Changed
+- Bumped internal dependencies (`thiserror`, `dunce`, and `fs-err`) to their latest versions.
+
+
 
 ---
 
