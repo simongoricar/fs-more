@@ -114,21 +114,22 @@ pub enum DirectoryMoveAllowedStrategies {
 }
 
 impl DirectoryMoveAllowedStrategies {
-    ///
-    /// Returns `true` if the allowed strategies include moving by rename.
+    /// Returns `true` if the allowed move strategies include moving by rename.
     ///
     /// # Invariants
-    /// At least one of [`Self::into_options_if_may_copy_and_delete`] and [`Self::may_rename`] will always return `true` / `Some`.
+    /// At least one of [`Self::allowed_to_rename`] and [`Self::into_options_if_may_copy_and_delete`]
+    /// will always return `true` or `Some(...)`, respectively.
     #[inline]
     pub(crate) fn allowed_to_rename(&self) -> bool {
         matches!(self, Self::OnlyRename | Self::Either { .. })
     }
 
-    /// Returns `Some(`[`DirectoryMoveByCopyOptions`])` if the allowed strategies include moving by copy-and-delete,
-    /// `None` otherwise.
+    /// Returns `Some(`[`DirectoryMoveByCopyOptions`])` if the allowed move strategies include moving by copy-and-delete,
+    /// and returns `None` otherwise.
     ///
     /// # Invariants
-    /// At least one of [`Self::into_options_if_may_copy_and_delete`] and [`Self::may_rename`] will always return `true` / `Some`.
+    /// At least one of [`Self::allowed_to_rename`] and [`Self::into_options_if_may_copy_and_delete`]
+    /// will always return `true` or `Some(...)`, respectively.
     #[inline]
     pub(crate) fn into_options_if_allowed_to_copy_and_delete(
         self,
