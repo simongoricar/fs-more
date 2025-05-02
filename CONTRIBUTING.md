@@ -13,6 +13,7 @@
   - [2.2 Generating local documentation](#22-generating-local-documentation)
   - [2.3 Using the test harness](#23-using-the-test-harness)
   - [2.4 Modifying filesystem tree harnesses](#24-modifying-filesystem-tree-harnesses)
+- [3. Publishing](#3-publishing)
 - [A1. Appendix: Project structure](#a1-appendix-project-structure)
 
 
@@ -66,6 +67,7 @@ chunk of code, you *can* add an ignore for it (`#[allow(...)]` / `#[rustfmt::ski
 <summary>💡 Setup for Visual Studio Code (with <code>rust-analyzer</code>)</summary>
 <br>
 
+> [!NOTE]
 > This configuration requires [`rust-analyzer`](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer) 
 > to be installed and enabled in Visual Studio Code.
 
@@ -150,6 +152,7 @@ For Better Comments, the following configuration might be of use — add this to
 
 
 ### 2.2 Generating local documentation
+> [!NOTE]
 > This requires [`cargo-make`](https://github.com/sagiegurari/cargo-make) 
 > and [`cargo-watch`](https://github.com/watchexec/cargo-watch)
 > to be installed on the system.
@@ -187,6 +190,7 @@ Currently, the following filesystem tree harnesses are available:
 All of them essentially represent a single consistent directory tree,
 but to showcase how they work, this section will focus on one of them - `DeepTree`. 
 
+> [!TIP]
 > If you're looking for more context about how this harness is constructed
 > and generated, take a look at the next chapter.
 
@@ -279,12 +283,12 @@ deep_harness.foo.b_bin.assert_unchanged_from_initial_state();
 ```
 
 > [!IMPORTANT]
-> When in doubt, take a look at the documentation for each struct or field
-> in the tree! For example, each root struct of the harness has documentation
+> When in doubt, look at the documentation for each struct or field
+> in the file tree! For example, each root struct of the harness has documentation
 > listing the entire filesystem structure it generates, as well as additional 
 > context and the fields that are available directly on it.
 >
-> This is best and easiest with IDE mouse-over support.
+> This is easiest with IDE mouse-over support.
 
 
 There are many many more available methods than what is showcased here;
@@ -307,6 +311,7 @@ deep_harness.destroy();
 
 
 ### 2.4 Modifying filesystem tree harnesses
+> [!NOTE]
 > This requires [`cargo-make`](https://github.com/sagiegurari/cargo-make)
 > to be installed on the system.
 
@@ -365,12 +370,43 @@ cargo make generate-test-harness-tree-schema
 
 </details>
 
+<br>
+
+
+### 3. Publishing
+Before publishing a new version, first make sure your working tree is clean.
+Then follow the steps below (replace `patch` with the bump level you want, see `cargo release --help`).
+
+```bash
+# Perform final checks before releasing a new version:
+$ typos --format long
+$ cargo +nightly fmt --all --check -- --config-path rustfmt.toml
+$ cargo deny --all-features --workspace check
+$ cargo test --workspace --doc --all-features
+$ cargo hack --feature-powerset --workspace nextest run --all-targets --fail-fast
+
+# Bump the versions, create the git tag, and push to origin.
+$ cargo release version patch --workspace --execute --no-confirm
+$ cargo release commit --execute --no-confirm
+$ cargo release tag --workspace --execute --no-confirm
+$ git push
+```
+
+> [!NOTE]
+> The steps provided above require the following tools:
+> - [`typos`](https://github.com/crate-ci/typos),
+> - [nightly `rustfmt`](https://github.com/rust-lang/rustfmt?tab=readme-ov-file#on-the-nightly-toolchain),
+> - [`cargo-release`](https://github.com/crate-ci/cargo-release),
+> - [`cargo-deny`](https://github.com/EmbarkStudios/cargo-deny),
+> - [`cargo-hack`](https://github.com/taiki-e/cargo-hack), and
+> - [`nextest`](https://github.com/nextest-rs/nextest).
+
+
 
 <br>
 
 
 ## A1. Appendix: Project structure
-Here is a rough outline of the repository:
 ```md
 |-- src
 |   |> The root fs-more crate.

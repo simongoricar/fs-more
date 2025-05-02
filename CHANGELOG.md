@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - Bumped internal dependencies (`thiserror`, `dunce`, and `fs-err`) to their latest versions.
+- Reworded some documentation for clarity.
+
+### Fixed
+- Fixed some variable name typos.
 
 
 
@@ -32,6 +36,23 @@ This is a small bug fix and refactoring release.
 Related issues / PRs:
 - [#3](https://github.com/simongoricar/fs-more/issues/3)
 
+
+
+## [0.7.2] - 2025-05-02
+
+This is a small bug fix and refactoring release, which is almost identical to `v0.8.0`, 
+but without the removal of an unused type (the single breaking change of `v0.8.0`).
+
+I also decided to backport this fix because `crates.io` statistics for this crate show a very bad uptake of `v0.8.0`.
+
+
+### Changed
+- The MSRV for `fs-more` has been dropped from `1.77` to `1.74.1`.
+- The documentation has received some improvements, mostly typo fixes and rewording.
+
+### Fixed
+- Fixed `copy_directory` and `copy_directory_with_progress` incorrectly handling relative symlink destinations,
+  erroneously classifying them as broken symlinks (see [#3](https://github.com/simongoricar/fs-more/issues/3)).
 
 
 
@@ -262,6 +283,7 @@ Initial development release with the API mostly stable.
 
 [Unreleased]: https://github.com/simongoricar/fs-more/compare/v0.8.0...HEAD
 [0.8.0]: https://github.com/simongoricar/fs-more/compare/v0.7.1...v0.8.0
+[0.7.2]: https://github.com/simongoricar/fs-more/compare/v0.7.2...v0.7.1
 [0.7.1]: https://github.com/simongoricar/fs-more/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/simongoricar/fs-more/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/simongoricar/fs-more/compare/v0.6.0...v0.6.1
