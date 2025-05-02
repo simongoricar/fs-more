@@ -548,7 +548,7 @@ pub struct DirectoryCopyProgressRef<'o> {
     pub total_operations: usize,
 }
 
-impl<'o> DirectoryCopyProgressRef<'o> {
+impl DirectoryCopyProgressRef<'_> {
     /// Clones the required data from this progress struct
     /// into an [`DirectoryCopyProgress`] - this way you own
     /// the entire state.
