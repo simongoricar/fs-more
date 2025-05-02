@@ -388,7 +388,7 @@ $ cargo hack --feature-powerset --workspace nextest run --all-targets --fail-fas
 # Bump the versions, create the git tag, and push to origin.
 $ cargo release version patch --workspace --execute --no-confirm
 $ cargo release commit --execute --no-confirm
-$ cargo release tag --workspace --execute --no-confirm
+$ cargo release tag --package fs-more --execute --no-confirm
 $ git push
 ```
 
