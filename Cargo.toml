@@ -43,6 +43,8 @@ default = ["dunce"]
 # though `fs-more` already provides plenty context on its own.
 fs-err = ["dep:fs-err"]
 
+# Enables [`dunce`](https://docs.rs/dunce) support, which automatically strips Windows' UNC paths 
+# if they can be represented as non-UNC paths. This dependency has no effect on non-Windows targets.
 dunce = ["dep:dunce"]
 
 
