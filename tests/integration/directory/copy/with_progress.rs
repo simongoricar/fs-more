@@ -846,7 +846,7 @@ fn copy_directory_with_progress_errors_when_source_is_symlink_to_destination() {
         .assert_is_directory_and_fully_matches_secondary_directory(deep_harness.as_path());
 
 
-    let symlink_to_deep_harnesss_path = {
+    let symlink_to_deep_harness_path = {
         let symlink_path = empty_harness.child_path("directory-symlink");
         symlink_path.assert_not_exists();
 
@@ -861,7 +861,7 @@ fn copy_directory_with_progress_errors_when_source_is_symlink_to_destination() {
     let mut last_progress_report: Option<DirectoryCopyProgress> = None;
 
     let copy_result = fs_more::directory::copy_directory_with_progress(
-        symlink_to_deep_harnesss_path.as_path(),
+        symlink_to_deep_harness_path.as_path(),
         deep_harness.as_path(),
         DirectoryCopyWithProgressOptions {
             destination_directory_rule: DestinationDirectoryRule::AllowNonEmpty {
@@ -894,7 +894,7 @@ fn copy_directory_with_progress_errors_when_source_is_symlink_to_destination() {
         .assert_is_directory_and_fully_matches_secondary_directory(deep_harness.as_path());
 
 
-    symlink_to_deep_harnesss_path.assert_is_symlink_and_remove();
+    symlink_to_deep_harness_path.assert_is_symlink_and_remove();
     empty_harness.assert_is_directory_and_empty();
 
 
