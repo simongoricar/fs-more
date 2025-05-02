@@ -390,6 +390,9 @@ $ cargo release version patch --workspace --execute --no-confirm
 $ cargo release commit --execute --no-confirm
 $ cargo release tag --package fs-more --execute --no-confirm
 $ git push
+
+# When you're ready to publish to crates.io:
+$ cargo release publish --package fs-more --execute
 ```
 
 > [!NOTE]
