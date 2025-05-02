@@ -5,6 +5,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 
+
+---
+
+## [0.8.1] - 2025-05-02
+
+This is a tiny release with documentation fixes and dependency version bumps.
+
+### Added
+- Documented the `dunce` feature flag in `Cargo.toml`.
+
 ### Changed
 - Bumped internal dependencies (`thiserror`, `dunce`, and `fs-err`) to their latest versions.
 - Reworded some documentation for clarity.
@@ -13,8 +23,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fixed some variable name typos.
 
 
-
----
 
 ## [0.8.0] - 2024-10-26
 
@@ -26,15 +34,10 @@ This is a small bug fix and refactoring release.
 
 ### Fixed
 - Fixed `copy_directory` and `copy_directory_with_progress` incorrectly handling relative symlink destinations,
-  erroneously classifying them as broken symlinks.
+  erroneously classifying them as broken symlinks (see [#3](https://github.com/simongoricar/fs-more/issues/3)).
 
 ### Removed
 - Removed unused `DirectoryError` error type.
-
-
-
-Related issues / PRs:
-- [#3](https://github.com/simongoricar/fs-more/issues/3)
 
 
 
