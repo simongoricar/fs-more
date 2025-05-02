@@ -13,6 +13,7 @@
   - [2.2 Generating local documentation](#22-generating-local-documentation)
   - [2.3 Using the test harness](#23-using-the-test-harness)
   - [2.4 Modifying filesystem tree harnesses](#24-modifying-filesystem-tree-harnesses)
+- [3. Publishing](#2-publishing)
 - [A1. Appendix: Project structure](#a1-appendix-project-structure)
 
 
@@ -365,6 +366,35 @@ cargo make generate-test-harness-tree-schema
 
 </details>
 
+<br>
+
+
+### 3. Publishing
+Before publishing a new version, first make sure your working tree is clean.
+Then follow the steps below (replace `patch` with the bump level you want, see `cargo release --help`).
+
+```bash
+# Perform final checks before releasing a new version:
+$ typos --format long
+$ cargo +nightly fmt --all --check -- --config-path rustfmt.toml
+$ cargo deny --all-features --workspace check
+$ cargo hack --feature-powerset --workspace nextest run --all-targets --fail-fast
+
+# Bump the versions, create the git tag, and push to origin.
+$ cargo release version patch --workspace --execute --no-confirm
+$ cargo release commit --execute --no-confirm
+$ cargo release tag --workspace --execute --no-confirm
+$ git push
+```
+
+> The steps provided above require the following tools:
+> - [`typos`](https://github.com/crate-ci/typos),
+> - [nightly `rustfmt`](https://github.com/rust-lang/rustfmt?tab=readme-ov-file#on-the-nightly-toolchain),
+> - [`cargo-deny`](https://github.com/EmbarkStudios/cargo-deny),
+> - [`cargo-hack`](https://github.com/taiki-e/cargo-hack), and
+> - [`nextest`](https://github.com/nextest-rs/nextest).
+
+
 
 <br>
 
@@ -380,14 +410,17 @@ Here is a rough outline of the repository:
 |   |    the two crates related to the test harness.
 |   |
 |   |-- test-harness
-|   |   |> Our test harness and useful reusable code 
+|   |   |> Test harness and other reusable code 
 |   |      for integration tests.
 |   |
-|   |-- test-harness-generator
-|   |   |> Our test harness tree code generator CLI.
-|   |      It generates code that acts as a specific filesystem tree
-|   |      (that's our testing harness). The structure of each tree
-|   |      is defined in `subcrates/test-harness/trees`.
+|   |-- test-harness-tree-generator
+|   |   |> Test harness tree code-generator CLI.
+|   |      Its purpose is to generate code for file trees from the provided 
+|   |      definitions in `test-harness/trees`.
+|   |
+|   |-- test-harness-tree-schema
+|   |   |> Contains the schema for JSON-defined file trees, used by
+|   |      both `test-harness` and `test-harness-tree-generator`.
 |
 |-- tests
 |   |> Integration tests bunched together into a single `integration`

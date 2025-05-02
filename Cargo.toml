@@ -1,6 +1,6 @@
 [package]
 name = "fs-more"
-version = "0.7.1"
+version = "0.7.2"
 rust-version = "1.74.1"
 authors = [
     "Simon Goričar <simon.peter.goricar@gmail.com>"
