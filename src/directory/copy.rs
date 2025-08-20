@@ -1276,7 +1276,7 @@ where
 /// It also guarantees one final progress report, when the state indicates the copy has been completed.
 ///
 /// For more details on reporting intervals for file copies, see progress reporting section
-/// for [`copy_file`][crate::file::copy_file].
+/// for [`copy_file_with_progress`][crate::file::copy_file_with_progress].
 ///
 ///
 /// # Errors
