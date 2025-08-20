@@ -889,6 +889,9 @@ pub struct DirectoryMoveProgress {
 ///
 /// If the move can be performed by renaming the directory, only one progress report will be emitted.
 ///
+/// For more details on reporting intervals for file moves, see progress reporting section
+/// for [`move_file_with_progress`][crate::file::move_file_with_progress].
+///
 ///
 /// <br>
 ///
