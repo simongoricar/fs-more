@@ -5,8 +5,8 @@ use std::{
 };
 
 use rand::{
-    distributions::Standard,
-    prelude::{Rng, SeedableRng},
+    distr::Uniform,
+    prelude::{RngExt, SeedableRng},
 };
 
 use crate::assertable::{symlink_to_directory, symlink_to_file};
@@ -91,10 +91,13 @@ pub(crate) fn initialize_file_with_random_data(
 ) -> Vec<u8> {
     let random_generator = rand_chacha::ChaCha20Rng::seed_from_u64(seed);
 
+    let uniform_distribution = Uniform::new_inclusive(u8::MIN, u8::MAX)
+        .expect("Uniform in inclusive range u8::MIN u8::MAX should not fail to be initialized");
+
     let mut random_data: Vec<u8> = Vec::with_capacity(file_size_bytes);
     random_data.extend(
         random_generator
-            .sample_iter::<u8, _>(Standard)
+            .sample_iter::<u8, _>(uniform_distribution)
             .take(file_size_bytes),
     );
 

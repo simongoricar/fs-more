@@ -14,7 +14,7 @@ use cli::{
 use codegen::final_source_file::generate_rust_source_file_for_schema;
 use fs_more_test_harness_tree_schema::schema::FileSystemHarnessSchema;
 use miette::{miette, Context, IntoDiagnostic, Result};
-use schemars::gen::SchemaGenerator;
+use schemars::generate::SchemaGenerator;
 
 mod cli;
 mod codegen;

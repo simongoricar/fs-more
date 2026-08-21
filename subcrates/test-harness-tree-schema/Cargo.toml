@@ -9,5 +9,5 @@ publish = false
 serializable_tree_schema = ["dep:serde", "dep:schemars"]
 
 [dependencies]
-serde = { version = "1.0.203", features = ["derive"], optional = true }
-schemars = { version = "0.8.21", optional = true }
+serde = { version = "1.0.229", features = ["derive"], optional = true }
+schemars = { version = "1.2.2", optional = true }

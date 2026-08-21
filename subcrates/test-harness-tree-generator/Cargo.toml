@@ -9,23 +9,23 @@ publish = false
 fs-more-test-harness-tree-schema = { path = "../test-harness-tree-schema", features = ["serializable_tree_schema"] }
 
 
-thiserror = "1.0.58"
-miette = { version = "7.2.0", features = ["fancy"] }
+thiserror = "2.0.20"
+miette = { version = "7.6.0", features = ["fancy"] }
 
-serde = { version = "1.0.203", features = ["derive"] }
-serde_json = "1.0.117"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
 
-clap = { version = "4.5.7", features = ["derive"] }
+clap = { version = "4.6.6", features = ["derive"] }
 
-schemars = "0.8.21"
+schemars = "1.2.2"
 
-quote = "1.0.35"
-syn = "2.0.66"
-proc-macro2 = "1.0.85"
-prettyplease = "0.2.20"
+quote = "1.0.47"
+syn = "3.0.3"
+proc-macro2 = "1.0.107"
+prettyplease = "0.3.0"
 
 heck = "0.5.0"
-itertools = "0.13.0"
+itertools = "0.15.0"
 
 path-slash = "0.2.1"
 

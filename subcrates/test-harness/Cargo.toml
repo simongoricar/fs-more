@@ -11,10 +11,10 @@ publish = false
 fs-more = { path = "../.." }
 fs-more-test-harness-tree-schema = { path = "../test-harness-tree-schema" }
 
-dunce = { version = "1.0.4" }
-rand = "0.8.5"
-rand_chacha = "0.3.1"
-thiserror = "1.0.48"
-tempfile = "3.10.1"
+dunce = { version = "1.0.5" }
+rand = "0.10.2"
+rand_chacha = "0.10.0"
+thiserror = "2.0.20"
+tempfile = "3.27.0"
 humansize = "2.1.3"
 assert_matches = "1.5.0"
