@@ -98,4 +98,4 @@ jobs:
       - name: Run doctests
         run: cargo test --workspace --doc --all-features
       - name: Run tests
-        run: cargo hack --keep-going --feature-powerset --workspace nextest run --color always --all-targets --no-fail-fast
+        run: cargo hack --keep-going --feature-powerset --workspace nextest run --color always --all-targets --no-fail-fast --no-tests=pass
