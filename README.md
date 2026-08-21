@@ -52,8 +52,8 @@ let finished_copy = fs_more::file::copy_file_with_progress(
     },
     |progress| {
         let percent_copied =
-            (progress.bytes_finished as f64) 
-            / (progress.bytes_total as f64 * 100.0);
+            (progress.bytes_finished as f64) / (progress.bytes_total as f64)
+            * 100.0;
 
         println!("Copied {:.2}% of the file!", percent_copied);
     }
