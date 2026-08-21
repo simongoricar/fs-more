@@ -188,6 +188,11 @@ impl CapturedFileState {
                     .open(&self.file_path)
                     .expect("failed to open file");
 
+                // We allow clippy::unbuffered_bytes here because we only need to check for a single byte,
+                // and clippy's suggestion to use BufReader is not warranted.
+                //
+                // See: <https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#unbuffered_bytes>
+                #[allow(clippy::unbuffered_bytes)]
                 if file.bytes().next().is_some() {
                     panic!(
                         "captured state is Empty, but file \"{}\" is not empty",
