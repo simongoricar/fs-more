@@ -75,6 +75,10 @@ ignore = [
     #{ id = "RUSTSEC-0000-0000", reason = "you can specify a reason the advisory is ignored" },
     #"a-crate-that-is-yanked@0.1.1", # you can also ignore yanked crate versions if you wish
     #{ crate = "a-crate-that-is-yanked@0.1.1", reason = "you can specify why you are ignoring the yanked crate" },
+
+    # TODO Check in some time if the ecosystem has moved onto adler2 (more specifically, `miette`'s dependencies) 
+    #      and remove this ignore if so.
+    { id = "RUSTSEC-2025-0056", reason = "this unmaintained crate does not impact us critically, as it's only used through miette, which is only used for the test harness generator" },
 ]
 # If this is true, then cargo deny will use the git executable to fetch advisory database.
 # If this is false, then it uses a built-in git library.
