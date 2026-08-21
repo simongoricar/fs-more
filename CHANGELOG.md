@@ -257,7 +257,7 @@ This changelog likely doesn't cover all of the changes that the crate got, but h
 
 ### Added
 - Add `miette` feature flag that derives `miette::Diagnostic` on all error types,
-  enabling covenient `wrap_err_with` and the like.
+  enabling convenient `wrap_err_with` and the like.
 
 
 

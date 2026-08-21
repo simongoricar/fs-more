@@ -518,7 +518,7 @@ fn format_error_with_source(error: &dyn Error) -> String {
 ///
 /// Every file and subdirectory in the `secondary_directory_path` is compared with the corresponding
 /// file and subdirectory in `primary_directory_path`. File contents are fully compared,
-/// erroring on content mismath.
+/// erroring on content mismatch.
 ///
 /// For symlink behaviour, see [`DirectoryComparisonOptions`].
 #[track_caller]
@@ -550,7 +550,7 @@ pub(crate) fn assert_primary_directory_precisely_contains_secondary_directory<F,
 ///
 /// Every file and subdirectory in the `secondary_directory_path` is compared with the corresponding
 /// file and subdirectory in `primary_directory_path` (and the other way around).
-/// File contents are fully compared, erroring on content mismath.
+/// File contents are fully compared, erroring on content mismatch.
 ///
 /// For symlink behaviour, see [`DirectoryComparisonOptions`].
 #[track_caller]
