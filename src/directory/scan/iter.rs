@@ -138,16 +138,7 @@ impl BreadthFirstDirectoryIter {
     /// Returns a reference to the currently active (open) directory iterator, if any,
     /// `None` otherwise.
     fn current_directory_handle(&self) -> Option<&OpenDirectory> {
-        if self.currently_open_directory.is_some() {
-            let handle = self
-                .currently_open_directory
-                .as_ref()
-                .expect("currently_open_directory should be Some");
-
-            return Some(handle);
-        }
-
-        None
+        self.currently_open_directory.as_ref()
     }
 
     /// Returns the directory path of the currently active (open) directory iterator.
@@ -182,13 +173,8 @@ impl BreadthFirstDirectoryIter {
     fn current_or_next_directory_handle_mut(
         &mut self,
     ) -> Result<Option<&mut OpenDirectory>, DirectoryScanError> {
-        if self.currently_open_directory.is_some() {
-            let handle = self
-                .currently_open_directory
-                .as_mut()
-                .expect("currently_open_directory should be Some");
-
-            return Ok(Some(handle));
+        if let Some(ref mut currently_open_directory) = self.currently_open_directory {
+            return Ok(Some(currently_open_directory));
         }
 
         self.open_next_directory_handle()

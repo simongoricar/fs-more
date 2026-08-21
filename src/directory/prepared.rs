@@ -492,8 +492,7 @@ fn scan_and_plan_directory_copy(
             let directory_item_name = directory_item_source_path.file_name().ok_or_else(|| {
                 DirectoryExecutionPlanError::UnableToAccess {
                     path: directory_item_source_path.clone(),
-                    error: io::Error::new(
-                        ErrorKind::Other,
+                    error: io::Error::other(
                         "ReadDir's iterator generated a path that terminates in \"..\"",
                     ),
                 }
